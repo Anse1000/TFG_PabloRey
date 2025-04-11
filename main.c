@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <sys/time.h>
 
+
 #define G 4.30091e-6  // pc^3 / (M_sun * s^2)
 #define KAPPA 4.74047   // Factor de conversión: mas/año a km/s
 #define V_GAL 220       //Velocidad media de rotacion galáctica
@@ -24,6 +25,12 @@
 #define TYPE_UL  0  // unsigned long
 #define TYPE_D   1  // double
 #define TYPE_F   2  // float
+
+//#define AVX_512
+
+#ifdef AVX_512
+#include <immintrin.h>
+#endif
 
 typedef struct {
     unsigned long id;
@@ -66,7 +73,7 @@ int read_file(char *filename, Star **estrellas, int *N, int *allocated_size) {
 
         //Se reserva de 10000 en 10000 para evitar tantas llamadas a realloc
         if (*N >= *allocated_size) {
-            *allocated_size += 10000;  // Aumentar de a 10000 elementos
+            *allocated_size += 10000; // Aumentar de a 10000 elementos
             Star *temp = realloc(*estrellas, *allocated_size * sizeof(Star));
             if (!temp) {
                 fclose(file);
@@ -79,15 +86,15 @@ int read_file(char *filename, Star **estrellas, int *N, int *allocated_size) {
         (*N)++;
 
         const FieldMap fields[] = {
-                {&current->id,                    TYPE_UL},
-                {&current->ra,                    TYPE_D},
-                {&current->dec,                   TYPE_D},
-                {&current->parallax,              TYPE_D},
-                {&current->pmra,                  TYPE_D},
-                {&current->pmdec,                 TYPE_D},
-                {&current->radial_velocity,       TYPE_D},
-                {&current->mean_g,                TYPE_F},
-                {&current->color,                 TYPE_F}
+            {&current->id, TYPE_UL},
+            {&current->ra, TYPE_D},
+            {&current->dec, TYPE_D},
+            {&current->parallax, TYPE_D},
+            {&current->pmra, TYPE_D},
+            {&current->pmdec, TYPE_D},
+            {&current->radial_velocity, TYPE_D},
+            {&current->mean_g, TYPE_F},
+            {&current->color, TYPE_F}
         };
 
         for (int j = 0; j < 9; j++) {
@@ -108,13 +115,13 @@ int read_file(char *filename, Star **estrellas, int *N, int *allocated_size) {
     return 0;
 }
 
-int getstarsfromfile(char *dirname,Star **estrellas) {
-    struct timeval start,end;
+int getstarsfromfile(char *dirname, Star **estrellas) {
+    struct timeval start, end;
     char path[1000];
     struct dirent *filedir;
-    int dirname_length=strlen(dirname);
-    int N=0,count=0,allocated=0;
-    int status=0;
+    int dirname_length = strlen(dirname);
+    int N = 0, count = 0, allocated = 0;
+    int status = 0;
     DIR *dir = opendir(dirname);
     if (dir == NULL) {
         perror("No se pudo abrir el directorio");
@@ -127,20 +134,19 @@ int getstarsfromfile(char *dirname,Star **estrellas) {
     while ((filedir = readdir(dir)) != NULL) {
         if (filedir->d_name[0] == '.') continue;
         strcpy(path + dirname_length + 1, filedir->d_name);
-        status=read_file(path,estrellas,&N,&allocated);
-        if (status!=0) {
+        status = read_file(path, estrellas, &N, &allocated);
+        if (status != 0) {
             printf("Error en la lectura de archivos\n");
             return -1;
         }
         count++;
-        if (count%10==0) {
-            printf("Leidos %d archivos...\n",count);
+        if (count % 10 == 0) {
+            printf("Leidos %d archivos...\n", count);
             fflush(stdout);
         }
-
     }
     //Ajustar memoria a tamaño exacto
-    Star *temp = realloc(*estrellas, N * sizeof(Star));  // Redimensionar al número exacto de estrellas leídas
+    Star *temp = realloc(*estrellas, N * sizeof(Star)); // Redimensionar al número exacto de estrellas leídas
     if (temp != NULL) {
         *estrellas = temp;
     } else {
@@ -149,14 +155,14 @@ int getstarsfromfile(char *dirname,Star **estrellas) {
     gettimeofday(&end, NULL);
     double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
     printf("\nLeídas y trasladadas %d estrellas a memoria ocupando %.2f MB en %.2f segundos\n", N,
-       N * sizeof(Star) / (1024.0 * 1024.0),seconds);
+           N * sizeof(Star) / (1024.0 * 1024.0), seconds);
     fflush(stdout);
     fflush(0);
     return N;
 }
 
 //Funcion de cómputo de aceleración
-void compute_acceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
+void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
     for (int i = 0; i < N; i++) {
         ax[i] = ay[i] = az[i] = 0.0;
         for (int j = 0; j < N; j++) {
@@ -168,7 +174,7 @@ void compute_acceleration(Star *estrellas, double *ax, double *ay, double *az, i
                 double dist_sq = dx * dx + dy * dy + dz * dz;
                 double dist = sqrt(dist_sq) + 1e-10; // Evitar división por 0
                 //calcular fuerza aplicada a la estrella
-                double force = G * estrellas[j].mass / (dist_sq * dist);
+                double force = -G * estrellas[j].mass / (dist_sq * dist);
                 ax[i] += force * dx;
                 ay[i] += force * dy;
                 az[i] += force * dz;
@@ -176,16 +182,67 @@ void compute_acceleration(Star *estrellas, double *ax, double *ay, double *az, i
         }
     }
 }
+#ifdef AVX_512
+void compute_aceleration_avx512(Star *estrellas, double *ax, double *ay, double *az, int N) {
+    const double epsilon = 1e-10; // Para evitar división por cero (al paralelizar no deberia ser necesario...)
+    const __m512d G_vec = _mm512_set1_pd(G); // Almacenamos G
+    const __m512d eps_vec = _mm512_set1_pd(epsilon); // Almacenamos Epsilon
+    for (int i = 0; i < N; i++) {
+        //inicializamos vectores
+        __m512d ax_vec = _mm512_setzero_pd();
+        __m512d ay_vec = _mm512_setzero_pd();
+        __m512d az_vec = _mm512_setzero_pd();
+        //cargamos coordenadas de la estrella
+        __m512d ix = _mm512_set1_pd(estrellas[i].C[0]);
+        __m512d iy = _mm512_set1_pd(estrellas[i].C[1]);
+        __m512d iz = _mm512_set1_pd(estrellas[i].C[2]);
+        for (int j = 0; j < N; j += 8) { // Procesamos en bloques de 8
+            __m512d jx = _mm512_loadu_pd(&estrellas[j].C[0]);
+            __m512d jy = _mm512_loadu_pd(&estrellas[j].C[1]);
+            __m512d jz = _mm512_loadu_pd(&estrellas[j].C[2]);
+            __m512d mass = _mm512_loadu_pd(&estrellas[j].mass);
 
+            __m512d dx = _mm512_sub_pd(jx, ix);
+            __m512d dy = _mm512_sub_pd(jy, iy);
+            __m512d dz = _mm512_sub_pd(jz, iz);
+
+            __m512d dist_sq = _mm512_fmadd_pd(dx, dx, _mm512_fmadd_pd(dy, dy, _mm512_mul_pd(dz, dz)));
+            __m512d dist = _mm512_sqrt_pd(_mm512_add_pd(dist_sq, eps_vec));
+
+
+            __m512d force = _mm512_div_pd(_mm512_mul_pd(G_vec, mass), _mm512_mul_pd(dist_sq, dist));
+
+            ax_vec = _mm512_fmadd_pd(force, dx, ax_vec);
+            ay_vec = _mm512_fmadd_pd(force, dy, ay_vec);
+            az_vec = _mm512_fmadd_pd(force, dz, az_vec);
+        }
+        // Devolvemos los resultados a memoria
+        double temp_ax[8], temp_ay[8], temp_az[8];
+        _mm512_storeu_pd(temp_ax, ax_vec);
+        _mm512_storeu_pd(temp_ay, ay_vec);
+        _mm512_storeu_pd(temp_az, az_vec);
+
+        for (int k = 0; k < 8 && i + k < N; k++) {
+            ax[i + k] += temp_ax[k];
+            ay[i + k] += temp_ay[k];
+            az[i + k] += temp_az[k];
+        }
+    }
+}
+#endif
 // Función principal de simulación
 void simulate(Star *estrellas, const int N) {
-    struct timeval start,end;
-    double *ax = malloc(N*sizeof(double));
-    double *ay = malloc(N*sizeof(double));
-    double *az = malloc(N*sizeof(double));
+    struct timeval start, end;
+    double *ax = malloc(N * sizeof(double));
+    double *ay = malloc(N * sizeof(double));
+    double *az = malloc(N * sizeof(double));
     gettimeofday(&start, NULL);
     for (int step = 0; step < STEPS; step++) {
-        compute_acceleration(estrellas, ax, ay, az, N);
+#ifdef AVX_512
+        compute_aceleration_avx512(estrellas, ax, ay, az, N);
+#else
+        compute_aceleration(estrellas, ax, ay, az, N);
+#endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso
             estrellas[i].V[0] += 0.5 * DT * ax[i];
@@ -197,19 +254,23 @@ void simulate(Star *estrellas, const int N) {
             estrellas[i].C[1] += estrellas[i].V[1] * DT;
             estrellas[i].C[2] += estrellas[i].V[2] * DT;
         }
-        compute_acceleration(estrellas, ax, ay, az, N);
+#ifdef AVX_512
+        compute_aceleration_avx512(estrellas, ax, ay, az, N);
+#else
+        compute_aceleration(estrellas, ax, ay, az, N);
+#endif
         for (int i = 0; i < N; i++) {
             // Completar actualización de velocidad
             estrellas[i].V[0] += 0.5 * DT * ax[i];
             estrellas[i].V[1] += 0.5 * DT * ay[i];
             estrellas[i].V[2] += 0.5 * DT * az[i];
         }
-        printf("Paso %d realizado\n", step+1);
+        printf("Paso %d realizado\n", step + 1);
         fflush(stdout);
     }
     gettimeofday(&end, NULL);
     double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
-    printf("Simuladas %d estrellas en %.2f segundos\n",N,seconds);
+    printf("Simuladas %d estrellas en %.2f segundos\n", N, seconds);
     fflush(stdout);
     free(ax);
     free(ay);
@@ -229,14 +290,14 @@ double calcular_distancia(double paralaje) {
     if (paralaje > 0.1) {
         return 1 / paralaje;
     }
-    if (paralaje<0.1 && paralaje<0) {
-        return 10.0;  // Paralaje muy pequeña, usamos estimación aproximada
+    if (paralaje < 0.1 && paralaje < 0) {
+        return 10.0; // Paralaje muy pequeña, usamos estimación aproximada
     }
-    return 4.0;  // Valor bayesiano promedio basado en Bailer-Jones (2018)
+    return 4.0; // Valor bayesiano promedio basado en Bailer-Jones (2018)
 }
 
 void complete_data(Star *estrellas, int N) {
-    struct timeval start,end;
+    struct timeval start, end;
     // Matriz de transformación ecuatorial a galáctico
     const double R[3][3] = {
         {-0.05487556, -0.87343709, -0.48383502},
@@ -261,18 +322,20 @@ void complete_data(Star *estrellas, int N) {
         double Z_E = sin_dec;
         // Transformación a coordenadas galácticas cartesianas
         for (int j = 0; j < 3; ++j) {
-            estrellas[i].C[j] = (R[j][0] * X_E + R[j][1] * Y_E + R[j][2] * Z_E)*d*1000;
+            estrellas[i].C[j] = (R[j][0] * X_E + R[j][1] * Y_E + R[j][2] * Z_E) * d * 1000;
         }
         /***Si no se incluye la velocidad radial se realiza una estimación***/
         if (estrellas[i].radial_velocity == 0) {
-            double C[3] = {estrellas[i].C[0], estrellas[i].C[1],
-                           estrellas[i].C[2]}; //variable para facilitar escritura
+            double C[3] = {
+                estrellas[i].C[0], estrellas[i].C[1],
+                estrellas[i].C[2]
+            }; //variable para facilitar escritura
             double V[3];
             // Matriz de transformación de proper motion en RA DEC a vx, vy, vz
             double T[3][2] = {
-                    {-sin_ra, -cos_ra * sin_dec},
-                    {cos_ra,  -sin_ra * sin_dec},
-                    {0,            cos_dec}
+                {-sin_ra, -cos_ra * sin_dec},
+                {cos_ra, -sin_ra * sin_dec},
+                {0, cos_dec}
             };
             // Multiplicación de matriz por vector
             for (int j = 0; j < 3; j++) {
@@ -299,14 +362,14 @@ void complete_data(Star *estrellas, int N) {
 
         // Vector de velocidad en el sistema ecuatorial
         double Vr_eq[3] = {
-                estrellas[i].radial_velocity * X_E - Vt_ra * sin_ra - Vt_dec * sin_dec * cos_ra,
-                estrellas[i].radial_velocity * Y_E + Vt_ra * cos_ra - Vt_dec * sin_dec * sin_ra,
-                estrellas[i].radial_velocity * Z_E + Vt_dec * cos_dec
+            estrellas[i].radial_velocity * X_E - Vt_ra * sin_ra - Vt_dec * sin_dec * cos_ra,
+            estrellas[i].radial_velocity * Y_E + Vt_ra * cos_ra - Vt_dec * sin_dec * sin_ra,
+            estrellas[i].radial_velocity * Z_E + Vt_dec * cos_dec
         };
 
         // Multiplicar la matriz de transformación por el vector de velocidad
         for (int j = 0; j < 3; ++j) {
-            estrellas[i].V[j] = (R[j][0] * Vr_eq[0] + R[j][1] * Vr_eq[1] + R[j][2] * Vr_eq[2])/SIGMA;
+            estrellas[i].V[j] = (R[j][0] * Vr_eq[0] + R[j][1] * Vr_eq[1] + R[j][2] * Vr_eq[2]) / SIGMA;
         }
         /*** Paso 3: calcular masa ***/
         // Calcular magnitud absoluta M_G
@@ -338,11 +401,12 @@ void complete_data(Star *estrellas, int N) {
     }
     gettimeofday(&end, NULL);
     double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
-    printf("Completados datos de %d estrellas en %lf segundos\n",N, seconds);
+    printf("Completados datos de %d estrellas en %lf segundos\n", N, seconds);
 }
 
 void print_estrellas(Star *estrellas) {
-    for (int i = 300000; i < 301000; i++) {//Se escogen estrellas del medio para no ver siempre las mismas
+    for (int i = 300000; i < 301000; i++) {
+        //Se escogen estrellas del medio para no ver siempre las mismas
         printf("------------------------------------------------------------\n");
         printf("ID: %lu\n", estrellas[i].id);
         printf("RA: %.4f   DEC: %.4f   Parallax: %.4f   Radial Velocity: %.4f\n",
@@ -359,15 +423,15 @@ void print_estrellas(Star *estrellas) {
 
 int main() {
     Star *estrellas = NULL;
-    int num_estrellas = getstarsfromfile("reducidos",&estrellas);
+    int num_estrellas = getstarsfromfile("reducidos", &estrellas);
     if (num_estrellas < 0) {
         perror("No se encontro ninguna estrella");
     }
-    complete_data(estrellas,num_estrellas);
+    complete_data(estrellas, num_estrellas);
     //print_estrellas(estrellas);
-    for (int i = 1000; i <= 100000; i*=10) {
-        simulate(estrellas,i);
+    for (int i = 1000; i <= 10000; i *= 10) {
+        simulate(estrellas, i);
     }
-    free(estrellas);  // Liberar memoria
+    free(estrellas); // Liberar memoria
     return 0;
 }
