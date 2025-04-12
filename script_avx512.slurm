@@ -9,6 +9,6 @@
 # Cargar módulos (si es necesario)
 module load gnu11/11.2.1
 # Ejecutar el programa
-make AVX512=1
+make AVX_512=1
 chmod u+x TFG_PRA
 ./TFG_PRA pruebas
