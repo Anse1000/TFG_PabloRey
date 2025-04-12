@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH -J test_cuda          # Nombre del trabajo
-#SBATCH -t 10:00:00           # Tiempo máximo de ejecución (2 horas)
-#SBATCH -o test_cuda.out      # Archivo de salida estándar
-#SBATCH --mem=50000           # Memoria solicitada (en MB)
+#SBATCH -J test_cuda
+#SBATCH -t 10:00:00
+#SBATCH -o test_cuda.out
+#SBATCH --mem=50000
 #SBATCH --gres=gpu:T4:1
 #SBATCH --mail-type=END,TIME_LIMIT_90
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
