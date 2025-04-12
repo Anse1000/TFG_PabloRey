@@ -1,5 +1,6 @@
 #include "simulation.h"
 
+
 //Funcion de cómputo de aceleración
 void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
     for (int i = 0; i < N; i++) {
@@ -81,6 +82,8 @@ void simulate(Star *estrellas, const int N) {
     for (int step = 0; step < STEPS; step++) {
 #ifdef AVX_512
         compute_aceleration_avx512(estrellas, ax, ay, az, N);
+#elif CUDA
+        compute_aceleration_CUDA(estrellas, ax, ay, az, N);
 #else
         compute_aceleration(estrellas, ax, ay, az, N);
 #endif
@@ -97,6 +100,8 @@ void simulate(Star *estrellas, const int N) {
         }
 #ifdef AVX_512
         compute_aceleration_avx512(estrellas, ax, ay, az, N);
+#elif CUDA
+        compute_aceleration_CUDA(estrellas, ax, ay, az, N);
 #else
         compute_aceleration(estrellas, ax, ay, az, N);
 #endif

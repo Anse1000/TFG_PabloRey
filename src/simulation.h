@@ -4,5 +4,8 @@
 #ifdef AVX_512
 #include <immintrin.h>
 #endif
-void simulate(Star *estrellas, const int N);
+#ifdef CUDA
+#include "cuda_functions.h"
+#endif
+void simulate(Star *estrellas, int N);
 #endif //SIMULATION_H

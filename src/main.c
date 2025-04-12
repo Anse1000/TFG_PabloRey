@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
     }
     complete_data(estrellas, num_estrellas);
     //print_estrellas(estrellas);
-    for (int i = 1000; i <= 10000; i *= 10) {
+    for (int i = 1000; i <= 1000000; i *= 10) {
         simulate(estrellas, i);
     }
     free(estrellas); // Liberar memoria
