@@ -63,7 +63,7 @@ endif
 
 # Limpiar archivos generados
 clean:
-	rm -f $(EXEC) *.o
+	rm -f $(EXEC) *.o *.out *.txt
 
 
 

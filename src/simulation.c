@@ -1,6 +1,5 @@
 #include "simulation.h"
 
-
 //Funcion de cómputo de aceleración
 void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
     for (int i = 0; i < N; i++) {
@@ -12,7 +11,7 @@ void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, in
                 double dy = estrellas[j].C[1] - estrellas[i].C[1];
                 double dz = estrellas[j].C[2] - estrellas[i].C[2];
                 double dist_sq = dx * dx + dy * dy + dz * dz;
-                double dist = sqrt(dist_sq) + 1e-10; // Evitar división por 0
+                double dist = sqrt(dist_sq);
                 //calcular fuerza aplicada a la estrella
                 double force = -G * estrellas[j].mass / (dist_sq * dist);
                 ax[i] += force * dx;
@@ -25,9 +24,7 @@ void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, in
 
 #ifdef AVX_512
 void compute_aceleration_avx512(Star *estrellas, double *ax, double *ay, double *az, int N) {
-    const double epsilon = 1e-10; // Para evitar división por cero (al paralelizar no deberia ser necesario...)
-    const __m512d G_vec = _mm512_set1_pd(G); // Almacenamos G
-    const __m512d eps_vec = _mm512_set1_pd(epsilon); // Almacenamos Epsilon
+    const __m512d G_vec = _mm512_set1_pd(-G); // Almacenamos G
     for (int i = 0; i < N; i++) {
         //inicializamos vectores
         __m512d ax_vec = _mm512_setzero_pd();
@@ -48,7 +45,7 @@ void compute_aceleration_avx512(Star *estrellas, double *ax, double *ay, double 
             __m512d dz = _mm512_sub_pd(jz, iz);
 
             __m512d dist_sq = _mm512_fmadd_pd(dx, dx, _mm512_fmadd_pd(dy, dy, _mm512_mul_pd(dz, dz)));
-            __m512d dist = _mm512_sqrt_pd(_mm512_add_pd(dist_sq, eps_vec));
+            __m512d dist = _mm512_sqrt_pd(dist_sq);
 
 
             __m512d force = _mm512_div_pd(_mm512_mul_pd(G_vec, mass), _mm512_mul_pd(dist_sq, dist));
@@ -86,6 +83,7 @@ void simulate(Star *estrellas, const int N) {
         compute_aceleration_CUDA(estrellas, ax, ay, az, N);
 #else
         compute_aceleration(estrellas, ax, ay, az, N);
+
 #endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso

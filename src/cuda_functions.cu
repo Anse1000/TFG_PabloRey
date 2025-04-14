@@ -3,7 +3,8 @@
 
 #define BLOCK_SIZE 256
 
-__global__ void cuda_kernel(Star *estrellas, double *ax, double *ay, double *az, int N) {
+
+__global__ void cuda_kernel(const Star *estrellas, double *ax, double *ay, double *az, int N) {
     __shared__ Star sh_stars[BLOCK_SIZE];
 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -21,23 +22,24 @@ __global__ void cuda_kernel(Star *estrellas, double *ax, double *ay, double *az,
         }
         __syncthreads();
 
+        #pragma unroll
         for (int k = 0; k < BLOCK_SIZE; k++) {
-            if (tile * BLOCK_SIZE + k >= N || i == tile * BLOCK_SIZE + k) continue;
+            int j_global = tile * BLOCK_SIZE + k;
+            if (j_global >= N || j_global == i) continue;
 
             double dx = sh_stars[k].C[0] - Ci_x;
             double dy = sh_stars[k].C[1] - Ci_y;
             double dz = sh_stars[k].C[2] - Ci_z;
             double dist_sq = dx * dx + dy * dy + dz * dz;
-            double dist = sqrt(dist_sq) + 1e-10;
-            double force = G * sh_stars[k].mass / (dist_sq * dist);
+
+            double inv_dist = rsqrt(dist_sq);
+            double force = -G * sh_stars[k].mass * inv_dist * inv_dist * inv_dist;
 
             ax_i += force * dx;
             ay_i += force * dy;
             az_i += force * dz;
         }
-        __syncthreads();
     }
-
     ax[i] = ax_i;
     ay[i] = ay_i;
     az[i] = az_i;
@@ -46,6 +48,7 @@ __global__ void cuda_kernel(Star *estrellas, double *ax, double *ay, double *az,
 extern "C" void compute_aceleration_CUDA(Star *estrellas, double *ax, double *ay, double *az, int N) {
     Star *d_estrellas;
     double *d_ax, *d_ay, *d_az;
+
     cudaMalloc(&d_estrellas, N * sizeof(Star));
     cudaMalloc(&d_ax, N * sizeof(double));
     cudaMalloc(&d_ay, N * sizeof(double));
@@ -54,9 +57,13 @@ extern "C" void compute_aceleration_CUDA(Star *estrellas, double *ax, double *ay
     cudaMemcpy(d_estrellas, estrellas, N * sizeof(Star), cudaMemcpyHostToDevice);
 
     int numBlocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
     cuda_kernel<<<numBlocks, BLOCK_SIZE>>>(d_estrellas, d_ax, d_ay, d_az, N);
-    cudaDeviceSynchronize();
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("CUDA kernel error: %s\n", cudaGetErrorString(err));
+        return;
+    }
 
     cudaMemcpy(ax, d_ax, N * sizeof(double), cudaMemcpyDeviceToHost);
     cudaMemcpy(ay, d_ay, N * sizeof(double), cudaMemcpyDeviceToHost);
@@ -67,3 +74,5 @@ extern "C" void compute_aceleration_CUDA(Star *estrellas, double *ax, double *ay
     cudaFree(d_ay);
     cudaFree(d_az);
 }
+
+

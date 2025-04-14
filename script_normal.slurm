@@ -5,6 +5,7 @@
 #SBATCH --mem=50000
 #SBATCH --mail-type=END,TIME_LIMIT_90
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
+#SBATCH --partition=compute3
 
 # Cargar módulos (si es necesario)
 module load gnu11/11.2.1
