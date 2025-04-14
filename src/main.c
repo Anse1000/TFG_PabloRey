@@ -130,9 +130,9 @@ void print_estrellas(Star *estrellas) {
                estrellas[i].ra, estrellas[i].dec, estrellas[i].parallax, estrellas[i].radial_velocity);
         printf("Mean G: %.4f   Color: %.4f   Mass: %.4f\n",
                estrellas[i].mean_g, estrellas[i].color, estrellas[i].mass);
-        printf("Position (X, Y, Z):   (%.4f, %.4f, %.4f)\n",
+        printf("Position (X, Y, Z):   (%.20lf, %.20lf, %.20lf)\n",
                estrellas[i].C[0], estrellas[i].C[1], estrellas[i].C[2]);
-        printf("Velocity (Vx, Vy, Vz): (%.20f, %.20f, %.20f)\n",
+        printf("Velocity (Vx, Vy, Vz): (%.20lf, %.20lf, %.20lf)\n",
                estrellas[i].V[0], estrellas[i].V[1], estrellas[i].V[2]);
         printf("------------------------------------------------------------\n");
     }
@@ -149,11 +149,11 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
     }
     complete_data(estrellas, num_estrellas);
-    simulate(estrellas,1000000);
+    //simulate(estrellas,1000000);
     //print_estrellas(estrellas);
-    /*for (int i = 1000; i <= 1000000; i *= 10) {
+    for (int i = 1000; i <= 1000000; i *= 10) {
         simulate(estrellas, i);
-    }*/
+    }
     free(estrellas); // Liberar memoria
     return 0;
 }

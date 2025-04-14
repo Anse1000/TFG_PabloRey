@@ -125,6 +125,6 @@ void simulate(Star *estrellas, const int N) {
         exit(1);
     }
     for (int i = 0; i < N; i++) {
-        fprintf(file, "X: %.6f Y = %.6f, Z = %.6f\n", estrellas[i].C[0], estrellas[i].C[1], estrellas[i].C[2]);
+        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n",estrellas[i].id ,estrellas[i].C[0], estrellas[i].C[1], estrellas[i].C[2]);
     }
 }
