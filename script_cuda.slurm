@@ -4,8 +4,6 @@
 #SBATCH -o test_cuda.out
 #SBATCH --mem=50000
 #SBATCH --gres=gpu:T4:1
-#SBATCH --mail-type=END,TIME_LIMIT_90
-#SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
 # Cargar módulos (si es necesario)
 module load gnu11/11.2.1

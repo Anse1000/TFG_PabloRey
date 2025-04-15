@@ -149,11 +149,11 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
     }
     complete_data(estrellas, num_estrellas);
-    //simulate(estrellas,1000000);
-    //print_estrellas(estrellas);
-    for (int i = 1000; i <= 1000000; i *= 10) {
-        simulate(estrellas, i);
-    }
+    simulate(estrellas,1000);
+    print_estrellas(estrellas);
+    //for (int i = 1000; i <= 1000000; i *= 10) {
+    //    simulate(estrellas, i);
+    //}
     free(estrellas); // Liberar memoria
     return 0;
 }
