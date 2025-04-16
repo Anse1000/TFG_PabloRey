@@ -4,9 +4,10 @@
 #SBATCH -o test_avx.out
 #SBATCH --mem=50000
 #SBATCH --partition=compute3
-# Cargar módulos (si es necesario)
+
+# Cargar módulos
 module load gnu11/11.2.1
-# Ejecutar el programa
-make AVX_512=1
-chmod u+x TFG_PRA
-./TFG_PRA pruebas
+module load cmake/3.25.2
+# Compilar el programa
+mkdir -p build && cd build && cmake .. -DENABLE_AVX512=ON && cmake --build .
+./TFG_PRA ../pruebas
