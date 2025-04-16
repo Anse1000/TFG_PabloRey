@@ -7,7 +7,7 @@
 
 # Cargar módulos (si es necesario)
 module load gnu11/11.2.1
-# Ejecutar el programa
-make
-chmod u+x TFG_PRA
-./TFG_PRA pruebas
+module load cmake/3.25.2
+# Compilar el programa
+mkdir -p build && cd build && cmake .. && cmake --build .
+./TFG_PRA ../pruebas

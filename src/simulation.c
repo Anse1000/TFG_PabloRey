@@ -62,7 +62,6 @@ void compute_aceleration_avx512(Star *estrellas, double *ax, double *ay, double 
 
             // Calcular distancia
             __m512d dist_sq = _mm512_fmadd_pd(dx, dx, _mm512_fmadd_pd(dy, dy, _mm512_mul_pd(dz, dz)));
-            dist_sq = _mm512_add_pd(dist_sq, epsilon);
             __m512d dist = _mm512_sqrt_pd(dist_sq);
 
             // Crear máscara para i != j
