@@ -13,144 +13,125 @@ double calcular_distancia(double paralaje) {
     return 4.0; // Valor bayesiano promedio basado en Bailer-Jones (2018)
 }
 
-void complete_data(Star *estrellas, int N) {
+void complete_data(Star *stars) {
     struct timeval start, end;
-    // Matriz de transformación ecuatorial a galáctico
+
     const double R[3][3] = {
         {-0.05487556, -0.87343709, -0.48383502},
         {+0.49410943, -0.44482963, +0.74698225},
         {-0.86766615, -0.19807637, +0.45598380}
     };
+
     gettimeofday(&start, NULL);
-    for (int i = 0; i < N; i++) {
-        double d = calcular_distancia(estrellas[i].parallax);
-        // Convertir grados a radianes
-        double ra_rad = estrellas[i].ra * (M_PI / 180.0);
-        double dec_rad = estrellas[i].dec * (M_PI / 180.0);
-        //Precálculos para mejorar eficiencia
-        double cos_ra = cos(ra_rad);
-        double sin_ra = sin(ra_rad);
-        double cos_dec = cos(dec_rad);
-        double sin_dec = sin(dec_rad);
-        /***Paso 1: Coordenadas galácticas X,Y,Z almacenadas en estrella->C ***/
-        //Convertir a coordenadas cartesianas ecuatoriales
+
+    for (int i = 0; i < stars->size; i++) {
+        double d = calcular_distancia(stars->parallax[i]);
+
+        double ra_rad = stars->ra[i] * (M_PI / 180.0);
+        double dec_rad = stars->dec[i] * (M_PI / 180.0);
+
+        double cos_ra = cos(ra_rad), sin_ra = sin(ra_rad);
+        double cos_dec = cos(dec_rad), sin_dec = sin(dec_rad);
+
         double X_E = cos_dec * cos_ra;
         double Y_E = cos_dec * sin_ra;
         double Z_E = sin_dec;
-        // Transformación a coordenadas galácticas cartesianas
-        for (int j = 0; j < 3; ++j) {
-            estrellas[i].C[j] = (R[j][0] * X_E + R[j][1] * Y_E + R[j][2] * Z_E) * d * 1000;
-        }
-        /***Si no se incluye la velocidad radial se realiza una estimación***/
-        if (estrellas[i].radial_velocity == 0) {
-            double C[3] = {
-                estrellas[i].C[0], estrellas[i].C[1],
-                estrellas[i].C[2]
-            }; //variable para facilitar escritura
+
+        stars->Cx[i] = (R[0][0] * X_E + R[0][1] * Y_E + R[0][2] * Z_E) * d * 1000;
+        stars->Cy[i] = (R[1][0] * X_E + R[1][1] * Y_E + R[1][2] * Z_E) * d * 1000;
+        stars->Cz[i] = (R[2][0] * X_E + R[2][1] * Y_E + R[2][2] * Z_E) * d * 1000;
+
+        if (stars->radial_velocity[i] == 0) {
+            double C[3] = {stars->Cx[i], stars->Cy[i], stars->Cz[i]};
             double V[3];
-            // Matriz de transformación de proper motion en RA DEC a vx, vy, vz
             double T[3][2] = {
                 {-sin_ra, -cos_ra * sin_dec},
                 {cos_ra, -sin_ra * sin_dec},
                 {0, cos_dec}
             };
-            // Multiplicación de matriz por vector
+
             for (int j = 0; j < 3; j++) {
-                V[j] = KAPPA * d * (T[j][0] * estrellas[i].pmra + T[j][1] * estrellas[i].pmdec);
+                V[j] = KAPPA * d * (T[j][0] * stars->pmra[i] + T[j][1] * stars->pmdec[i]);
             }
-            // Estimación de la velocidad radial
-            double V_radial_sin =
-                    (C[0] * V[0] + C[1] * V[1] + C[2] * V[2]) / sqrt(C[0] * C[0] + C[1] * C[1] + C[2] * C[2]);
-            // Distancia radial desde el centro galáctico
-            double R_gal = sqrt(C[0] * C[0] + C[1] * C[1]);
-            // Corregir por la rotación galáctica
+
+            double norm_C = sqrt(C[0]*C[0] + C[1]*C[1] + C[2]*C[2]);
+            double V_radial_sin = (C[0]*V[0] + C[1]*V[1] + C[2]*V[2]) / norm_C;
+
+            double R_gal = sqrt(C[0]*C[0] + C[1]*C[1]);
             double V_rot = (V_GAL * C[1]) / R_gal;
-            // Corregir por la velocidad del Sol
-            double V_sol_correccion =
-                    (U_SOL * C[0] + V_SOL * C[1] + W_SOL * C[2]) / sqrt(C[0] * C[0] + C[1] * C[1] + C[2] * C[2]);
+            double V_sol_corr = (U_SOL * C[0] + V_SOL * C[1] + W_SOL * C[2]) / norm_C;
 
-            // Resultado final con corrección por rotación y velocidad del Sol
-            estrellas[i].radial_velocity = V_radial_sin + V_rot - V_sol_correccion;
+            stars->radial_velocity[i] = V_radial_sin + V_rot - V_sol_corr;
         }
-        /*** Paso 2: conseguir vectores de velocidad completos Vx,Vy,Vz ***/
-        // Calcular velocidad tangencial
-        double Vt_ra = KAPPA * estrellas[i].pmra * d;
-        double Vt_dec = KAPPA * estrellas[i].pmdec * d;
 
-        // Vector de velocidad en el sistema ecuatorial
+        double Vt_ra = KAPPA * stars->pmra[i] * d;
+        double Vt_dec = KAPPA * stars->pmdec[i] * d;
+
         double Vr_eq[3] = {
-            estrellas[i].radial_velocity * X_E - Vt_ra * sin_ra - Vt_dec * sin_dec * cos_ra,
-            estrellas[i].radial_velocity * Y_E + Vt_ra * cos_ra - Vt_dec * sin_dec * sin_ra,
-            estrellas[i].radial_velocity * Z_E + Vt_dec * cos_dec
+            stars->radial_velocity[i] * X_E - Vt_ra * sin_ra - Vt_dec * sin_dec * cos_ra,
+            stars->radial_velocity[i] * Y_E + Vt_ra * cos_ra - Vt_dec * sin_dec * sin_ra,
+            stars->radial_velocity[i] * Z_E + Vt_dec * cos_dec
         };
 
-        // Multiplicar la matriz de transformación por el vector de velocidad
-        for (int j = 0; j < 3; ++j) {
-            estrellas[i].V[j] = (R[j][0] * Vr_eq[0] + R[j][1] * Vr_eq[1] + R[j][2] * Vr_eq[2]) / SIGMA;
-        }
-        /*** Paso 3: calcular masa ***/
-        // Calcular magnitud absoluta M_G
-        double M_G = estrellas[i].mean_g * log10(d) - 5.0;
+        stars->Vx[i] = (R[0][0] * Vr_eq[0] + R[0][1] * Vr_eq[1] + R[0][2] * Vr_eq[2]) / SIGMA;
+        stars->Vy[i] = (R[1][0] * Vr_eq[0] + R[1][1] * Vr_eq[1] + R[1][2] * Vr_eq[2]) / SIGMA;
+        stars->Vz[i] = (R[2][0] * Vr_eq[0] + R[2][1] * Vr_eq[1] + R[2][2] * Vr_eq[2]) / SIGMA;
 
-        // Calcular luminosidad relativa L/L_sun
+        double M_G = stars->mean_g[i] * log10(d) - 5.0;
         double L_Lsun = pow(10.0, (4.75 - M_G) / 2.5);
-
-        // Estimar la masa en función de la luminosidad y el color
+        double color = stars->color[i];
         double mass;
-        if (estrellas[i].color < 0.3) {
-            // Estrellas calientes (tipo O, B, A)
+
+        if (color < 0.3)
             mass = pow(L_Lsun, 1.0 / 3.8);
-        } else if (estrellas[i].color < 0.8) {
-            // Estrellas tipo F-G (similares al Sol)
+        else if (color < 0.8)
             mass = pow(L_Lsun, 1.0 / 4.0);
-        } else if (estrellas[i].color < 1.5) {
-            // Estrellas tipo K (más frías y menos masivas)
+        else if (color < 1.5)
             mass = pow(L_Lsun, 1.0 / 4.5);
-        } else {
-            // Enanas rojas (M)
+        else
             mass = pow(L_Lsun, 1.0 / 5.0);
-        }
-        // Corrección adicional basada en el color para mejorar precisión
-        mass *= 1.0 + 0.1 * (1.0 - exp(-pow(estrellas[i].color - 0.8, 2.0)));
 
-        //Masa basada en masas solares
-        estrellas[i].mass = mass;
+        mass *= 1.0 + 0.1 * (1.0 - exp(-pow(color - 0.8, 2.0)));
+        stars->mass[i] = mass;
     }
+
     gettimeofday(&end, NULL);
-    double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
-    printf("Completados datos de %d estrellas en %lf segundos\n", N, seconds);
+    double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
+    printf("Completados datos de %d estrellas en %lf segundos\n", stars->size, seconds);
 }
 
-void print_estrellas(Star *estrellas) {
-    for (int i = 300000; i < 301000; i++) {
-        //Se escogen estrellas del medio para no ver siempre las mismas
+void print_estrellas(Star *stars) {
+    for (int i = 300000; i < 301000 && i < stars->size; i++) {
         printf("------------------------------------------------------------\n");
-        printf("ID: %lu\n", estrellas[i].id);
+        printf("ID: %lu\n", stars->id[i]);
         printf("RA: %.4f   DEC: %.4f   Parallax: %.4f   Radial Velocity: %.4f\n",
-               estrellas[i].ra, estrellas[i].dec, estrellas[i].parallax, estrellas[i].radial_velocity);
+               stars->ra[i], stars->dec[i], stars->parallax[i], stars->radial_velocity[i]);
         printf("Mean G: %.4f   Color: %.4f   Mass: %.4f\n",
-               estrellas[i].mean_g, estrellas[i].color, estrellas[i].mass);
+               stars->mean_g[i], stars->color[i], stars->mass[i]);
         printf("Position (X, Y, Z):   (%.20lf, %.20lf, %.20lf)\n",
-               estrellas[i].C[0], estrellas[i].C[1], estrellas[i].C[2]);
+               stars->Cx[i], stars->Cy[i], stars->Cz[i]);
         printf("Velocity (Vx, Vy, Vz): (%.20lf, %.20lf, %.20lf)\n",
-               estrellas[i].V[0], estrellas[i].V[1], estrellas[i].V[2]);
+               stars->Vx[i], stars->Vy[i], stars->Vz[i]);
         printf("------------------------------------------------------------\n");
     }
 }
+
+
 
 int main(int argc, char *argv[]) {
-    Star *estrellas = NULL;
+    Star *estrellas = malloc(sizeof(Star));
+    memset(estrellas, 0, sizeof(Star));
     if (argc<2) {
         perror("No se ha introducido ningún archivo");
         return -1;
     }
-    int num_estrellas = getstarsfromfile(argv[1], &estrellas);
+    int num_estrellas = getstarsfromfile(argv[1], estrellas);
     if (num_estrellas < 0) {
         perror("No se encontro ninguna estrella");
     }
-    complete_data(estrellas, num_estrellas);
+    complete_data(estrellas);
     simulate(estrellas,1000);
-    print_estrellas(estrellas);
+    //print_estrellas(estrellas);
     //for (int i = 1000; i <= 1000000; i *= 10) {
     //    simulate(estrellas, i);
     //}

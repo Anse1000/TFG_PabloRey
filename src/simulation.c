@@ -1,19 +1,19 @@
 #include "simulation.h"
 
 //Funcion de cómputo de aceleración
-void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
+void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az,int N) {
     for (int i = 0; i < N; i++) {
         ax[i] = ay[i] = az[i] = 0.0;
         for (int j = 0; j < N; j++) {
             if (i != j) {
                 //calcular distancia a la estrella
-                double dx = estrellas[j].C[0] - estrellas[i].C[0];
-                double dy = estrellas[j].C[1] - estrellas[i].C[1];
-                double dz = estrellas[j].C[2] - estrellas[i].C[2];
+                double dx = estrellas->Cx[i] - estrellas->Cx[j];
+                double dy = estrellas->Cy[i] - estrellas->Cy[j];
+                double dz = estrellas->Cz[i] - estrellas->Cz[j];
                 double dist_sq = dx * dx + dy * dy + dz * dz;
                 double dist = sqrt(dist_sq);
                 //calcular fuerza aplicada a la estrella
-                double force = -G * estrellas[j].mass / (dist_sq * dist);
+                double force = -G * estrellas->mass[j] / (dist_sq * dist);
                 ax[i] += force * dx;
                 ay[i] += force * dy;
                 az[i] += force * dz;
@@ -23,69 +23,53 @@ void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, in
 }
 
 #ifdef AVX_512
-void compute_aceleration_avx512(Star *estrellas, double *ax, double *ay, double *az, int N) {
+void compute_aceleration_avx512(const Star *stars, double *ax, double *ay, double *az, int N) {
     const __m512d G_vec = _mm512_set1_pd(-G);
 
     for (int i = 0; i < N; i++) {
-        double ax_i = 0.0, ay_i = 0.0, az_i = 0.0;
-        // Posición de la estrella i
-        __m512d ix = _mm512_set1_pd(estrellas[i].C[0]);
-        __m512d iy = _mm512_set1_pd(estrellas[i].C[1]);
-        __m512d iz = _mm512_set1_pd(estrellas[i].C[2]);
+        __m512d xi = _mm512_set1_pd(stars->Cx[i]);
+        __m512d yi = _mm512_set1_pd(stars->Cy[i]);
+        __m512d zi = _mm512_set1_pd(stars->Cz[i]);
+
+        __m512d sum_ax = _mm512_setzero_pd();
+        __m512d sum_ay = _mm512_setzero_pd();
+        __m512d sum_az = _mm512_setzero_pd();
 
         for (int j = 0; j < N; j += 8) {
-            __mmask8 mask = (j + 7 < N) ? 0xFF : (1 << (N - j)) - 1;
+            // Cargar 8 elementos
+            __m512d xj = _mm512_load_pd(&stars->Cx[j]);
+            __m512d yj = _mm512_load_pd(&stars->Cy[j]);
+            __m512d zj = _mm512_load_pd(&stars->Cz[j]);
+            __m512d mj = _mm512_load_pd(&stars->mass[j]);
 
-            // Cargar posiciones y masas manualmente
-            double temp_jx[8], temp_jy[8], temp_jz[8];
-            float temp_mass[8];
-            int indices[8];
+            __m512d dx = _mm512_sub_pd(xi, xj);
+            __m512d dy = _mm512_sub_pd(yi, yj);
+            __m512d dz = _mm512_sub_pd(zi, zj);
 
-            for (int k = 0; k < 8 && (j + k) < N; k++) {
-                temp_jx[k] = estrellas[j + k].C[0];
-                temp_jy[k] = estrellas[j + k].C[1];
-                temp_jz[k] = estrellas[j + k].C[2];
-                temp_mass[k] = estrellas[j + k].mass;
-                indices[k] = j + k;
-            }
+            __m512d dist2 = _mm512_fmadd_pd(dx, dx, _mm512_fmadd_pd(dy, dy, _mm512_mul_pd(dz, dz)));
+            __m512d dist = _mm512_sqrt_pd(dist2);
+            __m512d dist3 = _mm512_mul_pd(dist2, dist);
 
-            __m512d jx = _mm512_maskz_loadu_pd(mask, temp_jx);
-            __m512d jy = _mm512_maskz_loadu_pd(mask, temp_jy);
-            __m512d jz = _mm512_maskz_loadu_pd(mask, temp_jz);
-            __m256 mass_f = _mm256_maskz_loadu_ps(mask, temp_mass);
-            __m512d mass = _mm512_cvtps_pd(mass_f);
-
-            // Calcular diferencias
-            __m512d dx = _mm512_sub_pd(jx, ix);
-            __m512d dy = _mm512_sub_pd(jy, iy);
-            __m512d dz = _mm512_sub_pd(jz, iz);
-
-            // Calcular distancia
-            __m512d dist_sq = _mm512_fmadd_pd(dx, dx, _mm512_fmadd_pd(dy, dy, _mm512_mul_pd(dz, dz)));
-            __m512d dist = _mm512_sqrt_pd(dist_sq);
+            // Fuerza = -G * m / r^3
+            __m512d inv = _mm512_div_pd(G_vec, dist3);
+            __m512d F = _mm512_mul_pd(inv, mj);
 
             // Crear máscara para i != j
-            __m256i index_vec = _mm256_maskz_loadu_epi32(mask, indices);
-            __m512i index64 = _mm512_cvtepi32_epi64(index_vec);
-            __mmask8 neq_mask = _mm512_cmpneq_epu64_mask(index64, _mm512_set1_epi64(i));
+            __mmask8 mask = _mm512_cmpneq_epi64_mask(
+                _mm512_set1_epi64(i),
+                _mm512_set_epi64(j+7, j+6, j+5, j+4, j+3, j+2, j+1, j+0)
+            );
 
-            // Calcular fuerza solo donde i != j
-            __m512d force = _mm512_maskz_div_pd(neq_mask,
-                                  _mm512_mul_pd(G_vec, mass),
-                                  _mm512_mul_pd(dist_sq, dist));
-
-            __m512d fx = _mm512_maskz_mul_pd(neq_mask, force, dx);
-            __m512d fy = _mm512_maskz_mul_pd(neq_mask, force, dy);
-            __m512d fz = _mm512_maskz_mul_pd(neq_mask, force, dz);
-
-            ax_i += _mm512_reduce_add_pd(fx);
-            ay_i += _mm512_reduce_add_pd(fy);
-            az_i += _mm512_reduce_add_pd(fz);
+            // sum += F * dX con máscara
+            sum_ax = _mm512_mask3_fmadd_pd(F, dx, sum_ax, mask);
+            sum_ay = _mm512_mask3_fmadd_pd(F, dy, sum_ay, mask);
+            sum_az = _mm512_mask3_fmadd_pd(F, dz, sum_az, mask);
         }
 
-        ax[i] += ax_i;
-        ay[i] += ay_i;
-        az[i] += az_i;
+        // Reducción horizontal para obtener el valor final
+        ax[i] = _mm512_reduce_add_pd(sum_ax);
+        ay[i] = _mm512_reduce_add_pd(sum_ay);
+        az[i] = _mm512_reduce_add_pd(sum_az);
     }
 }
 #endif
@@ -108,14 +92,14 @@ void simulate(Star *estrellas, const int N) {
 #endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso
-            estrellas[i].V[0] += 0.5 * DT * ax[i];
-            estrellas[i].V[1] += 0.5 * DT * ay[i];
-            estrellas[i].V[2] += 0.5 * DT * az[i];
+            estrellas->Vx[i] += 0.5 * DT * ax[i];
+            estrellas->Vy[i] += 0.5 * DT * ay[i];
+            estrellas->Vz[i] += 0.5 * DT * az[i];
 
             // Actualizar posición
-            estrellas[i].C[0] += estrellas[i].V[0] * DT;
-            estrellas[i].C[1] += estrellas[i].V[1] * DT;
-            estrellas[i].C[2] += estrellas[i].V[2] * DT;
+            estrellas->Cx[i] += estrellas->Vx[i] * DT;
+            estrellas->Cy[i] += estrellas->Vy[i] * DT;
+            estrellas->Cz[i] += estrellas->Vz[i] * DT;
         }
 #ifdef AVX_512
         compute_aceleration_avx512(estrellas, ax, ay, az, N);
@@ -126,9 +110,9 @@ void simulate(Star *estrellas, const int N) {
 #endif
         for (int i = 0; i < N; i++) {
             // Completar actualización de velocidad
-            estrellas[i].V[0] += 0.5 * DT * ax[i];
-            estrellas[i].V[1] += 0.5 * DT * ay[i];
-            estrellas[i].V[2] += 0.5 * DT * az[i];
+            estrellas->Vx[i] += 0.5 * DT * ax[i];
+            estrellas->Vy[i] += 0.5 * DT * ay[i];
+            estrellas->Vz[i] += 0.5 * DT * az[i];
         }
         printf("Paso %d realizado\n", step + 1);
         fflush(stdout);
@@ -146,6 +130,6 @@ void simulate(Star *estrellas, const int N) {
         exit(1);
     }
     for (int i = 0; i < N; i++) {
-        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n",estrellas[i].id ,estrellas[i].C[0], estrellas[i].C[1], estrellas[i].C[2]);
+        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n",estrellas->id[i] ,estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
     }
 }

@@ -15,6 +15,6 @@ typedef struct {
     int type;
 } FieldMap;
 
-int getstarsfromfile(char *dirname, Star **estrellas);
+int getstarsfromfile(char *dirname, Star *estrellas);
 
 #endif // FILE_HANDLER_H
