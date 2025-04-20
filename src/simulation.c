@@ -14,9 +14,9 @@ void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az,int
                 double dist = sqrt(dist_sq);
                 //calcular fuerza aplicada a la estrella
                 double force = -G * estrellas->mass[j] / (dist_sq * dist);
-                ax[i] += force * dx;
-                ay[i] += force * dy;
-                az[i] += force * dz;
+                ax[i] = fma(force, dx, ax[i]);
+                ay[i] = fma(force, dy, ay[i]);
+                az[i] = fma(force, dz, az[i]);
             }
         }
     }
@@ -77,6 +77,7 @@ void compute_aceleration_avx512(const Star *stars, double *ax, double *ay, doubl
 // Función principal de simulación
 void simulate(Star *estrellas, const int N) {
     struct timeval start, end;
+    double DT2 = 0.5 * DT;
     double *ax = malloc(N * sizeof(double));
     double *ay = malloc(N * sizeof(double));
     double *az = malloc(N * sizeof(double));
@@ -92,14 +93,13 @@ void simulate(Star *estrellas, const int N) {
 #endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso
-            estrellas->Vx[i] += 0.5 * DT * ax[i];
-            estrellas->Vy[i] += 0.5 * DT * ay[i];
-            estrellas->Vz[i] += 0.5 * DT * az[i];
-
+            estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
+            estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
+            estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
             // Actualizar posición
-            estrellas->Cx[i] += estrellas->Vx[i] * DT;
-            estrellas->Cy[i] += estrellas->Vy[i] * DT;
-            estrellas->Cz[i] += estrellas->Vz[i] * DT;
+            estrellas->Cx[i] = fma(DT, estrellas->Vx[i], estrellas->Cx[i]);
+            estrellas->Cy[i] = fma(DT, estrellas->Vy[i], estrellas->Cy[i]);
+            estrellas->Cz[i] = fma(DT,estrellas->Vz[i], estrellas->Cz[i]);
         }
 #ifdef AVX_512
         compute_aceleration_avx512(estrellas, ax, ay, az, N);
@@ -110,9 +110,9 @@ void simulate(Star *estrellas, const int N) {
 #endif
         for (int i = 0; i < N; i++) {
             // Completar actualización de velocidad
-            estrellas->Vx[i] += 0.5 * DT * ax[i];
-            estrellas->Vy[i] += 0.5 * DT * ay[i];
-            estrellas->Vz[i] += 0.5 * DT * az[i];
+            estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
+            estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
+            estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
         printf("Paso %d realizado\n", step + 1);
         fflush(stdout);

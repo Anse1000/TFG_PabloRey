@@ -19,7 +19,6 @@ __global__ void cuda_kernel(double *Cx,double *Cy,double *Cz,double *mass, doubl
                 double dz = Cz[i] - Cz[j];
                 double dist_sq = dx * dx + dy * dy + dz * dz;
                 double inv_dist = rsqrt(dist_sq);
-
                 // Calcular fuerza aplicada a la estrella
                 double force = -G * mass[j] * inv_dist * inv_dist * inv_dist;
                 ax[i] = fma(force, dx, ax[i]);
@@ -34,19 +33,27 @@ __global__ void cuda_kernel(double *Cx,double *Cy,double *Cz,double *mass, doubl
 extern "C" void compute_aceleration_CUDA(Star *stars, double *ax, double *ay, double *az, int N) {
     double *d_Cx, *d_Cy, *d_Cz, *d_mass;
     double *d_ax, *d_ay, *d_az;
+	const size_t size = N * sizeof(double);
 
-    cudaMalloc(&d_Cx, N * sizeof(double));
-    cudaMalloc(&d_Cy, N * sizeof(double));
-    cudaMalloc(&d_Cz, N * sizeof(double));
-    cudaMalloc(&d_mass, N * sizeof(double));
-    cudaMalloc(&d_ax, N * sizeof(double));
-    cudaMalloc(&d_ay, N * sizeof(double));
-    cudaMalloc(&d_az, N * sizeof(double));
 
-    cudaMemcpy(d_Cx, stars->Cx, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_Cy, stars->Cy, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_Cz, stars->Cz, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_mass, stars->mass, N * sizeof(double), cudaMemcpyHostToDevice);
+	// Usar streams para solapar transferencias
+    cudaStream_t stream1, stream2;
+    cudaStreamCreate(&stream1);
+    cudaStreamCreate(&stream2);
+
+    cudaMalloc(&d_Cx, size);
+    cudaMalloc(&d_Cy, size);
+    cudaMalloc(&d_Cz, size);
+    cudaMalloc(&d_mass, size);
+    cudaMalloc(&d_ax, size);
+    cudaMalloc(&d_ay, size);
+    cudaMalloc(&d_az, size);
+
+	// Transferir datos usando streams
+    cudaMemcpyAsync(d_Cx, stars->Cx, size, cudaMemcpyHostToDevice, stream1);
+    cudaMemcpyAsync(d_Cy, stars->Cy, size, cudaMemcpyHostToDevice, stream1);
+    cudaMemcpyAsync(d_Cz, stars->Cz, size, cudaMemcpyHostToDevice, stream2);
+    cudaMemcpyAsync(d_mass, stars->mass, size, cudaMemcpyHostToDevice, stream2);
 
     int numBlocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
     cuda_kernel<<<numBlocks, BLOCK_SIZE>>>(d_Cx, d_Cy, d_Cz, d_mass, d_ax, d_ay, d_az, N);
@@ -57,9 +64,17 @@ extern "C" void compute_aceleration_CUDA(Star *stars, double *ax, double *ay, do
         return;
     }
 
-    cudaMemcpy(ax, d_ax, N * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaMemcpy(ay, d_ay, N * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaMemcpy(az, d_az, N * sizeof(double), cudaMemcpyDeviceToHost);
+	// Transferir resultados de vuelta
+    cudaMemcpyAsync(ax, d_ax, size, cudaMemcpyDeviceToHost, stream1);
+    cudaMemcpyAsync(ay, d_ay, size, cudaMemcpyDeviceToHost, stream2);
+    cudaMemcpyAsync(az, d_az, size, cudaMemcpyDeviceToHost, stream2);
+
+    // Sincronizar y limpiar
+    cudaStreamSynchronize(stream1);
+    cudaStreamSynchronize(stream2);
+    cudaStreamDestroy(stream1);
+    cudaStreamDestroy(stream2);
+
 
     cudaFree(d_Cx);
     cudaFree(d_Cy);
