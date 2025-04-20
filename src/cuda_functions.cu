@@ -3,7 +3,6 @@
 
 #define BLOCK_SIZE 256
 
-
 __global__ void cuda_kernel(double *Cx,double *Cy,double *Cz,double *mass, double *ax, double *ay, double *az, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -23,9 +22,9 @@ __global__ void cuda_kernel(double *Cx,double *Cy,double *Cz,double *mass, doubl
 
                 // Calcular fuerza aplicada a la estrella
                 double force = -G * mass[j] * inv_dist * inv_dist * inv_dist;
-                ax[i] fma(force, dx, ax[i]);
-                ay[i] fma(force, dy, ay[i]);
-                az[i] fma(force, dz, az[i]);
+                ax[i] = fma(force, dx, ax[i]);
+                ay[i] = fma(force, dy, ay[i]);
+                az[i] = fma(force, dz, az[i]);
             }
         }
     }

@@ -128,13 +128,14 @@ int main(int argc, char *argv[]) {
     int num_estrellas = getstarsfromfile(argv[1], estrellas);
     if (num_estrellas < 0) {
         perror("No se encontro ninguna estrella");
+        return -1;
     }
     complete_data(estrellas);
-    simulate(estrellas,1000);
+    //simulate(estrellas,1000);
     //print_estrellas(estrellas);
-    //for (int i = 1000; i <= 1000000; i *= 10) {
-    //    simulate(estrellas, i);
-    //}
+    for (int i = 1000; i <= 1000000; i *= 10) {
+        simulate(estrellas, i);
+    }
     free(estrellas); // Liberar memoria
     return 0;
 }
