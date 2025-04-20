@@ -11,22 +11,22 @@ static void *safe_realloc(void *ptr, size_t size) {
 
 void realloc_stars(Star *stars) {
     stars->id = safe_realloc(stars->id,sizeof(long) * stars->capacity);
-    stars->ra = safe_realloc(stars->ra, sizeof(double) * stars->capacity);
-    stars->dec = safe_realloc(stars->dec, sizeof(double) * stars->capacity);
-    stars->parallax = safe_realloc(stars->parallax, sizeof(double) * stars->capacity);
-    stars->pmdec = safe_realloc(stars->pmdec, sizeof(double) * stars->capacity);
-    stars->pmra = safe_realloc(stars->pmra, sizeof(double) * stars->capacity);
-    stars->pmdec = safe_realloc(stars->pmdec, sizeof(double) * stars->capacity);
-    stars->radial_velocity = safe_realloc(stars->radial_velocity, sizeof(double) * stars->capacity);
+    stars->ra = safe_realloc(stars->ra, sizeof(float) * stars->capacity);
+    stars->dec = safe_realloc(stars->dec, sizeof(float) * stars->capacity);
+    stars->parallax = safe_realloc(stars->parallax, sizeof(float) * stars->capacity);
+    stars->pmdec = safe_realloc(stars->pmdec, sizeof(float) * stars->capacity);
+    stars->pmra = safe_realloc(stars->pmra, sizeof(float) * stars->capacity);
+    stars->pmdec = safe_realloc(stars->pmdec, sizeof(float) * stars->capacity);
+    stars->radial_velocity = safe_realloc(stars->radial_velocity, sizeof(float) * stars->capacity);
     stars->mean_g = safe_realloc(stars->mean_g, sizeof(float) * stars->capacity);
     stars->color = safe_realloc(stars->color, sizeof(float) * stars->capacity);
-    stars->Cx = safe_realloc(stars->Cx, sizeof(double) * stars->capacity);
-    stars->Cy = safe_realloc(stars->Cy, sizeof(double) * stars->capacity);
-    stars->Cz = safe_realloc(stars->Cz, sizeof(double) * stars->capacity);
-    stars->Vx = safe_realloc(stars->Vx, sizeof(double) * stars->capacity);
-    stars->Vy = safe_realloc(stars->Vy, sizeof(double) * stars->capacity);
-    stars->Vz = safe_realloc(stars->Vz, sizeof(double) * stars->capacity);
-    stars->mass = safe_realloc(stars->mass, sizeof(double) * stars->capacity);
+    stars->Cx = safe_realloc(stars->Cx, sizeof(float) * stars->capacity);
+    stars->Cy = safe_realloc(stars->Cy, sizeof(float) * stars->capacity);
+    stars->Cz = safe_realloc(stars->Cz, sizeof(float) * stars->capacity);
+    stars->Vx = safe_realloc(stars->Vx, sizeof(float) * stars->capacity);
+    stars->Vy = safe_realloc(stars->Vy, sizeof(float) * stars->capacity);
+    stars->Vz = safe_realloc(stars->Vz, sizeof(float) * stars->capacity);
+    stars->mass = safe_realloc(stars->mass, sizeof(float) * stars->capacity);
 }
 
 int read_file(char *filename, Star *stars) {
@@ -38,12 +38,12 @@ int read_file(char *filename, Star *stars) {
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == 's') continue;
 
-        char *tokens[21];
+        char *tokens[9];
         char *token = strtok(line, DELIMITER);
         int is_valid = 1;
         int i = 0;
 
-        while (token && i < 21) {
+        while (token && i < 9) {
             if ((i == 3 || i == 7 || i == 8) && token[0] == 'n') {
                 is_valid = 0;
                 break;
@@ -62,12 +62,12 @@ int read_file(char *filename, Star *stars) {
         int idx = stars->size++;
 
         stars->id[idx]               = strtoul(tokens[0], NULL, 10);
-        stars->ra[idx]               = strtod(tokens[1], NULL);
-        stars->dec[idx]              = strtod(tokens[2], NULL);
-        stars->parallax[idx]         = strtod(tokens[3], NULL);
-        stars->pmra[idx]             = strtod(tokens[4], NULL);
-        stars->pmdec[idx]            = strtod(tokens[5], NULL);
-        stars->radial_velocity[idx]  = strtod(tokens[6], NULL);
+        stars->ra[idx]               = strtof(tokens[1], NULL);
+        stars->dec[idx]              = strtof(tokens[2], NULL);
+        stars->parallax[idx]         = strtof(tokens[3], NULL);
+        stars->pmra[idx]             = strtof(tokens[4], NULL);
+        stars->pmdec[idx]            = strtof(tokens[5], NULL);
+        stars->radial_velocity[idx]  = strtof(tokens[6], NULL);
         stars->mean_g[idx]           = strtof(tokens[7], NULL);
         stars->color[idx]            = strtof(tokens[8], NULL);
     }

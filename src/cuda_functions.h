@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    void compute_aceleration_CUDA(Star *estrellas, double *ax, double *ay, double *az, int N);
+    void compute_aceleration_CUDA(Star *estrellas, float *ax, float *ay, float *az, int N);
 #ifdef __cplusplus
 }
 #endif

@@ -3,50 +3,49 @@
 
 #define BLOCK_SIZE 256
 
-__global__ void cuda_kernel(double *Cx,double *Cy,double *Cz,double *mass, double *ax, double *ay, double *az, int N) {
+__global__ void cuda_kernel(float *Cx, float *Cy, float *Cz, float *mass, float *ax, float *ay, float *az, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (i < N) {
-        ax[i] = 0.0;
-        ay[i] = 0.0;
-        az[i] = 0.0;
+        ax[i] = 0.0f;
+        ay[i] = 0.0f;
+        az[i] = 0.0f;
 
         for (int j = 0; j < N; j++) {
             if (i != j) {
                 // Calcular distancia a la estrella
-                double dx = Cx[i] - Cx[j];
-                double dy = Cy[i] - Cy[j];
-                double dz = Cz[i] - Cz[j];
-                double dist_sq = dx * dx + dy * dy + dz * dz;
-                double inv_dist = rsqrt(dist_sq);
+                float dx = Cx[i] - Cx[j];
+                float dy = Cy[i] - Cy[j];
+                float dz = Cz[i] - Cz[j];
+                float dist_sq = dx * dx + dy * dy + dz * dz;
+                float inv_dist = rsqrtf(dist_sq);
 
                 // Calcular fuerza aplicada a la estrella
-                double force = -G * mass[j] * inv_dist * inv_dist * inv_dist;
-                ax[i] = fma(force, dx, ax[i]);
-                ay[i] = fma(force, dy, ay[i]);
-                az[i] = fma(force, dz, az[i]);
+                float force = -G * mass[j] * inv_dist * inv_dist * inv_dist;
+                ax[i] = fmaf(force, dx, ax[i]);
+                ay[i] = fmaf(force, dy, ay[i]);
+                az[i] = fmaf(force, dz, az[i]);
             }
         }
     }
 }
 
+extern "C" void compute_aceleration_CUDA(Star *stars, float *ax, float *ay, float *az, int N) {
+    float *d_Cx, *d_Cy, *d_Cz, *d_mass;
+    float *d_ax, *d_ay, *d_az;
 
-extern "C" void compute_aceleration_CUDA(Star *stars, double *ax, double *ay, double *az, int N) {
-    double *d_Cx, *d_Cy, *d_Cz, *d_mass;
-    double *d_ax, *d_ay, *d_az;
+    cudaMalloc(&d_Cx, N * sizeof(float));
+    cudaMalloc(&d_Cy, N * sizeof(float));
+    cudaMalloc(&d_Cz, N * sizeof(float));
+    cudaMalloc(&d_mass, N * sizeof(float));
+    cudaMalloc(&d_ax, N * sizeof(float));
+    cudaMalloc(&d_ay, N * sizeof(float));
+    cudaMalloc(&d_az, N * sizeof(float));
 
-    cudaMalloc(&d_Cx, N * sizeof(double));
-    cudaMalloc(&d_Cy, N * sizeof(double));
-    cudaMalloc(&d_Cz, N * sizeof(double));
-    cudaMalloc(&d_mass, N * sizeof(double));
-    cudaMalloc(&d_ax, N * sizeof(double));
-    cudaMalloc(&d_ay, N * sizeof(double));
-    cudaMalloc(&d_az, N * sizeof(double));
-
-    cudaMemcpy(d_Cx, stars->Cx, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_Cy, stars->Cy, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_Cz, stars->Cz, N * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_mass, stars->mass, N * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_Cx, stars->Cx, N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_Cy, stars->Cy, N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_Cz, stars->Cz, N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_mass, stars->mass, N * sizeof(float), cudaMemcpyHostToDevice);
 
     int numBlocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
     cuda_kernel<<<numBlocks, BLOCK_SIZE>>>(d_Cx, d_Cy, d_Cz, d_mass, d_ax, d_ay, d_az, N);
@@ -57,9 +56,9 @@ extern "C" void compute_aceleration_CUDA(Star *stars, double *ax, double *ay, do
         return;
     }
 
-    cudaMemcpy(ax, d_ax, N * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaMemcpy(ay, d_ay, N * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaMemcpy(az, d_az, N * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ax, d_ax, N * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ay, d_ay, N * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(az, d_az, N * sizeof(float), cudaMemcpyDeviceToHost);
 
     cudaFree(d_Cx);
     cudaFree(d_Cy);
@@ -69,6 +68,3 @@ extern "C" void compute_aceleration_CUDA(Star *stars, double *ax, double *ay, do
     cudaFree(d_ay);
     cudaFree(d_az);
 }
-
-
-
