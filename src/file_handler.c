@@ -76,7 +76,7 @@ int read_file(char *filename, Star *stars) {
     return 0;
 }
 
-int getstarsfromfile(char *dirname, Star *stars) {
+int getstarsfromdir(char *dirname, Star *stars) {
     struct timeval start, end;
     char path[1000];
     struct dirent *filedir;
@@ -125,4 +125,28 @@ int getstarsfromfile(char *dirname, Star *stars) {
            (stars->capacity * sizeof(double) * 11 + stars->capacity * sizeof(float) * 2 + stars->capacity * sizeof(unsigned long)) / (1024.0 * 1024.0),
            seconds);
     return stars->size;
+}
+
+int get_files_list(char *dirname, char **files, int *num_files) {
+    struct dirent *filedir;
+    int count = 0;
+    char path[500];
+    DIR *dir = opendir(dirname);
+    if (dir == NULL) {
+        perror("No se pudo abrir el directorio");
+        return -1;
+    }
+    int dirname_length = strlen(dirname);
+    strcpy(files[count], dirname);
+    strcat(files[count], "/");
+    count++;
+    while ((filedir = readdir(dir)) != NULL) {
+        if (filedir->d_name[0] == '.') continue;
+        strcpy(path + dirname_length + 1, filedir->d_name);
+        files[count] = safe_realloc(files[count], strlen(path) + 1);
+        count++;
+    }
+    *num_files=count;
+    closedir(dir);
+    return 0;
 }

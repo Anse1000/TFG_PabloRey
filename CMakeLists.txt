@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(TFG_PRA C CXX)
-
+find_package(MPI REQUIRED)
 option(ENABLE_AVX512 "Enable AVX-512 optimization" OFF)
 option(ENABLE_CUDA "Enable CUDA support" OFF)
 
@@ -28,7 +28,7 @@ add_executable(TFG_PRA ${SRC} ${HEADERS})
 
 # Opciones comunes
 target_compile_options(TFG_PRA PRIVATE -O3 -Wall -Wextra)
-target_link_libraries(TFG_PRA PRIVATE m)  # Link a math
+target_link_libraries(TFG_PRA PRIVATE PUBLIC MPI::MPI_C m)  # Link a math
 
 # AVX-512
 if(ENABLE_AVX512)

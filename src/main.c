@@ -1,6 +1,7 @@
 #include "file_handler.h"
 #include "types.h"
 #include "simulation.h"
+#include <mpi.h>
 
 // Función para calcular la distancia considerando paralaje negativa o incierta
 double calcular_distancia(double paralaje) {
@@ -116,16 +117,34 @@ void print_estrellas(Star *stars) {
     }
 }
 
-
-
 int main(int argc, char *argv[]) {
+    int numprocs, rank;
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
-    if (argc<2) {
-        perror("No se ha introducido ningún archivo");
-        return -1;
+    MPI_Init(&argc, &argv);
+    char *files[500];
+    int num_files;
+    MPI_Datatype file;
+    MPI_Type_vector(500, 1, 4, MPI_FLOAT, &tipoCol);
+    MPI_Type_commit(&tipoCol);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+    if (!rank) {
+        if (argc<3) {
+            perror("No se ha introducido ningún archivo");
+            MPI_Finalize();
+            return -1;
+        }
+        char *entrydir = argv[1];
+        char *outputname = argv[2];
+        get_files_list(entrydir, files, &num_files);
+        MPI_Scatter(files, num_files/numprocs, MPI_CHAR, files, num_files, MPI_CHAR, 0, MPI_COMM_WORLD);
     }
-    int num_estrellas = getstarsfromfile(argv[1], estrellas);
+    else {
+
+    }
+
+    int num_estrellas = getstarsfromdir(argv[1], estrellas);
     if (num_estrellas < 0) {
         perror("No se encontro ninguna estrella");
         return -1;
