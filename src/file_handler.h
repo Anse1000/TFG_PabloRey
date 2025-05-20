@@ -2,6 +2,7 @@
 #define FILE_HANDLER_H
 #include "types.h"
 #include <dirent.h>
+#include <omp.h>
 
 #define MAX_LINE 2000
 #define DELIMITER ","
@@ -16,5 +17,6 @@ typedef struct {
 } FieldMap;
 
 int getstarsfromfile(char *dirname, Star *estrellas);
+void free_stars(Star *stars);
 
 #endif // FILE_HANDLER_H

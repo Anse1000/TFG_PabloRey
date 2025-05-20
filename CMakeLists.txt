@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
+
+# Configurar compiladores Intel antes de definir el proyecto
+set(CMAKE_C_COMPILER "icc")
+set(CMAKE_CXX_COMPILER "icpc")
+
 project(TFG_PRA C CXX)
 
 option(ENABLE_AVX512 "Enable AVX-512 optimization" OFF)
 option(ENABLE_CUDA "Enable CUDA support" OFF)
+
+find_package(OpenMP REQUIRED)
 
 # Archivos fuente base
 set(SRC
@@ -26,14 +33,46 @@ endif()
 # Crear el ejecutable
 add_executable(TFG_PRA ${SRC} ${HEADERS})
 
-# Opciones comunes
-target_compile_options(TFG_PRA PRIVATE -O3 -Wall -Wextra)
+# Opciones de compilación específicas para ICC
+if(CMAKE_C_COMPILER_ID MATCHES "Intel")
+    # Opciones comunes para ICC
+    target_compile_options(TFG_PRA PRIVATE -O3 -w3 -ipo)
+    
+    # OpenMP con ICC
+    target_compile_options(TFG_PRA PRIVATE -qopenmp)
+    
+    # AVX-512 con sintaxis específica de Intel
+    if(ENABLE_AVX512)
+        target_compile_options(TFG_PRA PRIVATE -xCASCADELAKE -qopt-zmm-usage=high)
+        target_compile_definitions(TFG_PRA PRIVATE AVX_512)
+    endif()
+else()
+    # Opciones para compiladores no Intel (como respaldo)
+    target_compile_options(TFG_PRA PRIVATE -O3 -Wall -Wextra)
+    
+    # AVX-512 para compiladores GCC/Clang
+    if(ENABLE_AVX512)
+        target_compile_options(TFG_PRA PRIVATE -march=cascadelake -mavx512f -mavx512dq)
+        target_compile_definitions(TFG_PRA PRIVATE AVX_512)
+    endif()
+endif()
+
 target_link_libraries(TFG_PRA PRIVATE m)  # Link a math
 
-# AVX-512
-if(ENABLE_AVX512)
-    target_compile_options(TFG_PRA PRIVATE -march=cascadelake -mavx512f -mavx512dq)
-    target_compile_definitions(TFG_PRA PRIVATE AVX_512)
+# Añadir flags de OpenMP
+if(CMAKE_C_COMPILER_ID MATCHES "Intel")
+    target_link_libraries(TFG_PRA PRIVATE -qopenmp)
+else()
+    target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
+endif()
+
+# Flags de depuración ajustadas para ICC
+if(CMAKE_C_COMPILER_ID MATCHES "Intel")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O1 -traceback")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O1 -traceback")
+else()
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")
 endif()
 
 # CUDA
@@ -50,7 +89,3 @@ endif()
 set_target_properties(TFG_PRA PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
-
-
-
-

@@ -89,7 +89,6 @@ void simulate(Star *estrellas, const int N) {
         compute_aceleration_CUDA(estrellas, ax, ay, az, N);
 #else
         compute_aceleration(estrellas, ax, ay, az, N);
-
 #endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso
