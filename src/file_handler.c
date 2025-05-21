@@ -1,4 +1,6 @@
 #include "file_handler.h"
+#include <dirent.h>
+#include <omp.h>
 
 // Función para calcular la distancia considerando paralaje negativa o incierta
 double calcular_distancia(double paralaje) {
@@ -203,8 +205,6 @@ int getstarsfromfile(char *dirname, Star *stars) {
     struct timeval start, end;
     struct dirent **filelist;
 
-
-
     // Obtener la lista de archivos
     int num_files = scandir(dirname, &filelist, NULL, alphasort);
     if (num_files < 0) {
@@ -233,7 +233,8 @@ int getstarsfromfile(char *dirname, Star *stars) {
     stars->capacity = valid_count*500000;
     stars->size = 0;
     realloc_stars(stars);
-    printf("Iniciando lectura de %d archivos\n", valid_count);
+    printf("Iniciando lectura de %d archivos usando %d threads\n", valid_count, omp_get_max_threads());
+    fflush(stdout);
 #pragma omp parallel
     {
         Star *temp = malloc(sizeof(Star));
@@ -247,7 +248,6 @@ int getstarsfromfile(char *dirname, Star *stars) {
             read_file(valid_files[i], temp);
             complete_data(temp);
             int start_idx;
-
             // Reservamos espacio exacto solo si hay algo para copiar
             if (temp->size > 0) {
 #pragma omp critical

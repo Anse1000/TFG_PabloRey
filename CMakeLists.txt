@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
 
 # Configurar compiladores Intel antes de definir el proyecto
-set(CMAKE_C_COMPILER "icc")
-set(CMAKE_CXX_COMPILER "icpc")
+set(CMAKE_C_COMPILER "icx")
+set(CMAKE_CXX_COMPILER "icpx")
 
 project(TFG_PRA C CXX)
 
@@ -36,11 +36,7 @@ add_executable(TFG_PRA ${SRC} ${HEADERS})
 # Opciones de compilación específicas para ICC
 if(CMAKE_C_COMPILER_ID MATCHES "Intel")
     # Opciones comunes para ICC
-    target_compile_options(TFG_PRA PRIVATE -O3 -w3 -ipo)
-    
-    # OpenMP con ICC
-    target_compile_options(TFG_PRA PRIVATE -qopenmp)
-    
+    target_compile_options(TFG_PRA PRIVATE -O3 -Wall -xHost -D_FILE_OFFSET_BITS=64)
     # AVX-512 con sintaxis específica de Intel
     if(ENABLE_AVX512)
         target_compile_options(TFG_PRA PRIVATE -xCASCADELAKE -qopt-zmm-usage=high)
@@ -49,7 +45,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "Intel")
 else()
     # Opciones para compiladores no Intel (como respaldo)
     target_compile_options(TFG_PRA PRIVATE -O3 -Wall -Wextra)
-    
+
     # AVX-512 para compiladores GCC/Clang
     if(ENABLE_AVX512)
         target_compile_options(TFG_PRA PRIVATE -march=cascadelake -mavx512f -mavx512dq)
@@ -60,11 +56,7 @@ endif()
 target_link_libraries(TFG_PRA PRIVATE m)  # Link a math
 
 # Añadir flags de OpenMP
-if(CMAKE_C_COMPILER_ID MATCHES "Intel")
-    target_link_libraries(TFG_PRA PRIVATE -qopenmp)
-else()
-    target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
-endif()
+target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
 
 # Flags de depuración ajustadas para ICC
 if(CMAKE_C_COMPILER_ID MATCHES "Intel")
@@ -85,7 +77,6 @@ if(ENABLE_CUDA)
     target_compile_options(TFG_PRA PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3>)
 endif()
 
-# (Opcional) Ejecutable en la carpeta build/
 set_target_properties(TFG_PRA PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )

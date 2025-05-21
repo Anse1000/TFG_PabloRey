@@ -1,15 +1,17 @@
 #!/bin/bash
 #SBATCH -J test_gaia
-#SBATCH -t 70:00:00
-#SBATCH -o test_gaia.out
-#SBATCH --mem=250000
+#SBATCH -t 00:30:00
+#SBATCH -o test_gaia_%j.out
+#SBATCH --mem=170000
 #SBATCH -n 1
+#SBATCH -N 1
 #SBATCH -c 16
-#SBATCH --partition=compute3
 
-# Cargar módulos (si es necesario)
-module load gnu11/11.2.1
-module load cmake/3.25.2
+# Cargar módulos
+module load cesga/2025 intel
 # Compilar el programa
-mkdir -p build && cd build && cmake .. && cmake --build .
-./TFG_PRA ../reducidos
+mkdir -p build
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build
+cmake --build ./build
+# Ejecutar
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/reducidos
