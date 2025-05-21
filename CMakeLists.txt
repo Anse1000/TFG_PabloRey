@@ -60,8 +60,8 @@ target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
 
 # Flags de depuración ajustadas para ICC
 if(CMAKE_C_COMPILER_ID MATCHES "Intel")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O1 -traceback")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O1 -traceback")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O2 -traceback")
 else()
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")

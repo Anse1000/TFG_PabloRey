@@ -3,22 +3,36 @@ Leídas y trasladadas 1347293721 estrellas a memoria ocupando 167915.34 MB
 Tiempos leyendo linea por línea fgets
 THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
 ----------------------------------------------------------
-1          |+3000          |+50         |100%            |
+1          |+6000          |+100        |X               |
 2          |2837           |47:17       |47.49%          |
 4          |1518           |25:18       |38.83%          |
 8          |829            |13:49       |35.20%          |
 16         |717            |11:57       |20.01%          |
 32         |669            |11:01       |10.79%          |
 64         |563            |9:23        |6.56%           |
-Se detecta claramente un cuello de botella en operaciones IO, a falta de probar con VTune
+Se detecta claramente un cuello de botella en operaciones IO
 
 Tiempos leyendo en bloques de 4MB y diviendo las lineas en memoria
 THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
 ----------------------------------------------------------
+1          |4377           |1:13:00     |50.31%          |
+2          |1604           |26:44       |67.38%          |
+4          |991            |16:31       |53.74%          |
+8          |810            |13:30       |33.20%          |
+16         |414            |6:54        |31.55%          |
+32         |368            |6:08        |17.77%          |
+64         |219            |3:49        |14.60%          |
+
+Modificación del sistema de archivos de Lustre para hacer más eficiente su lectura
+lfs setstripe --stripe-size 4M --stripe-count 8
+THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
+----------------------------------------------------------
 1          |          |         |100%            |
-2          |           |       |          |
-4          |           |       |          |
-8          |            |       |          |
-16         |            |       |          |
-32         |               |            |                |
-64         |               |            |                |
+2          |1584           |26:24       |68.47%          |
+4          |776            |12:56       |70.01%          |
+8          |460            |7:40        |56.97%          |
+16         |372            |6:12        |34.64%          |
+32         |207            |3:27        |30.70%          |
+64         |134            |2:14        |23.63%          |
+La eficiencia sigue siendo bajísima vtune dice que la carga esta en strtod y strtok no en IO, no podemos hacer mucho mas.
+Se considera correcto el resultado.

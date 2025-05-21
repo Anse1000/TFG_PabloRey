@@ -62,65 +62,134 @@ void realloc_stars(Star *stars) {
     stars->mass = safe_realloc(stars->mass, sizeof(double) * stars->capacity);
 }
 
-int read_file(char *filename, Star *stars) {
+int read_file(const char *filename, Star *stars) {
     FILE *file = fopen(filename, "r");
-    if (!file) return -1;
-
-    char line[MAX_LINE];
-
-    while (fgets(line, sizeof(line), file)) {
-        // Ignorar líneas vacías o encabezados
-        if (line[0] == 's' || line[0] == '\n') continue;
-
-        // Eliminar el salto de línea final, si lo hay
-        line[strcspn(line, "\r\n")] = '\0';
-
-        char *tokens[9];
-        int i = 0;
-
-        // Separar por comas
-        char *saveptr; //str_tok no es thread safe
-        char *token = strtok_r(line, DELIMITER, &saveptr);
-        while (token && i < 9) {
-            tokens[i++] = token;
-            token = strtok_r(NULL, DELIMITER, &saveptr);
-        }
-
-        // Si no hay suficientes columnas, descartamos
-        if (i != 9) continue;
-
-        // Validar campos importantes (parallax, mean_g, color)
-        if (strcmp(tokens[3], "null") == 0 ||
-            strcmp(tokens[7], "null") == 0 ||
-            strcmp(tokens[8], "null") == 0) {
-            continue;
-        }
-
-        // Asegurar capacidad antes de escribir
-        if (stars->size >= stars->capacity) {
-            stars->capacity += 10000;
-            realloc_stars(stars);
-        }
-
-        int idx = stars->size++;
-
-        stars->id[idx] = strtoul(tokens[0], NULL, 10);
-        stars->ra[idx] = strtod(tokens[1], NULL);
-        stars->dec[idx] = strtod(tokens[2], NULL);
-        stars->parallax[idx] = strtod(tokens[3], NULL);
-        stars->pmra[idx] = strtod(tokens[4], NULL);
-        stars->pmdec[idx] = strtod(tokens[5], NULL);
-
-        // radial_velocity puede ser null
-        stars->radial_velocity[idx] = strcmp(tokens[6], "null") == 0 ? 0.0 : strtod(tokens[6], NULL);
-
-        stars->mean_g[idx] = strtof(tokens[7], NULL);
-        stars->color[idx] = strtof(tokens[8], NULL);
+    if (!file) {
+        perror("Error abriendo el archivo");
+        return -1;
     }
 
+    // Asignamos un búfer con suficiente tamaño para manejar fragmentos
+    char *buffer = malloc(BLOCK_SIZE + 1); // +1 para la terminación nula
+    if (!buffer) {
+        perror("Error asignando memoria al búfer");
+        fclose(file);
+        return -1;
+    }
+
+    size_t leftover = 0; // Bytes restantes (línea incompleta)
+    size_t bytes_read;   // Bytes leídos en cada iteración
+    char *line_start;
+    char *newline;
+
+    while ((bytes_read = fread(buffer + leftover, 1, BLOCK_SIZE - leftover, file)) > 0) {
+        bytes_read += leftover; // Considerar el sobrante de la iteración anterior
+        buffer[bytes_read] = '\0'; // Asegurarnos de que el búfer esté finalizado en cada lectura
+
+        line_start = buffer; // Inicio de la línea actual
+        
+        // Buscar las líneas completas dentro del bloque leído
+        while ((newline = strchr(line_start, '\n')) != NULL) {
+            *newline = '\0'; // Finalizar línea actual
+
+            // Procesar la línea si no es encabezado u hoja vacía
+            if (line_start[0] != 's' && line_start[0] != '\0') {
+                char *tokens[9];
+                int i = 0;
+
+                // Tokenizar la línea usando delimitador
+                char *saveptr;
+                char *token = strtok_r(line_start, DELIMITER, &saveptr);
+                while (token && i < 9) {
+                    tokens[i++] = token;
+                    token = strtok_r(NULL, DELIMITER, &saveptr);
+                }
+
+                // Validamos y procesamos la línea si cumple con las condiciones
+                if (i == 9 && 
+                    strcmp(tokens[3], "null") != 0 && 
+                    strcmp(tokens[7], "null") != 0 && 
+                    strcmp(tokens[8], "null") != 0) {
+
+                    // Expandir arreglo si es necesario
+                    if (stars->size >= stars->capacity) {
+                        stars->capacity += 10000;
+                        realloc_stars(stars);
+                    }
+
+                    int idx = stars->size++;
+                    stars->id[idx] = strtoul(tokens[0], NULL, 10);
+                    stars->ra[idx] = strtod(tokens[1], NULL);
+                    stars->dec[idx] = strtod(tokens[2], NULL);
+                    stars->parallax[idx] = strtod(tokens[3], NULL);
+                    stars->pmra[idx] = strtod(tokens[4], NULL);
+                    stars->pmdec[idx] = strtod(tokens[5], NULL);
+                    stars->radial_velocity[idx] = strcmp(tokens[6], "null") == 0 ? 0.0 : strtod(tokens[6], NULL);
+                    stars->mean_g[idx] = strtof(tokens[7], NULL);
+                    stars->color[idx] = strtof(tokens[8], NULL);
+                }
+            }
+
+            // Mover al siguiente inicio de línea
+            line_start = newline + 1;
+        }
+
+        // Manejo del sobrante (línea cortada) al comienzo del búfer
+        leftover = strlen(line_start);
+        if (leftover > 0) {
+            if (leftover > BLOCK_SIZE) {
+                fprintf(stderr, "Error: línea demasiado grande para el búfer\n");
+                free(buffer);
+                fclose(file);
+                return -1;
+            }
+            memmove(buffer, line_start, leftover);
+        }
+    }
+
+    // Procesar última línea si no termina en '\n'
+    if (leftover > 0) {
+        buffer[leftover] = '\0';
+        if (buffer[0] != 's' && buffer[0] != '\0') {
+            char *tokens[9];
+            int i = 0;
+
+            char *saveptr;
+            char *token = strtok_r(buffer, DELIMITER, &saveptr);
+            while (token && i < 9) {
+                tokens[i++] = token;
+                token = strtok_r(NULL, DELIMITER, &saveptr);
+            }
+
+            if (i == 9 &&
+                strcmp(tokens[3], "null") != 0 &&
+                strcmp(tokens[7], "null") != 0 &&
+                strcmp(tokens[8], "null") != 0) {
+
+                if (stars->size >= stars->capacity) {
+                    stars->capacity += 10000;
+                    realloc_stars(stars);
+                }
+
+                int idx = stars->size++;
+                stars->id[idx] = strtoul(tokens[0], NULL, 10);
+                stars->ra[idx] = strtod(tokens[1], NULL);
+                stars->dec[idx] = strtod(tokens[2], NULL);
+                stars->parallax[idx] = strtod(tokens[3], NULL);
+                stars->pmra[idx] = strtod(tokens[4], NULL);
+                stars->pmdec[idx] = strtod(tokens[5], NULL);
+                stars->radial_velocity[idx] = strcmp(tokens[6], "null") == 0 ? 0.0 : strtod(tokens[6], NULL);
+                stars->mean_g[idx] = strtof(tokens[7], NULL);
+                stars->color[idx] = strtof(tokens[8], NULL);
+            }
+        }
+    }
+
+    free(buffer);
     fclose(file);
     return 0;
 }
+
 
 void complete_data(Star *stars) {
     const double R[3][3] = {
