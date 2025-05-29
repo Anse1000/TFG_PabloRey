@@ -24,10 +24,10 @@ THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
 64         |219            |3:49        |14.60%          |
 
 Modificación del sistema de archivos de Lustre para hacer más eficiente su lectura
-lfs setstripe --stripe-size 4M --stripe-count 8
+lfs setstripe --stripe-size 4M --stripe-count 8  (division en bloques de 4MB en 8 OST distintos)
 THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
 ----------------------------------------------------------
-1          |          |         |100%            |
+1          |               |            |                |
 2          |1584           |26:24       |68.47%          |
 4          |776            |12:56       |70.01%          |
 8          |460            |7:40        |56.97%          |

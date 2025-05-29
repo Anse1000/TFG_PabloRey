@@ -16,12 +16,14 @@ set(SRC
         src/main.c
         src/file_handler.c
         src/simulation.c
+        src/calculations.c
 )
 
 set(HEADERS
         src/file_handler.h
         src/simulation.h
         src/types.h
+        src/calculations.h
 )
 
 # Si se activa CUDA, añadimos el .cu a los fuentes antes de crear el ejecutable

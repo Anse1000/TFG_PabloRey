@@ -1,0 +1,10 @@
+Diferente número de estrellas a calcular en función del filtrado que se escoja, se decidirá en función del tiempo de cálculo.
+
+Catálogo completo GAIA DR3 -> 1.811.709.771
+Estrellas del catálogo con astrometría completa y distancia -> 1.467.744.818
+Estrellas de la secuencia principal 0.3<BP-RP<2.0 -> 1.174.075.109 ACTUAL Y OBJETIVO MÁXIMO DEL PROYECTO EN ESTOS MOMENTOS
+Estrellas con radio calculado a partir de FLAME -> 280.842.938
+Estrellas con masa calculada a partir de FLAME -> 139.716.106
+Estrellas con velocidad radial calculada -> 33.812.183
+
+Es posible realizar más filtraciones, pero estas son las más básicas y las que primero tendré en cuenta.
