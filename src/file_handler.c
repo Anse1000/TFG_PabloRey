@@ -56,6 +56,51 @@ void realloc_stars(Star *stars) {
     stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
 }
 
+void process_line(const char *line, Star *stars) {
+    char *tokens[12];
+    int i = 0;
+
+    char *saveptr;
+    char *token = strtok_r((char *)line, DELIMITER, &saveptr);
+    while (token && i < 12) {
+        tokens[i++] = token;
+        token = strtok_r(NULL, DELIMITER, &saveptr);
+    }
+
+    // Validar que la línea tenga 12 columnas correctamente y que ciertos valores no sean "null"
+    if (i == 12 && strcmp(tokens[11], "null") != 0 &&
+        strcmp(tokens[7], "null") != 0 &&
+        strcmp(tokens[6], "null") != 0) {
+        // Expandir arreglo si es necesario
+        if (stars->size >= stars->capacity) {
+            stars->capacity += 10000;
+            realloc_stars(stars);
+        }
+
+        int idx = stars->size++;
+
+        stars->id[idx] = strtoul(tokens[0], NULL, 10);
+        stars->ra[idx] = strtod(tokens[1], NULL);
+        stars->dec[idx] = strtod(tokens[2], NULL);
+        stars->pmra[idx] = strtod(tokens[3], NULL);
+        stars->pmdec[idx] = strtod(tokens[4], NULL);
+        stars->radial_velocity[idx] = strcmp(tokens[5], "null") == 0 ? 0.0 : strtod(tokens[5], NULL);
+        stars->mean_g[idx] = strtof(tokens[6], NULL);
+        stars->color[idx] = strtof(tokens[7], NULL);
+
+        // Validar rango de color
+        if (stars->color[idx] < 0.3 || stars->color[idx] > 2) {
+            stars->size--;
+            return;
+        }
+
+        stars->mass[idx] = strcmp(tokens[8], "null") == 0 ? 0.0 : strtof(tokens[8], NULL);
+        stars->radius[idx] = strcmp(tokens[9], "null") == 0 ? 0.0F : strtof(tokens[9], NULL);
+        stars->gravity[idx] = strcmp(tokens[10], "null") == 0 ? 0.0F : strtof(tokens[10], NULL);
+        stars->distance[idx] = strtod(tokens[11], NULL);
+        }
+}
+
 int read_file(const char *filename, Star *stars) {
     FILE *file = fopen(filename, "r");
     if (!file) {
@@ -88,45 +133,7 @@ int read_file(const char *filename, Star *stars) {
 
             // Procesar la línea si no es encabezado u hoja vacía
             if (line_start[0] != 's' && line_start[0] != '\0') {
-                char *tokens[12];
-                int i = 0;
-
-                // Tokenizar la línea usando delimitador
-                char *saveptr;
-                char *token = strtok_r(line_start, DELIMITER, &saveptr);
-                while (token && i < 12) {
-                    tokens[i++] = token;
-                    token = strtok_r(NULL, DELIMITER, &saveptr);
-                }
-
-                // Validamos y procesamos la línea si cumple con las condiciones
-                if (i == 12 && strlen(tokens[11]) != 0 &&
-                    strlen(tokens[7]) != 0 &&
-                    strlen(tokens[6]) != 0) {
-                    // Expandir arreglo si es necesario
-                    if (stars->size >= stars->capacity) {
-                        stars->capacity += 10000;
-                        realloc_stars(stars);
-                    }
-
-                    int idx = stars->size++;
-                    stars->id[idx] = strtoul(tokens[0], NULL, 10);
-                    stars->ra[idx] = strtod(tokens[1], NULL);
-                    stars->dec[idx] = strtod(tokens[2], NULL);
-                    stars->pmra[idx] = strtod(tokens[3], NULL);
-                    stars->pmdec[idx] = strtod(tokens[4], NULL);
-                    stars->radial_velocity[idx] = strlen(tokens[5]) == 0 ? 0.0 : strtod(tokens[5], NULL);
-                    stars->mean_g[idx] = strtof(tokens[6], NULL);
-                    stars->color[idx] = strtof(tokens[7], NULL);
-                    if (stars->color[idx] < 0.5 || stars->color[idx] > 2) {
-                        idx = stars->size--;
-                        continue;
-                    }
-                    stars->mass[idx] = strlen(tokens[8]) == 0 ? 0.0 : strtof(tokens[8], NULL);
-                    stars->radius[idx] = strlen(tokens[9]) == 0 ? 0.0F : strtof(tokens[9], NULL);
-                    stars->gravity[idx] = strlen(tokens[10]) == 0 ? 0.0F : strtof(tokens[10], NULL);
-                    stars->distance[idx] = strtod(tokens[11], NULL);
-                }
+                process_line(line_start, stars);
             }
 
             // Mover al siguiente inicio de línea
@@ -150,42 +157,7 @@ int read_file(const char *filename, Star *stars) {
     if (leftover > 0) {
         buffer[leftover] = '\0';
         if (buffer[0] != 's' && buffer[0] != '\0') {
-            char *tokens[12];
-            int i = 0;
-
-            char *saveptr;
-            char *token = strtok_r(buffer, DELIMITER, &saveptr);
-            while (token && i < 9) {
-                tokens[i++] = token;
-                token = strtok_r(NULL, DELIMITER, &saveptr);
-            }
-            // Validamos y procesamos la línea si cumple con las condiciones
-            if (i == 12 && strlen(tokens[11]) != 0 &&
-                strlen(tokens[7]) != 0 &&
-                strlen(tokens[6]) != 0) {
-                // Expandir arreglo si es necesario
-                if (stars->size >= stars->capacity) {
-                    stars->capacity += 10000;
-                    realloc_stars(stars);
-                }
-
-                int idx = stars->size++;
-                stars->id[idx] = strtoul(tokens[0], NULL, 10);
-                stars->ra[idx] = strtod(tokens[1], NULL);
-                stars->dec[idx] = strtod(tokens[2], NULL);
-                stars->pmra[idx] = strtod(tokens[3], NULL);
-                stars->pmdec[idx] = strtod(tokens[4], NULL);
-                stars->radial_velocity[idx] = strlen(tokens[5]) == 0 ? 0.0 : strtod(tokens[5], NULL);
-                stars->mean_g[idx] = strtof(tokens[6], NULL);
-                stars->color[idx] = strtof(tokens[7], NULL);
-                if (stars->color[idx] < 0.5 || stars->color[idx] > 2) {
-                    idx = stars->size--;
-                }
-                stars->mass[idx] = strlen(tokens[8]) == 0 ? 0.0 : strtof(tokens[8], NULL);
-                stars->radius[idx] = strlen(tokens[9]) == 0 ? 0.0F : strtof(tokens[9], NULL);
-                stars->gravity[idx] = strlen(tokens[10]) == 0 ? 0.0F : strtof(tokens[10], NULL);
-                stars->distance[idx] = strtod(tokens[11], NULL);
-            }
+            process_line(buffer, stars);
         }
     }
 
@@ -223,7 +195,7 @@ int getstarsfromfile(char *dirname, Star *stars) {
     }
     free(filelist);
     //Se preasigna una estimación de memoria para los datos en función del número de archivos
-    stars->capacity = valid_count * 500000;
+    stars->capacity = valid_count * 400000;
     stars->size = 0;
     realloc_stars(stars);
     printf("Iniciando lectura de %d archivos usando %d threads\n", valid_count, omp_get_max_threads());
@@ -286,7 +258,7 @@ int getstarsfromfile(char *dirname, Star *stars) {
     double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
     printf("\nLeídas y trasladadas %d estrellas a memoria ocupando %.2f MB en %.2f segundos\n",
            stars->size,
-           (stars->capacity * sizeof(double) * 11 + stars->capacity * sizeof(float) * 2 + stars->capacity * sizeof(
+           (stars->capacity * sizeof(double) * 13 + stars->capacity * sizeof(float) * 4 + stars->capacity * sizeof(
                 unsigned long)) / (1024.0 * 1024.0), seconds);
     return stars->size;
 }

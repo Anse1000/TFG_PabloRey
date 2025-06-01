@@ -6,11 +6,10 @@
 #include <math.h>
 #include <sys/time.h>
 
-#define G 4.30091e-6    // pc^3 / (M_sun * s^2)
-#define KAPPA 4.74047   // Factor de conversión: mas/año a km/s
+#define G 4.30091e-6
+#define KAPPA 4.74047   // AS/año * parsecs -> km/s
 #define V_GAL 220       // Velocidad media de rotacion galáctica
-
-#define SIGMA 3.0857e13 // Factor de conversion de km/s a parsecs
+#define SIGMA 1.0227 // Factor de conversion de km/s a kiloparsecs/Milones de años
 #define LOGG_SOL 4.437  // Logaritmo de la gravedad del SOL
 
 // Movimiento del Sol respecto al LSR en km/s

@@ -9,10 +9,19 @@ const double R[3][3] = {
 };
 
 void calculate_mass(double *mass, float gravity, float radius, float mean_g, float color, double d) {
-    if (gravity != 0 || radius != 0) {
+    if (gravity != 0 && radius != 0) {
         // log10(M / M_sun) = logg - logg_sun + 2 * log10(R / R_sun)
         double log_mass = gravity - LOGG_SOL + 2.0 * log10(radius);
         *mass = pow(10.0, log_mass);
+        if (*mass < 0.06) { //Si la forma1 falla probamos con la segunda usando otros datos más estables pero menos precisos
+            double M_G = mean_g - 5.0 * log10(d) + 5.0;
+            const double a = -0.15;
+            const double b = -0.10;
+            const double c = 1.2;
+
+            double log_mass2 = a * color + b * M_G + c;
+            *mass = pow(10.0, log_mass2);
+        }
     } else {
         double M_G = mean_g - 5.0 * log10(d) + 5.0; //magnitud absoluta a 10 parsecs
         // 2. Relación empírica: log(M) ≈ a * (BP-RP) + b * M_G + c
@@ -24,6 +33,7 @@ void calculate_mass(double *mass, float gravity, float radius, float mean_g, flo
         double log_mass = a * color + b * M_G + c;
         *mass = pow(10.0, log_mass);
     }
+
 }
 
 void calculate_radialvelocity(double *radial_velocity, double sin_ra, double cos_ra, double sin_dec, double cos_dec,
@@ -36,14 +46,14 @@ void calculate_radialvelocity(double *radial_velocity, double sin_ra, double cos
     };
 
     for (int j = 0; j < 3; j++) {
-        V[j] = KAPPA * d * (T[j][0] * pmra + T[j][1] * pmdec);
+        V[j] = KAPPA * d * (T[j][0] * (pmra/1000) + T[j][1] * (pmdec/1000));
     }
 
     double norm_C = sqrt(Cx * Cx + Cy * Cy + Cz * Cz);
     double V_radial_sin = (Cx * V[0] + Cy * V[1] + Cz * V[2]) / norm_C;
 
     double R_gal = sqrt(Cx * Cx + Cy * Cy);
-    double V_rot = (V_GAL * Cy) / R_gal;
+    double V_rot = V_GAL * Cy / R_gal;
     double V_sol_corr = (U_SOL * Cx + V_SOL * Cy + W_SOL * Cz) / norm_C;
 
     *radial_velocity = V_radial_sin + V_rot - V_sol_corr;
@@ -58,8 +68,8 @@ void calculate_coords(double *Cx, double *Cy, double *Cz, double X_E, double Y_E
 void calculate_vectors(double *Vx, double *Vy, double *Vz, double X_E, double Y_E, double Z_E, double pmra,
                        double pmdec, double rv, double d, double sin_ra, double sin_dec, double cos_ra,
                        double cos_dec) {
-    double Vt_ra = KAPPA * pmra * d;
-    double Vt_dec = KAPPA * pmdec * d;
+    double Vt_ra = KAPPA * (pmra/1000) * d;
+    double Vt_dec = KAPPA * (pmdec/1000) * d;
 
     double Vr_eq[3] = {
         rv * X_E - Vt_ra * sin_ra - Vt_dec * sin_dec * cos_ra,
@@ -67,9 +77,9 @@ void calculate_vectors(double *Vx, double *Vy, double *Vz, double X_E, double Y_
         rv * Z_E + Vt_dec * cos_dec
     };
 
-    *Vx = (R[0][0] * Vr_eq[0] + R[0][1] * Vr_eq[1] + R[0][2] * Vr_eq[2]) / SIGMA;
-    *Vy = (R[1][0] * Vr_eq[0] + R[1][1] * Vr_eq[1] + R[1][2] * Vr_eq[2]) / SIGMA;
-    *Vz = (R[2][0] * Vr_eq[0] + R[2][1] * Vr_eq[1] + R[2][2] * Vr_eq[2]) / SIGMA;
+    *Vx = (R[0][0] * Vr_eq[0] + R[0][1] * Vr_eq[1] + R[0][2] * Vr_eq[2]) * SIGMA;
+    *Vy = (R[1][0] * Vr_eq[0] + R[1][1] * Vr_eq[1] + R[1][2] * Vr_eq[2]) * SIGMA;
+    *Vz = (R[2][0] * Vr_eq[0] + R[2][1] * Vr_eq[1] + R[2][2] * Vr_eq[2]) * SIGMA;
 }
 
 void complete_data(Star *stars) {

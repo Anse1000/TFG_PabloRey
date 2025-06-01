@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.18)
 
 # Configurar compiladores Intel antes de definir el proyecto
-set(CMAKE_C_COMPILER "icx")
-set(CMAKE_CXX_COMPILER "icpx")
+find_program(INTEL_COMPILER icx)
+if (INTEL_COMPILER)
+    set(CMAKE_C_COMPILER "icx")
+    set(CMAKE_CXX_COMPILER "icpx")
+else ()
+    set(CMAKE_C_COMPILER "gcc")
+    set(CMAKE_CXX_COMPILER "g++")
+endif ()
+
 
 project(TFG_PRA C CXX)
 
@@ -41,7 +48,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "Intel")
     target_compile_options(TFG_PRA PRIVATE -O3 -Wall -xHost -D_FILE_OFFSET_BITS=64)
     # AVX-512 con sintaxis específica de Intel
     if(ENABLE_AVX512)
-        target_compile_options(TFG_PRA PRIVATE -xCASCADELAKE -qopt-zmm-usage=high)
+        target_compile_options(TFG_PRA PRIVATE -qopt-zmm-usage=high)
         target_compile_definitions(TFG_PRA PRIVATE AVX_512)
     endif()
 else()

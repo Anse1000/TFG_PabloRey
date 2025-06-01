@@ -8,4 +8,5 @@
 #include "cuda_functions.h"
 #endif
 void simulate(Star *estrellas, int N);
+void test_simulation(Star *estrellas);
 #endif //SIMULATION_H

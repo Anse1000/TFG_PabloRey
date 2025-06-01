@@ -83,13 +83,7 @@ void simulate(Star *estrellas, const int N) {
     double *az = malloc(N * sizeof(double));
     gettimeofday(&start, NULL);
     for (int step = 0; step < STEPS; step++) {
-#ifdef AVX_512
-        compute_aceleration_avx512(estrellas, ax, ay, az, N);
-#elif CUDA
-        compute_aceleration_CUDA(estrellas, ax, ay, az, N);
-#else
         compute_aceleration(estrellas, ax, ay, az, N);
-#endif
         for (int i = 0; i < N; i++) {
             // Leapfrog integration: actualizar velocidad a mitad de paso
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
@@ -100,13 +94,7 @@ void simulate(Star *estrellas, const int N) {
             estrellas->Cy[i] = fma(DT, estrellas->Vy[i], estrellas->Cy[i]);
             estrellas->Cz[i] = fma(DT,estrellas->Vz[i], estrellas->Cz[i]);
         }
-#ifdef AVX_512
-        compute_aceleration_avx512(estrellas, ax, ay, az, N);
-#elif CUDA
-        compute_aceleration_CUDA(estrellas, ax, ay, az, N);
-#else
         compute_aceleration(estrellas, ax, ay, az, N);
-#endif
         for (int i = 0; i < N; i++) {
             // Completar actualización de velocidad
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
@@ -131,4 +119,80 @@ void simulate(Star *estrellas, const int N) {
     for (int i = 0; i < N; i++) {
         fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n",estrellas->id[i] ,estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
     }
+}
+//funcion de prueba: calcula la aceleracion de una sola estrella con TODAS
+void compute_aceleration_single(const Star *stars, double *ax, double *ay, double *az,int index) {
+    double epsilon = 0.1;
+    for (int i=0;i<stars->size;i++) {
+        if (i!=index) {
+            //calcular distancia a la estrella
+            double dx = stars->Cx[i] - stars->Cx[index];
+            double dy = stars->Cy[i] - stars->Cy[index];
+            double dz = stars->Cz[i] - stars->Cz[index];
+            double dist_sq = dx * dx + dy * dy + dz * dz + epsilon;
+            double dist = sqrt(dist_sq);
+            //calcular fuerza aplicada a la estrella
+            double force = -G * stars->mass[i] / (dist_sq * dist);
+            *ax = fma(force, dx, *ax);
+            *ay = fma(force, dy, *ay);
+            *az = fma(force, dz, *az);
+        }
+    }
+}
+//funcion de prueba: calcula la aceleracion de una sola estrella con las CERCANAS
+void compute_aceleration_single_near(const Star *stars, double *ax, double *ay, double *az, int index, int *count) {
+    const double dx0 = stars->Cx[index];
+    const double dy0 = stars->Cy[index];
+    const double dz0 = stars->Cz[index];
+    const double epsilon = 0.1;  // pc
+    const double cutoff = 1000;   // pc
+    const double cutoff_sq = cutoff * cutoff;
+    *count = 0;
+
+    for (int i = 0; i < stars->size; i++) {
+        if (i != index) {
+            double dx = stars->Cx[i] - dx0;
+            double dy = stars->Cy[i] - dy0;
+            double dz = stars->Cz[i] - dz0;
+            double dist_sq = dx*dx + dy*dy + dz*dz + epsilon*epsilon;
+
+            if (dist_sq < cutoff_sq) {
+                (*count)++;
+                double dist = sqrt(dist_sq);
+                double force = -G * stars->mass[i] / (dist_sq * dist);
+                *ax = fma(force, dx, *ax);
+                *ay = fma(force, dy, *ay);
+                *az = fma(force, dz, *az);
+            }
+        }
+    }
+}
+
+
+void test_simulation(Star *estrellas) {
+    int indexes[20];
+    int count[20];
+    for (int i = 0; i < 20; i++) {
+        indexes[i] = rand() % estrellas->size;
+    }
+    double ax[20] = {0}, ay[20] = {0}, az[20] = {0};
+    double axn[20] = {0}, ayn[20] = {0}, azn[20] = {0};
+    double diferencex[20] = {0}, diferencey[20] = {0}, diferencez[20] = {0};
+    
+    for (int i = 0; i < 20; i++) {
+        compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i]);
+        compute_aceleration_single_near(estrellas, &axn[i], &ayn[i], &azn[i], indexes[i],&count[i]);
+        diferencex[i] = fabs(ax[i] - axn[i]);
+        diferencey[i] = fabs(ay[i] - ayn[i]);
+        diferencez[i] = fabs(az[i] - azn[i]);
+        printf("------------------------------------------------------\n");
+        printf("Estrella: %d\n", indexes[i]);
+        printf("Aceleracion: X=%e Y=%e Z=%e\n", ax[i], ay[i], az[i]);
+        printf("Aceleracion cercanas: X=%e Y=%e Z=%e\n", axn[i], ayn[i], azn[i]);
+        printf("Diferencia: X=%e Y=%e Z=%e\n", diferencex[i], diferencey[i], diferencez[i]);
+        printf("Cantidad de estrellas cercanas: %d\n", count[i]);
+        printf("Ahorrados %d cálculos\n", estrellas->size - count[i]);
+    }
+
+
 }

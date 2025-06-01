@@ -6,7 +6,7 @@ void print_estrellas(Star *stars) {
     for (int i = 300000; i < 301000 && i < stars->size; i++) {
         printf("------------------------------------------------------------\n");
         printf("ID: %lu\n", stars->id[i]);
-        printf("RA: %.4f   DEC: %.4f   Parallax: %.4f   Radial Velocity: %.4f\n",
+        printf("RA: %.4f   DEC: %.4f   Distance: %.4f   Radial Velocity: %.4f\n",
                stars->ra[i], stars->dec[i], stars->distance[i], stars->radial_velocity[i]);
         printf("Mean G: %.4f   Color: %.4f   Mass: %.4f\n",
                stars->mean_g[i], stars->color[i], stars->mass[i]);
@@ -17,6 +17,7 @@ void print_estrellas(Star *stars) {
         printf("------------------------------------------------------------\n");
     }
 }
+
 void findminmax(Star *stars) {
     double min_rv = stars->radial_velocity[0], max_rv = stars->radial_velocity[0];
     double min_mass = stars->mass[0], max_mass = stars->mass[0];
@@ -44,13 +45,14 @@ void findminmax(Star *stars) {
     }
 
     printf("Rangos de valores:\n");
-    printf("Velocidad Radial: %.4f - %.4f\n", min_rv, max_rv);
-    printf("Masa: %.4f - %.4f\n", min_mass, max_mass);
-    printf("Distancia: %.4f - %.4f\n", min_dist, max_dist);
-    printf("Posición X: %.4f - %.4f\n", min_cx, max_cx);
-    printf("Posición Y: %.4f - %.4f\n", min_cy, max_cy);
-    printf("Posición Z: %.4f - %.4f\n", min_cz, max_cz);
+    printf("Velocidad Radial: %.8f - %.8f\n", min_rv, max_rv);
+    printf("Masa: %.8f - %.8f\n", min_mass, max_mass);
+    printf("Distancia: %.8f - %.8f\n", min_dist, max_dist);
+    printf("Posición X: %.8f - %.8f\n", min_cx, max_cx);
+    printf("Posición Y: %.8f - %.8f\n", min_cy, max_cy);
+    printf("Posición Z: %.8f - %.8f\n", min_cz, max_cz);
 }
+
 int main(int argc, char *argv[]) {
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
@@ -64,6 +66,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     findminmax(estrellas);
+    test_simulation(estrellas);
     //simulate(estrellas,1000);
     //print_estrellas(estrellas);
     //for (int i = 1000; i <= 1000000; i *= 10) {

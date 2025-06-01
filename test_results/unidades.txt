@@ -1,0 +1,12 @@
+// Valores de conversión
+double M_sol = 1.98847e30;     // kg
+double pc_to_m = 3.0857e16;    // metros por parsec
+double kpc_to_m = 3.0857e19;   // metros por kiloparsec
+double Myr_to_s = 3.15576e13;  // segundos por millón de años
+
+// G en SI
+double G_SI = 6.67430e-11;     // m³ kg⁻¹ s⁻²
+
+// Conversión: distancias en parsecs, aceleración en kpc/Myr²
+// G_sim = G_SI × M_sol × (Myr_to_s)² / (pc_to_m)² / (kpc_to_m)
+double G_sim = G_SI * M_sol * Myr_to_s * Myr_to_s / (pc_to_m * pc_to_m) / kpc_to_m;
