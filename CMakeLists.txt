@@ -55,7 +55,7 @@ else()
     # Opciones para compiladores no Intel (como respaldo)
     target_compile_options(TFG_PRA PRIVATE -O3 -Wall -Wextra)
 
-    # AVX-512 para compiladores GCC/Clang
+    # AVX-512 para compiladores GCC
     if(ENABLE_AVX512)
         target_compile_options(TFG_PRA PRIVATE -march=cascadelake -mavx512f -mavx512dq)
         target_compile_definitions(TFG_PRA PRIVATE AVX_512)
@@ -72,8 +72,8 @@ if(CMAKE_C_COMPILER_ID MATCHES "Intel")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -fno-omit-frame-pointer")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O2 -traceback")
 else()
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread -g3 -O1 -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -O1 -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O1 -fno-omit-frame-pointer")
 endif()
 
 # CUDA

@@ -26,7 +26,7 @@ typedef struct {
     double *Cx, *Cy, *Cz;
     double *Vx, *Vy, *Vz;
     float *mean_g, *color,*radius,*gravity;
-    double *mass;
+    float *mass;
     int size;
     int capacity;
 } Star;

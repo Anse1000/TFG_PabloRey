@@ -198,7 +198,7 @@ int getstarsfromfile(char *dirname, Star *stars) {
     stars->capacity = valid_count * 400000;
     stars->size = 0;
     realloc_stars(stars);
-    printf("Iniciando lectura de %d archivos usando %d threads\n", valid_count, omp_get_max_threads());
+    printf("\nIniciando lectura de %d archivos usando %d threads\n", valid_count, omp_get_max_threads());
     fflush(stdout);
 #pragma omp parallel
     {
@@ -252,13 +252,16 @@ int getstarsfromfile(char *dirname, Star *stars) {
         }
         free_stars(temp);
     }
+    stars->capacity = stars->size;
+    realloc_stars(stars);
     free(valid_files);
     gettimeofday(&end, NULL);
 
     double seconds = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
-    printf("\nLeídas y trasladadas %d estrellas a memoria ocupando %.2f MB en %.2f segundos\n",
+    printf("Leídas y trasladadas %d estrellas a memoria ocupando %.2f MB en %.2f segundos\n",
            stars->size,
            (stars->capacity * sizeof(double) * 13 + stars->capacity * sizeof(float) * 4 + stars->capacity * sizeof(
                 unsigned long)) / (1024.0 * 1024.0), seconds);
+    fflush(stdout);
     return stars->size;
 }
