@@ -2,7 +2,7 @@
 #SBATCH -J test_gaia
 #SBATCH -t 00:15:00
 #SBATCH -o test_gaia_%j.out
-#SBATCH --mem=200000
+#SBATCH --mem=500000
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 64

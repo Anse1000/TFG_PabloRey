@@ -8,7 +8,7 @@ const double R[3][3] = {
     {-0.86766615, -0.19807637, +0.45598380}
 };
 
-void calculate_mass(double *mass, float gravity, float radius, float mean_g, float color, double d) {
+void calculate_mass(float *mass, float gravity, float radius, float mean_g, float color, double d) {
     if (gravity != 0 && radius != 0) {
         // log10(M / M_sun) = logg - logg_sun + 2 * log10(R / R_sun)
         double log_mass = gravity - LOGG_SOL + 2.0 * log10(radius);

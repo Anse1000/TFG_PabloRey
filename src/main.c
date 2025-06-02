@@ -51,6 +51,7 @@ void findminmax(Star *stars) {
     printf("Posición X: %.8f - %.8f\n", min_cx, max_cx);
     printf("Posición Y: %.8f - %.8f\n", min_cy, max_cy);
     printf("Posición Z: %.8f - %.8f\n", min_cz, max_cz);
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -65,7 +66,7 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
-    findminmax(estrellas);
+    //findminmax(estrellas);
     test_simulation(estrellas);
     //simulate(estrellas,1000);
     //print_estrellas(estrellas);

@@ -10,3 +10,20 @@ double G_SI = 6.67430e-11;     // m³ kg⁻¹ s⁻²
 // Conversión: distancias en parsecs, aceleración en kpc/Myr²
 // G_sim = G_SI × M_sol × (Myr_to_s)² / (pc_to_m)² / (kpc_to_m)
 double G_sim = G_SI * M_sol * Myr_to_s * Myr_to_s / (pc_to_m * pc_to_m) / kpc_to_m;
+
+********UNIDADES DE DATOS Y RESULTADOS************
+ID -> sin unidad
+RA (Ascensión Recta) -> Grados
+DEC (Declinación) -> Grados
+distance (Distancia desde el sol) -> Parsecs
+PMRA (Proper-motion ascensión recta) -> Miliarcosegundos/año
+PMDEC (Proper-motion declinación) -> Miliarcosegundos/año
+Radial_velocity (Velocidad Radial) -> Km/s
+Cx, Cy, Cz (Coordenadas galácticas) -> Parsecs
+Vx, Vy, Vz (Vectores velocidad) -> Kiloparsecs/Millón de años
+mean_g (Magnitud aparente de la luminosidad) -> sin unidad
+color (Color de la estrella)-> sin unidad
+radius (Radio de la estrella)-> Radios solares
+gravity (Logaritmo de la gravedad de la estrella)-> Log cgs
+mass (Masa) -> Masas solares
+Ax, Ay, Az (Vectores aceleraciones) -> Kiloparsecs/Millón de años al cuadrado
