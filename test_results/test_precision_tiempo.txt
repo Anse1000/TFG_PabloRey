@@ -1,0 +1,206 @@
+Iniciando lectura de 11 archivos usando 4 threads
+Leídas y trasladadas 3255010 estrellas a memoria ocupando 397.34 MB en 3.07 segundos
+Iniciando construccion del arbol de estrellas
+Arbol creado en 1.840028 segundos ocupando 627.040497 MB
+------------------------------------------------------
+Estrella: 1013843
+Aceleracion:            X=9.890515e-07 Y=-2.125023e-06 Z=-1.095083e-05
+Aceleracion cercanas:   X=-6.213741e-07 Y=-1.518128e-06 Z=-1.157059e-05
+Aceleracion Barnes-Hut: X=9.566768e-07 Y=-2.135915e-06 Z=-1.093732e-05
+Cantidad de estrellas cercanas: 2313176
+Ahorrados 941834 cálculos
+Tiempo:            0.024430 segundos
+Tiempo cercanas:   0.032190 segundos
+Tiempo Barnes-Hut: 0.000200 segundos
+------------------------------------------------------
+Estrella: 628286
+Aceleracion:            X=1.582972e-05 Y=-1.791426e-05 Z=-7.456612e-06
+Aceleracion cercanas:   X=1.237242e-05 Y=-1.653192e-05 Z=-8.945627e-06
+Aceleracion Barnes-Hut: X=1.575302e-05 Y=-1.793566e-05 Z=-7.461312e-06
+Cantidad de estrellas cercanas: 1491477
+Ahorrados 1763533 cálculos
+Tiempo:            0.023906 segundos
+Tiempo cercanas:   0.033233 segundos
+Tiempo Barnes-Hut: 0.000174 segundos
+------------------------------------------------------
+Estrella: 2107617
+Aceleracion:            X=3.289953e-06 Y=1.718560e-05 Z=-3.239155e-06
+Aceleracion cercanas:   X=2.308509e-06 Y=1.661347e-05 Z=-3.805644e-06
+Aceleracion Barnes-Hut: X=3.289910e-06 Y=1.717783e-05 Z=-3.189037e-06
+Cantidad de estrellas cercanas: 2198413
+Ahorrados 1056597 cálculos
+Tiempo:            0.023813 segundos
+Tiempo cercanas:   0.032791 segundos
+Tiempo Barnes-Hut: 0.000197 segundos
+------------------------------------------------------
+Estrella: 2501655
+Aceleracion:            X=-1.288626e-05 Y=2.025853e-06 Z=2.325526e-05
+Aceleracion cercanas:   X=-1.379630e-05 Y=2.245556e-06 Z=2.213750e-05
+Aceleracion Barnes-Hut: X=-1.287271e-05 Y=2.035728e-06 Z=2.325026e-05
+Cantidad de estrellas cercanas: 2262971
+Ahorrados 992039 cálculos
+Tiempo:            0.024149 segundos
+Tiempo cercanas:   0.032584 segundos
+Tiempo Barnes-Hut: 0.000160 segundos
+------------------------------------------------------
+Estrella: 1486783
+Aceleracion:            X=2.162051e-05 Y=-3.761781e-06 Z=-6.983593e-06
+Aceleracion cercanas:   X=1.808543e-05 Y=-2.648220e-06 Z=-8.483615e-06
+Aceleracion Barnes-Hut: X=2.155517e-05 Y=-3.719431e-06 Z=-7.001494e-06
+Cantidad de estrellas cercanas: 1471935
+Ahorrados 1783075 cálculos
+Tiempo:            0.023512 segundos
+Tiempo cercanas:   0.032692 segundos
+Tiempo Barnes-Hut: 0.000195 segundos
+------------------------------------------------------
+Estrella: 1087035
+Aceleracion:            X=-5.889388e-06 Y=-7.803805e-06 Z=6.069795e-06
+Aceleracion cercanas:   X=-7.950134e-06 Y=-6.586571e-06 Z=4.755859e-06
+Aceleracion Barnes-Hut: X=-6.129561e-06 Y=-7.617484e-06 Z=5.998225e-06
+Cantidad de estrellas cercanas: 2231765
+Ahorrados 1023245 cálculos
+Tiempo:            0.024013 segundos
+Tiempo cercanas:   0.033164 segundos
+Tiempo Barnes-Hut: 0.000188 segundos
+------------------------------------------------------
+Estrella: 528176
+Aceleracion:            X=-4.914239e-07 Y=-9.584024e-08 Z=-5.526312e-06
+Aceleracion cercanas:   X=1.754546e-07 Y=3.829117e-07 Z=-9.235222e-07
+Aceleracion Barnes-Hut: X=-4.935378e-07 Y=-9.306575e-08 Z=-5.536326e-06
+Cantidad de estrellas cercanas: 103169
+Ahorrados 3151841 cálculos
+Tiempo:            0.023831 segundos
+Tiempo cercanas:   0.007088 segundos
+Tiempo Barnes-Hut: 0.000125 segundos
+------------------------------------------------------
+Estrella: 2725432
+Aceleracion:            X=-5.483670e-06 Y=-1.805198e-05 Z=2.402373e-05
+Aceleracion cercanas:   X=-7.694337e-06 Y=-1.656858e-05 Z=2.221927e-05
+Aceleracion Barnes-Hut: X=-5.462352e-06 Y=-1.800502e-05 Z=2.397100e-05
+Cantidad de estrellas cercanas: 1975558
+Ahorrados 1279452 cálculos
+Tiempo:            0.023859 segundos
+Tiempo cercanas:   0.034604 segundos
+Tiempo Barnes-Hut: 0.000171 segundos
+------------------------------------------------------
+Estrella: 849819
+Aceleracion:            X=-5.296626e-06 Y=-7.373063e-06 Z=-1.106590e-05
+Aceleracion cercanas:   X=-3.393418e-06 Y=-6.101931e-06 Z=-9.496759e-06
+Aceleracion Barnes-Hut: X=-5.287464e-06 Y=-7.392968e-06 Z=-1.103180e-05
+Cantidad de estrellas cercanas: 1491392
+Ahorrados 1763618 cálculos
+Tiempo:            0.023425 segundos
+Tiempo cercanas:   0.033165 segundos
+Tiempo Barnes-Hut: 0.000214 segundos
+------------------------------------------------------
+Estrella: 1562771
+Aceleracion:            X=2.109664e-05 Y=3.923010e-06 Z=9.987875e-07
+Aceleracion cercanas:   X=1.753986e-05 Y=4.987102e-06 Z=-6.753275e-07
+Aceleracion Barnes-Hut: X=2.103012e-05 Y=4.017638e-06 Z=9.620579e-07
+Cantidad de estrellas cercanas: 1413397
+Ahorrados 1841613 cálculos
+Tiempo:            0.024162 segundos
+Tiempo cercanas:   0.032603 segundos
+Tiempo Barnes-Hut: 0.000230 segundos
+------------------------------------------------------
+Estrella: 3129222
+Aceleracion:            X=6.713458e-06 Y=2.354133e-05 Z=8.155838e-06
+Aceleracion cercanas:   X=5.146853e-06 Y=2.319011e-05 Z=7.059520e-06
+Aceleracion Barnes-Hut: X=6.754467e-06 Y=2.351535e-05 Z=8.186326e-06
+Cantidad de estrellas cercanas: 2205234
+Ahorrados 1049776 cálculos
+Tiempo:            0.023639 segundos
+Tiempo cercanas:   0.032918 segundos
+Tiempo Barnes-Hut: 0.000203 segundos
+------------------------------------------------------
+Estrella: 2915887
+Aceleracion:            X=-2.624013e-06 Y=1.152391e-05 Z=4.673327e-06
+Aceleracion cercanas:   X=-3.249048e-06 Y=1.124759e-05 Z=3.854636e-06
+Aceleracion Barnes-Hut: X=-2.501410e-06 Y=1.162386e-05 Z=4.701788e-06
+Cantidad de estrellas cercanas: 2213421
+Ahorrados 1041589 cálculos
+Tiempo:            0.023634 segundos
+Tiempo cercanas:   0.032569 segundos
+Tiempo Barnes-Hut: 0.000190 segundos
+------------------------------------------------------
+Estrella: 2166290
+Aceleracion:            X=6.957471e-06 Y=1.901264e-05 Z=-5.781374e-06
+Aceleracion cercanas:   X=5.747726e-06 Y=1.839528e-05 Z=-6.179784e-06
+Aceleracion Barnes-Hut: X=6.927333e-06 Y=1.904476e-05 Z=-5.743614e-06
+Cantidad de estrellas cercanas: 2188797
+Ahorrados 1066213 cálculos
+Tiempo:            0.023354 segundos
+Tiempo cercanas:   0.033624 segundos
+Tiempo Barnes-Hut: 0.000258 segundos
+------------------------------------------------------
+Estrella: 2326679
+Aceleracion:            X=-5.065455e-06 Y=5.116645e-06 Z=-1.041557e-05
+Aceleracion cercanas:   X=-4.139533e-06 Y=4.192199e-06 Z=-9.695402e-06
+Aceleracion Barnes-Hut: X=-5.073681e-06 Y=5.107636e-06 Z=-1.040627e-05
+Cantidad de estrellas cercanas: 1827242
+Ahorrados 1427768 cálculos
+Tiempo:            0.026033 segundos
+Tiempo cercanas:   0.036932 segundos
+Tiempo Barnes-Hut: 0.000254 segundos
+------------------------------------------------------
+Estrella: 751483
+Aceleracion:            X=-2.615001e-07 Y=-2.729341e-05 Z=-7.706868e-06
+Aceleracion cercanas:   X=-1.914831e-06 Y=-2.573838e-05 Z=-8.372670e-06
+Aceleracion Barnes-Hut: X=-2.745338e-07 Y=-2.728331e-05 Z=-7.674540e-06
+Cantidad de estrellas cercanas: 2173223
+Ahorrados 1081787 cálculos
+Tiempo:            0.025797 segundos
+Tiempo cercanas:   0.033013 segundos
+Tiempo Barnes-Hut: 0.000223 segundos
+------------------------------------------------------
+Estrella: 1487886
+Aceleracion:            X=1.083615e-05 Y=-4.638003e-07 Z=-1.413921e-05
+Aceleracion cercanas:   X=8.157171e-06 Y=1.616245e-07 Z=-1.471537e-05
+Aceleracion Barnes-Hut: X=1.076755e-05 Y=-5.182668e-07 Z=-1.408373e-05
+Cantidad de estrellas cercanas: 2130272
+Ahorrados 1124738 cálculos
+Tiempo:            0.023514 segundos
+Tiempo cercanas:   0.034283 segundos
+Tiempo Barnes-Hut: 0.000233 segundos
+------------------------------------------------------
+Estrella: 1331350
+Aceleracion:            X=-1.063788e-05 Y=1.810229e-06 Z=1.075977e-06
+Aceleracion cercanas:   X=-9.810003e-06 Y=1.681199e-06 Z=8.395376e-07
+Aceleracion Barnes-Hut: X=-1.067992e-05 Y=1.756298e-06 Z=1.126267e-06
+Cantidad de estrellas cercanas: 2008477
+Ahorrados 1246533 cálculos
+Tiempo:            0.023558 segundos
+Tiempo cercanas:   0.034949 segundos
+Tiempo Barnes-Hut: 0.000284 segundos
+------------------------------------------------------
+Estrella: 763696
+Aceleracion:            X=8.492040e-06 Y=-2.804326e-05 Z=-2.577153e-06
+Aceleracion cercanas:   X=5.472354e-06 Y=-2.650838e-05 Z=-3.959735e-06
+Aceleracion Barnes-Hut: X=8.439460e-06 Y=-2.807653e-05 Z=-2.521554e-06
+Cantidad de estrellas cercanas: 1709244
+Ahorrados 1545766 cálculos
+Tiempo:            0.023430 segundos
+Tiempo cercanas:   0.036014 segundos
+Tiempo Barnes-Hut: 0.000180 segundos
+------------------------------------------------------
+Estrella: 1373242
+Aceleracion:            X=7.011446e-06 Y=6.095712e-07 Z=-1.658059e-05
+Aceleracion cercanas:   X=5.427997e-06 Y=5.036990e-07 Z=-1.453251e-05
+Aceleracion Barnes-Hut: X=7.060723e-06 Y=5.996266e-07 Z=-1.660109e-05
+Cantidad de estrellas cercanas: 1769496
+Ahorrados 1485514 cálculos
+Tiempo:            0.023666 segundos
+Tiempo cercanas:   0.032088 segundos
+Tiempo Barnes-Hut: 0.000179 segundos
+------------------------------------------------------
+Estrella: 1451736
+Aceleracion:            X=1.617526e-05 Y=4.106355e-06 Z=-1.501715e-05
+Aceleracion cercanas:   X=1.331070e-05 Y=4.699136e-06 Z=-1.569049e-05
+Aceleracion Barnes-Hut: X=1.615059e-05 Y=4.123291e-06 Z=-1.501494e-05
+Cantidad de estrellas cercanas: 2050760
+Ahorrados 1204250 cálculos
+Tiempo:            0.023653 segundos
+Tiempo cercanas:   0.033602 segundos
+Tiempo Barnes-Hut: 0.000197 segundos
+
+Process finished with exit code 0
