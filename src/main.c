@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
         perror("No se ha introducido ningún archivo");
         return -1;
     }
-    int num_estrellas = getstarsfromfile(argv[1], estrellas);
-    if (num_estrellas < 0) {
+    unsigned long num_estrellas = getstarsfromfile(argv[1], estrellas);
+    if (num_estrellas <= 0) {
         perror("No se encontro ninguna estrella");
         return -1;
     }

@@ -11,27 +11,27 @@ const double R[3][3] = {
 void calculate_mass(float *mass, float gravity, float radius, float mean_g, float color, double d) {
     if (gravity != 0 && radius != 0) {
         // log10(M / M_sun) = logg - logg_sun + 2 * log10(R / R_sun)
-        double log_mass = gravity - LOGG_SOL + 2.0 * log10(radius);
-        *mass = pow(10.0, log_mass);
+        float log_mass = gravity - LOGG_SOL + 2.0F * log10f(radius);
+        *mass = powf(10.0F, log_mass);
         if (*mass < 0.06) { //Si la forma1 falla probamos con la segunda usando otros datos más estables pero menos precisos
-            double M_G = mean_g - 5.0 * log10(d) + 5.0;
-            const double a = -0.15;
-            const double b = -0.10;
-            const double c = 1.2;
+            float M_G = mean_g - 5.0F * log10f(d) + 5.0F;
+            const float a = -0.15F;
+            const float b = -0.10F;
+            const float c = 1.2F;
 
-            double log_mass2 = a * color + b * M_G + c;
-            *mass = pow(10.0, log_mass2);
+            float log_mass2 = a * color + b * M_G + c;
+            *mass = powf(10.0F, log_mass2);
         }
     } else {
-        double M_G = mean_g - 5.0 * log10(d) + 5.0; //magnitud absoluta a 10 parsecs
+        float M_G = mean_g - 5.0F * log10f(d) + 5.0F; //magnitud absoluta a 10 parsecs
         // 2. Relación empírica: log(M) ≈ a * (BP-RP) + b * M_G + c
         // Ajustada para secuencia principal solar-metalicidad (aproximado)
-        const double a = -0.15;
-        const double b = -0.10;
-        const double c = 1.2;
+        const float a = -0.15F;
+        const float b = -0.10F;
+        const float c = 1.2F;
 
-        double log_mass = a * color + b * M_G + c;
-        *mass = pow(10.0, log_mass);
+        float log_mass = a * color + b * M_G + c;
+        *mass = powf(10.0F, log_mass);
     }
 
 }
