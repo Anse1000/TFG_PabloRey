@@ -3,7 +3,7 @@
 #include "simulation.h"
 
 void print_estrellas(Star *stars) {
-    for (int i = 300000; i < 301000 && i < stars->size; i++) {
+    for (size_t i = 300000; i < 301000 && i < stars->size; i++) {
         printf("------------------------------------------------------------\n");
         printf("ID: %lu\n", stars->id[i]);
         printf("RA: %.4f   DEC: %.4f   Distance: %.4f   Radial Velocity: %.4f\n",
@@ -26,7 +26,7 @@ void findminmax(Star *stars) {
     double min_cy = stars->Cy[0], max_cy = stars->Cy[0];
     double min_cz = stars->Cz[0], max_cz = stars->Cz[0];
 
-    for (int i = 0; i < stars->size; i++) {
+    for (size_t i = 0; i < stars->size; i++) {
         if (stars->radial_velocity[i] < min_rv) min_rv = stars->radial_velocity[i];
         else if (stars->radial_velocity[i] > max_rv) max_rv = stars->radial_velocity[i];
 

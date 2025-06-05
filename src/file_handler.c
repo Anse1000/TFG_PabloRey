@@ -174,8 +174,8 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
                 }
 
                 // Copiamos fuera del critical
-                for (int j = 0; j < temp->size; j++) {
-                    int idx = start_idx + j;
+                for (size_t j = 0; j < temp->size; j++) {
+                    size_t idx = start_idx + j;
                     stars->id[idx] = temp->id[j];
                     stars->ra[idx] = temp->ra[j];
                     stars->dec[idx] = temp->dec[j];

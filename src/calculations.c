@@ -83,7 +83,7 @@ void calculate_vectors(double *Vx, double *Vy, double *Vz, double X_E, double Y_
 }
 
 void complete_data(Star *stars) {
-    for (int i = 0; i < stars->size; i++) {
+    for (size_t i = 0; i < stars->size; i++) {
         double ra_rad = stars->ra[i] * (M_PI / 180.0);
         double dec_rad = stars->dec[i] * (M_PI / 180.0);
 

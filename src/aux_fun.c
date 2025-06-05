@@ -66,8 +66,7 @@ void resize_tree(Octree *tree) {
     tree->com_x = safe_realloc(tree->com_x, sizeof(float) * tree->capacity);
     tree->com_y = safe_realloc(tree->com_y, sizeof(float) * tree->capacity);
     tree->com_z = safe_realloc(tree->com_z, sizeof(float) * tree->capacity);
-    tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
-    tree->first_child_index = safe_realloc(tree->first_child_index, sizeof(long) * tree->capacity);
+    tree->star_or_child = safe_realloc(tree->star_or_child, sizeof(uint64_t) * tree->capacity);
 
 }
 void free_tree(Octree *tree) {
@@ -80,8 +79,7 @@ void free_tree(Octree *tree) {
     free(tree->com_x);
     free(tree->com_y);
     free(tree->com_z);
-    free(tree->star_index);
-    free(tree->first_child_index);
+    free(tree->star_or_child);
     free(tree);
 }
 
