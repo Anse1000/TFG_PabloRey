@@ -10,4 +10,5 @@
 
 void simulate(Star *estrellas, int N);
 void test_simulation(Star *estrellas);
+void predict_tree(Star *estrellas);
 #endif //SIMULATION_H

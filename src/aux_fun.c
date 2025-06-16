@@ -58,29 +58,30 @@ void resize_stars(Star *stars) {
     stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
 }
 void resize_tree(Octree *tree) {
-    tree->cx = safe_realloc(tree->cx, sizeof(double) * tree->capacity);
-    tree->cy = safe_realloc(tree->cy, sizeof(double) * tree->capacity);
-    tree->cz = safe_realloc(tree->cz, sizeof(double) * tree->capacity);
-    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
+    tree->center_x = safe_realloc(tree->center_x, sizeof(double) * tree->capacity);
+    tree->center_y = safe_realloc(tree->center_y, sizeof(double) * tree->capacity);
+    tree->center_z = safe_realloc(tree->center_z, sizeof(double) * tree->capacity);
+    tree->half_size = safe_realloc(tree->half_size, sizeof(double) * tree->capacity);
     tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
-    tree->com_x = safe_realloc(tree->com_x, sizeof(float) * tree->capacity);
-    tree->com_y = safe_realloc(tree->com_y, sizeof(float) * tree->capacity);
-    tree->com_z = safe_realloc(tree->com_z, sizeof(float) * tree->capacity);
-    tree->star_or_child = safe_realloc(tree->star_or_child, sizeof(uint64_t) * tree->capacity);
+    tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
+    tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
+    tree->com_z = safe_realloc(tree->com_z, sizeof(double) * tree->capacity);
+    tree->children = safe_realloc(tree->children, sizeof(long[8]) * tree->capacity);
+    tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
 
 }
 void free_tree(Octree *tree) {
     if (!tree) return;
-    free(tree->cx);
-    free(tree->cy);
-    free(tree->cz);
+    free(tree->center_x);
+    free(tree->center_y);
+    free(tree->center_z);
     free(tree->half_size);
     free(tree->mass);
     free(tree->com_x);
     free(tree->com_y);
     free(tree->com_z);
-    free(tree->star_or_child);
-    free(tree);
+    free(tree->children);
+    free(tree->star_index);
 }
 
 void free_aux(Star *estrellas) {

@@ -1,6 +1,8 @@
 #include "simulation.h"
 #include "aux_fun.h"
 
+double MIN_NODE_SIZE=1e-10;
+
 //Funcion de cómputo de aceleración
 void compute_aceleration(Star *estrellas, double *ax, double *ay, double *az, int N) {
     for (int i = 0; i < N; i++) {
@@ -147,217 +149,134 @@ void compute_aceleration_single(const Star *stars, double *ax, double *ay, doubl
     *seconds = get_seconds(start, end);
 }
 
-//funcion de prueba: calcula la aceleracion de una sola estrella con las CERCANAS
-void compute_aceleration_single_near(const Star *stars, double *ax, double *ay, double *az, const unsigned long index,
-                                     int *count,
-                                     double *seconds) {
-    struct timeval start, end;
-    const double dx0 = stars->Cx[index];
-    const double dy0 = stars->Cy[index];
-    const double dz0 = stars->Cz[index];
-    const double cutoff = 1000; // pc
-    const double cutoff_sq = cutoff * cutoff;
-    *count = 0;
-    gettimeofday(&start, NULL);
-    for (unsigned long i = 0; i < stars->size; i++) {
-        if (i != index) {
-            double dx = stars->Cx[i] - dx0;
-            double dy = stars->Cy[i] - dy0;
-            double dz = stars->Cz[i] - dz0;
-            double dist_sq = dx * dx + dy * dy + dz * dz + EPSILON;
-
-            if (dist_sq < cutoff_sq) {
-                (*count)++;
-                double dist = sqrt(dist_sq);
-                double force = -G * stars->mass[i] / (dist_sq * dist);
-                *ax = fma(force, dx, *ax);
-                *ay = fma(force, dy, *ay);
-                *az = fma(force, dz, *az);
-            }
-        }
-    }
-    gettimeofday(&end, NULL);
-    *seconds = get_seconds(start, end);
-}
-
-unsigned long octree_add_node(Octree *tree, double cx, double cy, double cz, float half_size) {
+long octree_new_node(Octree *tree, double cx, double cy, double cz, double half_size) {
     if (tree->size >= tree->capacity) {
-        size_t new_capacity = tree->capacity < 1000000000
-                                  ? tree->capacity * 2
-                                  : tree->capacity * 1.5;
-        tree->capacity = new_capacity;
+        tree->capacity *= 1.5;
         resize_tree(tree);
-        printf("Nuevo tamaño reservado: %ld\n", tree->capacity);
-        fflush(stdout);
     }
+    size_t i = tree->size++;
 
-    size_t idx = tree->size++;
-    tree->cx[idx] = cx;
-    tree->cy[idx] = cy;
-    tree->cz[idx] = cz;
-    tree->half_size[idx] = half_size;
-    tree->mass[idx] = 0.0f;
-    tree->com_x[idx] = 0.0f;
-    tree->com_y[idx] = 0.0f;
-    tree->com_z[idx] = 0.0f;
-    tree->star_or_child[idx] = 0; // vacío
+    tree->center_x[i] = cx;
+    tree->center_y[i] = cy;
+    tree->center_z[i] = cz;
+    tree->half_size[i] = half_size;
 
-    return idx;
-}
-void memcpy_node(Octree *tree, size_t dst, size_t src) {
-    tree->cx[dst] = tree->cx[src];
-    tree->cy[dst] = tree->cy[src];
-    tree->cz[dst] = tree->cz[src];
-    tree->half_size[dst] = tree->half_size[src];
-    tree->mass[dst] = tree->mass[src];
-    tree->com_x[dst] = tree->com_x[src];
-    tree->com_y[dst] = tree->com_y[src];
-    tree->com_z[dst] = tree->com_z[src];
-    tree->star_or_child[dst] = tree->star_or_child[src];
+    tree->mass[i] = 0.0;
+    tree->com_x[i] = 0.0;
+    tree->com_y[i] = 0.0;
+    tree->com_z[i] = 0.0;
+    tree->star_index[i] = -1;
+
+    for (int j = 0; j < 8; j++)
+        tree->children[i][j] = -1;
+
+    return i;
 }
 
+inline int get_octant(double cx, double cy, double cz, double x, double y, double z) {
+    return ((x >= cx) << 2) | ((y >= cy) << 1) | (z >= cz);
+}
 
-void insert_star(Octree *tree, const Star *stars, unsigned long node_idx, long star_idx) {
-    const double x = stars->Cx[star_idx];
-    const double y = stars->Cy[star_idx];
-    const double z = stars->Cz[star_idx];
-    float m_new = stars->mass[star_idx];
+void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) {
+    double cx = tree->center_x[node_index];
+    double cy = tree->center_y[node_index];
+    double cz = tree->center_z[node_index];
+    double hs = tree->half_size[node_index];
 
-    uint64_t entry = tree->star_or_child[node_idx];
+    double x = stars->Cx[star_index];
+    double y = stars->Cy[star_index];
+    double z = stars->Cz[star_index];
+    float m = stars->mass[star_index];
 
-    // Nodo vacío
-    if (entry == 0) {
-        tree->star_or_child[node_idx] = MAKE_LEAF(star_idx);
-        tree->mass[node_idx] = m_new;
-        tree->com_x[node_idx] = x;
-        tree->com_y[node_idx] = y;
-        tree->com_z[node_idx] = z;
+    // Actualizar masa y centro de masa del nodo
+    float old_mass = tree->mass[node_index];
+    float new_mass = old_mass + m;
+
+    tree->com_x[node_index] = (tree->com_x[node_index] * old_mass + x * m) / new_mass;
+    tree->com_y[node_index] = (tree->com_y[node_index] * old_mass + y * m) / new_mass;
+    tree->com_z[node_index] = (tree->com_z[node_index] * old_mass + z * m) / new_mass;
+    tree->mass[node_index] = new_mass;
+
+    // Si el nodo es demasiado pequeño, no subdividir más
+    if (hs * 2.0 <= MIN_NODE_SIZE) {
+        if (tree->star_index[node_index] == -1)
+            tree->star_index[node_index] = star_index;  // asignar primera estrella
+        // si ya hay una, se quedan varias aquí (no se subdivide más)
         return;
     }
 
-    // Nodo hoja → subdividir
-    if (IS_LEAF(entry)) {
-        long existing_star = GET_STAR_INDEX(entry);
-        tree->star_or_child[node_idx] = 0;  // temporalmente vacío
+    int oct = get_octant(cx, cy, cz, x, y, z);
 
-        // Crear primer hijo en el octante de la estrella existente
-        unsigned long tmp[8] = {0}; // max 8 hijos
-        int n_children = 0;
+    if (tree->children[node_index][oct] == -1) {
+        // Crear nuevo nodo hijo
+        double offset = hs * 0.5;
+        double new_cx = cx + ((oct & 4) ? offset : -offset);
+        double new_cy = cy + ((oct & 2) ? offset : -offset);
+        double new_cz = cz + ((oct & 1) ? offset : -offset);
 
-        for (int i = 0; i < 8; i++) tmp[i] = -1;
+        long child_index = octree_new_node(tree, new_cx, new_cy, new_cz, offset);
+        tree->children[node_index][oct] = child_index;
 
-        // Insertar antigua estrella
-        int eoct = ((stars->Cx[existing_star] >= tree->cx[node_idx]) << 0) |
-                   ((stars->Cy[existing_star] >= tree->cy[node_idx]) << 1) |
-                   ((stars->Cz[existing_star] >= tree->cz[node_idx]) << 2);
+        // Insertar directamente en el hijo
+        tree->star_index[child_index] = star_index;
+        tree->mass[child_index] = m;
+        tree->com_x[child_index] = x;
+        tree->com_y[child_index] = y;
+        tree->com_z[child_index] = z;
+    } else {
+        long child = tree->children[node_index][oct];
+        if (tree->star_index[child] >= 0) {
+            long existing_star = tree->star_index[child];
+            tree->star_index[child] = -1;
 
-        float offset = tree->half_size[node_idx] / 2.0f;
-        for (int i = 0; i < 8; i++) {
-            if (i == eoct) {
-                double cx = tree->cx[node_idx] + ((i & 1) ? offset : -offset);
-                double cy = tree->cy[node_idx] + ((i & 2) ? offset : -offset);
-                double cz = tree->cz[node_idx] + ((i & 4) ? offset : -offset);
-                tmp[i] = octree_add_node(tree, cx, cy, cz, offset);
-                insert_star(tree, stars, tmp[i], existing_star);
-                n_children = 1;
-            }
-        }
+            // Resetear propiedades acumuladas del hijo antes de reinserciones
+            tree->mass[child] = 0.0F;
+            tree->com_x[child] = 0.0;
+            tree->com_y[child] = 0.0;
+            tree->com_z[child] = 0.0;
 
-        // Reservar espacio contiguo y copiar hijos
-        unsigned long base = tree->size;
-        for (int i = 0; i < 8; i++) {
-            if (tmp[i] != -1) {
-                unsigned long new_idx = octree_add_node(tree, 0, 0, 0, 0);  // placeholder
-                memcpy_node(tree, new_idx, tmp[i]);  // necesitas una función auxiliar
-            }
-        }
-
-        tree->star_or_child[node_idx] = MAKE_INTERNAL(base, n_children);
-    }
-
-    // Nodo interno
-    entry = tree->star_or_child[node_idx];
-    unsigned long base = GET_CHILD_START(entry);
-    int count = GET_CHILD_COUNT(entry);
-
-    int octant = ((x >= tree->cx[node_idx]) << 0) |
-                 ((y >= tree->cy[node_idx]) << 1) |
-                 ((z >= tree->cz[node_idx]) << 2);
-
-    int exists = 0;
-    for (int i = 0; i < count; i++) {
-        int idx = base + i;
-        if (((tree->cx[idx] > tree->cx[node_idx]) == ((octant & 1) != 0)) &&
-            ((tree->cy[idx] > tree->cy[node_idx]) == ((octant & 2) != 0)) &&
-            ((tree->cz[idx] > tree->cz[node_idx]) == ((octant & 4) != 0))) {
-            insert_star(tree, stars, idx, star_idx);
-            exists = 1;
-            break;
+            octree_insert(tree, stars, child, existing_star);
+            octree_insert(tree, stars, child, star_index);
+        } else {
+            octree_insert(tree, stars, child, star_index);
         }
     }
-
-    if (!exists) {
-        // Reubicar hijos + nuevo hijo al final
-        float offset = tree->half_size[node_idx] / 2.0f;
-        unsigned long new_base = tree->size;
-
-        for (int i = 0; i < count; i++) {
-            unsigned long new_idx = octree_add_node(tree, 0, 0, 0, 0);
-            memcpy_node(tree, new_idx, base + i);
-        }
-
-        // Nuevo hijo en su octante
-        double cx = tree->cx[node_idx] + ((octant & 1) ? offset : -offset);
-        double cy = tree->cy[node_idx] + ((octant & 2) ? offset : -offset);
-        double cz = tree->cz[node_idx] + ((octant & 4) ? offset : -offset);
-        unsigned long new_child = octree_add_node(tree, cx, cy, cz, offset);
-        insert_star(tree, stars, new_child, star_idx);
-
-        tree->star_or_child[node_idx] = MAKE_INTERNAL(new_base, count + 1);
-    }
-
-    // Actualizar masa y centro de masa
-    float m_old = tree->mass[node_idx];
-    tree->mass[node_idx] += m_new;
-    tree->com_x[node_idx] = (tree->com_x[node_idx] * m_old + x * m_new) / tree->mass[node_idx];
-    tree->com_y[node_idx] = (tree->com_y[node_idx] * m_old + y * m_new) / tree->mass[node_idx];
-    tree->com_z[node_idx] = (tree->com_z[node_idx] * m_old + z * m_new) / tree->mass[node_idx];
 }
 
+void compute_acceleration_bh(const Star *stars, const Octree *tree,
+                             long node_idx, long star_idx, double theta,
+                             double *ax, double *ay, double *az) {
+    // Ignorar si es una hoja con la misma estrella
+    if (tree->star_index[node_idx] == star_idx)
+        return;
 
-
-void compute_acceleration_bh(const Star *stars, const Octree *tree, unsigned long node_idx, long star_idx,
-                             double theta, double *ax, double *ay, double *az) {
-    uint64_t meta = tree->star_or_child[node_idx];
-    if (meta == 0) return;
-
-    if (IS_LEAF(meta) && GET_STAR_INDEX(meta) == star_idx) return;
-
+    // Diferencia de posición
     double dx = tree->com_x[node_idx] - stars->Cx[star_idx];
     double dy = tree->com_y[node_idx] - stars->Cy[star_idx];
     double dz = tree->com_z[node_idx] - stars->Cz[star_idx];
     double dist_sq = dx * dx + dy * dy + dz * dz + EPSILON;
     double dist = sqrt(dist_sq);
 
-    float s = 2.0f * tree->half_size[node_idx];
+    double s = 2.0 * tree->half_size[node_idx]; // ancho total del nodo
 
-    if ((s / dist < theta) || IS_LEAF(meta)) {
+    if ((s / dist) < theta || tree->star_index[node_idx] >= 0) {
+        // Tratar como nodo lejano o hoja
         double force = -G * tree->mass[node_idx] / (dist_sq * dist);
         *ax = fma(force, dx, *ax);
         *ay = fma(force, dy, *ay);
         *az = fma(force, dz, *az);
     } else {
-        unsigned long base = GET_CHILD_START(meta);
-        int count = GET_CHILD_COUNT(meta);
-        for (int i = 0; i < count; i++) {
-            compute_acceleration_bh(stars, tree, base + i, star_idx, theta, ax, ay, az);
+        // Recursión en hijos
+        for (int i = 0; i < 8; i++) {
+            long child = tree->children[node_idx][i];
+            if (child != -1) {
+                compute_acceleration_bh(stars, tree, child, star_idx, theta, ax, ay, az);
+            }
         }
     }
 }
 
-
-
-void aux_time_bh(const Star *stars, const Octree *tree, unsigned long node_idx, long index, double theta, double *ax,
+void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long index, double theta, double *ax,
                  double *ay, double *az, double *seconds) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
@@ -366,7 +285,7 @@ void aux_time_bh(const Star *stars, const Octree *tree, unsigned long node_idx, 
     *seconds = get_seconds(start, end);
 }
 
-void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, double *center_z, float *half_size) {
+void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, double *center_z, double *half_size) {
     // Inicializar límites
     double min_cx = estrellas->Cx[0], max_cx = estrellas->Cx[0];
     double min_cy = estrellas->Cy[0], max_cy = estrellas->Cy[0];
@@ -394,10 +313,13 @@ void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, do
     double max_range = fmax(dx, fmax(dy, dz));
 
     // Usar margen de seguridad (20%) y dividir entre 2
-    *half_size = 0.5F * max_range * 1.2F;
+    *half_size = 0.5 * max_range * 1.2;
+
+    //Elegir precisión para subdivisiones
+    MIN_NODE_SIZE = max_range * 1e-6;
 }
 
-Octree *build_tree(Star *stars) {
+Octree *build_tree(Star *stars, long *raiz) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
@@ -411,38 +333,47 @@ Octree *build_tree(Star *stars) {
     tree->size = 0;
     resize_tree(tree);
 
+    for (size_t i = 0; i < initial_capacity; i++) {
+        for (int j = 0; j < 8; j++) tree->children[i][j] = -1;
+        tree->star_index[i] = -1;
+    }
+
     double cx, cy, cz;
-    float hs;
+    double hs;
     compute_root_bounds(stars, &cx, &cy, &cz, &hs);
 
-    unsigned long root = octree_add_node(tree, cx, cy, cz, hs);
-    for (unsigned long i = 0; i < stars->size; i++) {
-        insert_star(tree, stars, root, i);
+    long root = octree_new_node(tree, cx, cy, cz, hs);
+
+    for (long i = 0; i < stars->size; i++) {
+        octree_insert(tree, stars, root, i);
+        if (i % 1000000 == 0) {
+            printf("\r%ld de %ld estrellas insertadas: %ld nodos en el árbol", i, stars->size, tree->size);
+            fflush(stdout);
+        }
     }
     if (tree->size < tree->capacity) {
         tree->capacity = tree->size;
         resize_tree(tree);
     }
     gettimeofday(&end, NULL);
-    size_t memory = tree->capacity * (sizeof(double) * 3 + // cx, cy, cz
-                                      sizeof(float) * 5 + // half_size, mass, com_x, com_y, com_z
-                                      sizeof(uint64_t));
+    size_t memory = tree->capacity * (
+                        sizeof(double) * 7 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
+                        sizeof(double) + // mass
+                        sizeof(long[8]) + // children (8 longs por nodo)
+                        sizeof(long) // star_index
+                    );
     double secs = get_seconds(start, end);
-    printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs, memory / 1024 / 1024);
+    printf("\nÁrbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs, memory / 1024 / 1024);
     fflush(stdout);
+    *raiz=root;
     return tree;
-}
-void aux_count_empty(Octree *tree){
-    int count=0;
-    for(size_t i=0; i<tree->size;i++) {
-        if (tree->star_or_child[i]==0) count++;
-    }
-    printf("Encontrados %d nodos vacíos de %lu: %.2f%%\n",count,tree->size,(float)count/tree->size*100);
 }
 
 void test_simulation(Star *estrellas) {
+    double THETA = 0.5;
     int indexes[20];
     int count[20];
+    long root;
     double seconds[20], seconds_near[20], seconds_bh[20];
     for (int i = 0; i < 20; i++) {
         indexes[i] = rand() % estrellas->size;
@@ -452,13 +383,11 @@ void test_simulation(Star *estrellas) {
     double axb[20] = {0}, ayb[20] = {0}, azb[20] = {0};
 
     //free_aux(estrellas);
-    Octree *octree = build_tree(estrellas);
-    aux_count_empty(octree);
+    Octree *octree = build_tree(estrellas,&root);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);
-        compute_aceleration_single_near(estrellas, &axn[i], &ayn[i], &azn[i], indexes[i], &count[i], &seconds_near[i]);
-        aux_time_bh(estrellas, octree, 0, indexes[i], 0.5, &axb[i], &ayb[i], &azb[i], &seconds_bh[i]);
+        aux_time_bh(estrellas, octree, root, indexes[i], THETA, &axb[i], &ayb[i], &azb[i], &seconds_bh[i]);
         printf("------------------------------------------------------\n");
         printf("Estrella: %d\n", indexes[i]);
         printf("Aceleracion:                 X=%e Y=%e Z=%e\n", ax[i], ay[i], az[i]);

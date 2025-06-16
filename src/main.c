@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
     //for (int i = 1000; i <= 1000000; i *= 10) {
     //    simulate(estrellas, i);
     //}
+    //predict_tree(estrellas);
     free_stars(estrellas);
     return 0;
 }
