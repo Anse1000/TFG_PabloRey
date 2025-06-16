@@ -316,7 +316,7 @@ void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, do
     *half_size = 0.5 * max_range * 1.2;
 
     //Elegir precisión para subdivisiones
-    MIN_NODE_SIZE = max_range * 1e-6;
+    MIN_NODE_SIZE = max_range * 1e-7;
 }
 
 Octree *build_tree(Star *stars, long *raiz) {
@@ -370,32 +370,33 @@ Octree *build_tree(Star *stars, long *raiz) {
 }
 
 void test_simulation(Star *estrellas) {
-    double THETA = 0.5;
+    double THETA[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
     int indexes[20];
-    int count[20];
     long root;
-    double seconds[20], seconds_near[20], seconds_bh[20];
+    double seconds[20], seconds_bh[200];
     for (int i = 0; i < 20; i++) {
         indexes[i] = rand() % estrellas->size;
     }
     double ax[20] = {0}, ay[20] = {0}, az[20] = {0};
-    double axn[20] = {0}, ayn[20] = {0}, azn[20] = {0};
-    double axb[20] = {0}, ayb[20] = {0}, azb[20] = {0};
+    double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
 
     //free_aux(estrellas);
     Octree *octree = build_tree(estrellas,&root);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);
-        aux_time_bh(estrellas, octree, root, indexes[i], THETA, &axb[i], &ayb[i], &azb[i], &seconds_bh[i]);
+        for (int j = 0; j < 10; j++) {
+            int idex=i*10+j;
+            aux_time_bh(estrellas, octree, root, indexes[i], THETA[j], &axb[idex], &ayb[idex], &azb[idex], &seconds_bh[idex]);
+        }
         printf("------------------------------------------------------\n");
         printf("Estrella: %d\n", indexes[i]);
-        printf("Aceleracion:                 X=%e Y=%e Z=%e\n", ax[i], ay[i], az[i]);
-        printf("Aceleracion cercanas:        X=%e Y=%e Z=%e\n", axn[i], ayn[i], azn[i]);
-        printf("Aceleracion Barnes-Hut:      X=%e Y=%e Z=%e\n", axb[i], ayb[i], azb[i]);
-        printf("Tiempo:                 %f segundos\n", seconds[i]);
-        printf("Tiempo cercanas:        %f segundos\n", seconds_near[i]);
-        printf("Tiempo Barnes-Hut:      %f segundos\n", seconds_bh[i]);
+        printf("Referencia:              X= %+e Y= %+e Z= %+e  %f segundos\n", ax[i], ay[i], az[i], seconds[i]);
+        for (int j = 0; j < 10; j++) {
+            int idex=i*10+j;
+            printf("BarnesHut THETA %0.1f:     X= %+e Y= %+e Z= %+e  %f segundos\n",THETA[j], axb[idex], ayb[idex], azb[idex],seconds_bh[idex]);
+        }
     }
+
     free_tree(octree);
 }
