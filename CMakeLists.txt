@@ -83,7 +83,7 @@ if(ENABLE_CUDA)
     target_compile_definitions(TFG_PRA PRIVATE CUDA)
     set_target_properties(TFG_PRA PROPERTIES
             CUDA_SEPARABLE_COMPILATION ON
-            CUDA_ARCHITECTURES 75
+            CUDA_ARCHITECTURES 80
     )
     target_compile_options(TFG_PRA PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3>)
 endif()

@@ -319,7 +319,7 @@ void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, do
     MIN_NODE_SIZE = max_range * 1e-7;
 }
 
-Octree *build_tree(Star *stars, long *raiz) {
+Octree *build_tree(Star *stars) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
@@ -344,7 +344,7 @@ Octree *build_tree(Star *stars, long *raiz) {
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
 
-    for (long i = 0; i < stars->size; i++) {
+    for (unsigned long i = 0; i < stars->size; i++) {
         octree_insert(tree, stars, root, i);
         if (i % 1000000 == 0) {
             printf("\r%ld de %ld estrellas insertadas: %ld nodos en el árbol", i, stars->size, tree->size);
@@ -365,14 +365,12 @@ Octree *build_tree(Star *stars, long *raiz) {
     double secs = get_seconds(start, end);
     printf("\nÁrbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs, memory / 1024 / 1024);
     fflush(stdout);
-    *raiz=root;
     return tree;
 }
 
 void test_simulation(Star *estrellas) {
     double THETA[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
     int indexes[20];
-    long root;
     double seconds[20], seconds_bh[200];
     for (int i = 0; i < 20; i++) {
         indexes[i] = rand() % estrellas->size;
@@ -381,13 +379,13 @@ void test_simulation(Star *estrellas) {
     double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
 
     //free_aux(estrellas);
-    Octree *octree = build_tree(estrellas,&root);
+    Octree *octree = build_tree(estrellas);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);
         for (int j = 0; j < 10; j++) {
             int idex=i*10+j;
-            aux_time_bh(estrellas, octree, root, indexes[i], THETA[j], &axb[idex], &ayb[idex], &azb[idex], &seconds_bh[idex]);
+            aux_time_bh(estrellas, octree, 0, indexes[i], THETA[j], &axb[idex], &ayb[idex], &azb[idex], &seconds_bh[idex]);
         }
         printf("------------------------------------------------------\n");
         printf("Estrella: %d\n", indexes[i]);
