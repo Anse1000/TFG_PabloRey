@@ -1,15 +1,23 @@
 #!/bin/bash
 #SBATCH -J test_cuda
-#SBATCH -t 10:00:00
-#SBATCH -o test_cuda.out
-#SBATCH --mem=50000
-#SBATCH --gres=gpu:T4:1
+#SBATCH -t 02:00:00
+#SBATCH -o test_cuda_%j.out
+#SBATCH --mem=450GB
+#SBATCH -n 1
+#SBATCH -N 1
+#SBATCH -c 64
+#SBATCH --gres=gpu:a100:8
+#SBATCH --mail-type=begin
+#SBATCH --mail-type=end
+#SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
-# Cargar módulos (si es necesario)
-module load gnu11/11.2.1
-module load cuda/11.8.0
-module load cmake/3.25.2
+ulimit -s unlimited
+# Cargar módulos
+module purge
+module load cesga/2025 nvhpc/25.3-CUDA-system
 # Compilar el programa
-mkdir -p build && cd build && cmake .. -DENABLE_CUDA=ON && cmake --build .
-# Ejecutar el programa
-./TFG_PRA ../pruebas
+mkdir -p build
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -S . -B ./build
+cmake --build ./build
+# Ejecutar
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_cuda.txt

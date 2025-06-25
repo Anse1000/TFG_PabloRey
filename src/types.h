@@ -18,8 +18,8 @@
 #define V_SOL 12.24  // Tangencial al eje de rotacion
 #define W_SOL 7.25   // Perpendicular a plano galáctico
 
-#define DT 10000     // Paso de tiempo en segundos
-#define STEPS 10     // Pasos de la simulacion
+#define DT 0.0001    // Paso de tiempo en millones de años
+#define STEPS 1     // Pasos de la simulacion
 #define EPSILON 0.000001
 
 typedef struct {

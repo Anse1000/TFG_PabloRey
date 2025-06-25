@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include "file_handler.h"
 #include "types.h"
 #include "simulation.h"
@@ -57,8 +59,12 @@ void findminmax(Star *stars) {
 int main(int argc, char *argv[]) {
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
-    if (argc<2) {
-        perror("No se ha introducido ningún archivo");
+    if (argc < 3) {
+        fprintf(stderr, "Error: Número incorrecto de argumentos\n");
+        fprintf(stderr, "Uso: %s <archivo_estrellas> <archivo_salida>\n", argv[0]);
+        fprintf(stderr, "  <archivo_estrellas>: Archivo con los datos de entrada de las estrellas\n");
+        fprintf(stderr, "  <archivo_salida>: Archivo donde se guardarán los resultados\n");
+        free(estrellas);
         return -1;
     }
     unsigned long num_estrellas = getstarsfromfile(argv[1], estrellas);
@@ -67,8 +73,11 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     //findminmax(estrellas);
+#ifdef CUDA
     test_simulation(estrellas);
-    //simulate(estrellas,1000);
+#else
+    simulate(estrellas,estrellas->size,argv[2]);
+#endif
     //print_estrellas(estrellas);
     //for (int i = 1000; i <= 1000000; i *= 10) {
     //    simulate(estrellas, i);
