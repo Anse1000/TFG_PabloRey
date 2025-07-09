@@ -35,15 +35,15 @@ typedef struct {
 
 typedef struct {
     // Bounding box (centro y tamaño)
-    double *center_x, *center_y, *center_z;
-    double *half_size;
+    float *center_x, *center_y, *center_z;
+    float *half_size;
 
     // Agregado de masa
     float *mass;
     double *com_x, *com_y, *com_z;  // centro de masa
 
     // Hijos (índices, -1 si no existe). 8 hijos por nodo.
-    long (*children)[8];  // tamaño = capacity
+    unsigned int (*children)[8];  // tamaño = capacity
 
     // Índice de estrella si hoja, -1 si nodo interno
     long *star_index;

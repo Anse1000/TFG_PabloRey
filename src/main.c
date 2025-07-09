@@ -1,5 +1,6 @@
 #include <errno.h>
 
+#include "aux_fun.h"
 #include "file_handler.h"
 #include "types.h"
 #include "simulation.h"
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
+    free_aux(estrellas);
     //findminmax(estrellas);
 #ifdef CUDA
     test_simulation(estrellas);

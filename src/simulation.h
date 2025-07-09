@@ -5,6 +5,8 @@
 #include "cuda_functions.h"
 #endif
 
+#define INVALID_INDEX UINT32_MAX
+
 void simulate(Star *estrellas, long N, const char* outputfile);
 void test_simulation(Star *estrellas);
 

@@ -2,7 +2,7 @@
 #SBATCH -J test_cuda
 #SBATCH -t 02:00:00
 #SBATCH -o test_cuda_%j.out
-#SBATCH --mem=450GB
+#SBATCH --mem=245GB
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 64

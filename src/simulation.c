@@ -1,7 +1,5 @@
 #include "simulation.h"
-
 #include <omp.h>
-
 #include "aux_fun.h"
 
 double MIN_NODE_SIZE=1e-10;
@@ -30,9 +28,9 @@ void compute_aceleration_single(const Star *stars, double *ax, double *ay, doubl
     *seconds = get_seconds(start, end);
 }
 
-long octree_new_node(Octree *tree, double cx, double cy, double cz, double half_size) {
+long octree_new_node(Octree *tree, float cx, float cy, float cz, float half_size) {
     if (tree->size >= tree->capacity) {
-        tree->capacity *= 1.5;
+        tree->capacity *= 1.2;
         resize_tree(tree);
     }
     size_t i = tree->size++;
@@ -42,15 +40,14 @@ long octree_new_node(Octree *tree, double cx, double cy, double cz, double half_
     tree->center_z[i] = cz;
     tree->half_size[i] = half_size;
 
-    tree->mass[i] = 0.0;
+    tree->mass[i] = 0.0F;
     tree->com_x[i] = 0.0;
     tree->com_y[i] = 0.0;
     tree->com_z[i] = 0.0;
     tree->star_index[i] = -1;
 
     for (int j = 0; j < 8; j++)
-        tree->children[i][j] = -1;
-
+        tree->children[i][j] = INVALID_INDEX;
     return i;
 }
 
@@ -59,10 +56,10 @@ inline int get_octant(double cx, double cy, double cz, double x, double y, doubl
 }
 
 void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) {
-    double cx = tree->center_x[node_index];
-    double cy = tree->center_y[node_index];
-    double cz = tree->center_z[node_index];
-    double hs = tree->half_size[node_index];
+    float cx = tree->center_x[node_index];
+    float cy = tree->center_y[node_index];
+    float cz = tree->center_z[node_index];
+    float hs = tree->half_size[node_index];
 
     double x = stars->Cx[star_index];
     double y = stars->Cy[star_index];
@@ -88,12 +85,12 @@ void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) 
 
     int oct = get_octant(cx, cy, cz, x, y, z);
 
-    if (tree->children[node_index][oct] == -1) {
+    if (tree->children[node_index][oct] == INVALID_INDEX) {
         // Crear nuevo nodo hijo
-        double offset = hs * 0.5;
-        double new_cx = cx + ((oct & 4) ? offset : -offset);
-        double new_cy = cy + ((oct & 2) ? offset : -offset);
-        double new_cz = cz + ((oct & 1) ? offset : -offset);
+        float offset = hs * 0.5F;
+        float new_cx = cx + ((oct & 4) ? offset : -offset);
+        float new_cy = cy + ((oct & 2) ? offset : -offset);
+        float new_cz = cz + ((oct & 1) ? offset : -offset);
 
         long child_index = octree_new_node(tree, new_cx, new_cy, new_cz, offset);
         tree->children[node_index][oct] = child_index;
@@ -150,7 +147,7 @@ void compute_acceleration_bh(const Star *stars, const Octree *tree,
         // Recursión en hijos
         for (int i = 0; i < 8; i++) {
             long child = tree->children[node_idx][i];
-            if (child != -1) {
+            if (child != INVALID_INDEX) {
                 compute_acceleration_bh(stars, tree, child, star_idx, theta, ax, ay, az);
             }
         }
@@ -166,7 +163,7 @@ void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long inde
     *seconds = get_seconds(start, end);
 }
 
-void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, double *center_z, double *half_size) {
+void compute_root_bounds(Star *estrellas, float *center_x, float *center_y, float *center_z, float *half_size) {
     // Inicializar límites
     double min_cx = estrellas->Cx[0], max_cx = estrellas->Cx[0];
     double min_cy = estrellas->Cy[0], max_cy = estrellas->Cy[0];
@@ -183,9 +180,9 @@ void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, do
     }
 
     // Calcular centro
-    *center_x = 0.5 * (min_cx + max_cx);
-    *center_y = 0.5 * (min_cy + max_cy);
-    *center_z = 0.5 * (min_cz + max_cz);
+    *center_x = 0.5F * (min_cx + max_cx);
+    *center_y = 0.5F * (min_cy + max_cy);
+    *center_z = 0.5F * (min_cz + max_cz);
 
     // Calcular rango máximo
     double dx = max_cx - min_cx;
@@ -194,7 +191,7 @@ void compute_root_bounds(Star *estrellas, double *center_x, double *center_y, do
     double max_range = fmax(dx, fmax(dy, dz));
 
     // Usar margen de seguridad (20%) y dividir entre 2
-    *half_size = 0.5 * max_range * 1.2;
+    *half_size = 0.5F * max_range * 1.2F;
 
     //Elegir precisión para subdivisiones
     MIN_NODE_SIZE = max_range * 1e-7;
@@ -215,12 +212,12 @@ Octree *build_tree(Star *stars) {
     resize_tree(tree);
 
     for (size_t i = 0; i < initial_capacity; i++) {
-        for (int j = 0; j < 8; j++) tree->children[i][j] = -1;
+        for (int j = 0; j < 8; j++) tree->children[i][j] = INVALID_INDEX;
         tree->star_index[i] = -1;
     }
 
-    double cx, cy, cz;
-    double hs;
+    float cx, cy, cz;
+    float hs;
     compute_root_bounds(stars, &cx, &cy, &cz, &hs);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
@@ -234,31 +231,16 @@ Octree *build_tree(Star *stars) {
     }
     gettimeofday(&end, NULL);
     size_t memory = tree->capacity * (
-                        sizeof(double) * 7 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
+                        sizeof(double) * 3 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
                         sizeof(double) + // mass
-                        sizeof(long[8]) + // children (8 longs por nodo)
+                        sizeof(float) * 4 +
+                        sizeof(unsigned int[8]) + // children (8 longs por nodo)
                         sizeof(long) // star_index
                     );
     double secs = get_seconds(start, end);
     printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs, memory / 1024 / 1024);
     fflush(stdout);
     return tree;
-}
-
-void test_simulation(Star *estrellas) {
-    //free_aux(estrellas);
-    Octree *octree = build_tree(estrellas);
-#ifdef CUDA
-    //traslado a GPU
-    Octree *gpu_trees[8];
-    NodoResumen *hermanosGPU[8];
-    distribute_root(octree, hermanosGPU);
-    #pragma omp parallel for num_threads(8)
-    for (int i = 0; i < 8; i++) {
-        distribute_tree_gpu(octree,i,&gpu_trees[i]);
-    }
-#endif
-    free_tree(octree);
 }
 
 // Función principal de simulación
@@ -272,7 +254,7 @@ void simulate(Star *estrellas, const long N, const char* outputfile) {
     gettimeofday(&start, NULL);
     for (int step = 0; step < STEPS; step++) {
         Octree *octree = build_tree(estrellas);
-        printf("Iniciando calculos de aceleracion\n"); fflush(stdout);
+        printf("Iniciando fase 1\n"); fflush(stdout);
         #pragma omp parallel for
         for (long i = 0; i < N; i++) {
             compute_acceleration_bh(estrellas, octree, 0, i, 0.2, &ax[i], &ay[i], &az[i]);
@@ -288,7 +270,7 @@ void simulate(Star *estrellas, const long N, const char* outputfile) {
         free_tree(octree);
         //Reconstruir con nuevas posiciones
         octree = build_tree(estrellas);
-        printf("Iniciando calculos de aceleracion\n"); fflush(stdout);
+        printf("Iniciando fase 2\n"); fflush(stdout);
         #pragma omp parallel for
         for (long i = 0; i < N; i++) {
             compute_acceleration_bh(estrellas, octree, 0, i, 0.2, &ax[i], &ay[i], &az[i]);

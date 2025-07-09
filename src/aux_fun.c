@@ -16,14 +16,6 @@ double get_seconds(const struct timeval start, const struct timeval end) {
 
 void free_stars(Star *stars) {
     free(stars->id);
-    free(stars->ra);
-    free(stars->dec);
-    free(stars->distance);
-    free(stars->pmdec);
-    free(stars->pmra);
-    free(stars->radial_velocity);
-    free(stars->mean_g);
-    free(stars->color);
     free(stars->Cx);
     free(stars->Cy);
     free(stars->Cz);
@@ -31,8 +23,6 @@ void free_stars(Star *stars) {
     free(stars->Vy);
     free(stars->Vz);
     free(stars->mass);
-    free(stars->radius);
-    free(stars->gravity);
     free(stars);
 }
 
@@ -58,10 +48,10 @@ void resize_stars(Star *stars) {
     stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
 }
 void resize_tree(Octree *tree) {
-    tree->center_x = safe_realloc(tree->center_x, sizeof(double) * tree->capacity);
-    tree->center_y = safe_realloc(tree->center_y, sizeof(double) * tree->capacity);
-    tree->center_z = safe_realloc(tree->center_z, sizeof(double) * tree->capacity);
-    tree->half_size = safe_realloc(tree->half_size, sizeof(double) * tree->capacity);
+    tree->center_x = safe_realloc(tree->center_x, sizeof(float) * tree->capacity);
+    tree->center_y = safe_realloc(tree->center_y, sizeof(float) * tree->capacity);
+    tree->center_z = safe_realloc(tree->center_z, sizeof(float) * tree->capacity);
+    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
     tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
     tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
     tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
