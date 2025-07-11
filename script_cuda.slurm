@@ -5,8 +5,8 @@
 #SBATCH --mem=245GB
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 64
-#SBATCH --gres=gpu:a100:8
+#SBATCH -c 32
+#SBATCH --gres=gpu:a100:1
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es

@@ -163,40 +163,6 @@ void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long inde
     *seconds = get_seconds(start, end);
 }
 
-void compute_root_bounds(Star *estrellas, float *center_x, float *center_y, float *center_z, float *half_size) {
-    // Inicializar límites
-    double min_cx = estrellas->Cx[0], max_cx = estrellas->Cx[0];
-    double min_cy = estrellas->Cy[0], max_cy = estrellas->Cy[0];
-    double min_cz = estrellas->Cz[0], max_cz = estrellas->Cz[0];
-
-    // Calcular límites de posición
-    for (unsigned long i = 0; i < estrellas->size; i++) {
-        if (estrellas->Cx[i] < min_cx) min_cx = estrellas->Cx[i];
-        else if (estrellas->Cx[i] > max_cx) max_cx = estrellas->Cx[i];
-        if (estrellas->Cy[i] < min_cy) min_cy = estrellas->Cy[i];
-        else if (estrellas->Cy[i] > max_cy) max_cy = estrellas->Cy[i];
-        if (estrellas->Cz[i] < min_cz) min_cz = estrellas->Cz[i];
-        else if (estrellas->Cz[i] > max_cz) max_cz = estrellas->Cz[i];
-    }
-
-    // Calcular centro
-    *center_x = 0.5F * (min_cx + max_cx);
-    *center_y = 0.5F * (min_cy + max_cy);
-    *center_z = 0.5F * (min_cz + max_cz);
-
-    // Calcular rango máximo
-    double dx = max_cx - min_cx;
-    double dy = max_cy - min_cy;
-    double dz = max_cz - min_cz;
-    double max_range = fmax(dx, fmax(dy, dz));
-
-    // Usar margen de seguridad (20%) y dividir entre 2
-    *half_size = 0.5F * max_range * 1.2F;
-
-    //Elegir precisión para subdivisiones
-    MIN_NODE_SIZE = max_range * 1e-7;
-}
-
 Octree *build_tree(Star *stars) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
@@ -218,7 +184,8 @@ Octree *build_tree(Star *stars) {
 
     float cx, cy, cz;
     float hs;
-    compute_root_bounds(stars, &cx, &cy, &cz, &hs);
+    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&MIN_NODE_SIZE);
+    printf("MIN_NODE_SIZE = %f\n", MIN_NODE_SIZE); fflush(stdout);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
 

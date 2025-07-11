@@ -4,7 +4,9 @@
 #include "file_handler.h"
 #include "types.h"
 #include "simulation.h"
-
+#ifdef CUDA
+#include "cuda_functions.cuh"
+#endif
 void print_estrellas(Star *stars) {
     for (size_t i = 300000; i < 301000 && i < stars->size; i++) {
         printf("------------------------------------------------------------\n");
@@ -76,7 +78,7 @@ int main(int argc, char *argv[]) {
     free_aux(estrellas);
     //findminmax(estrellas);
 #ifdef CUDA
-    test_simulation(estrellas);
+    simulate_multi_gpu_unified(estrellas,10000000,argv[2]);
 #else
     simulate(estrellas,estrellas->size,argv[2]);
 #endif

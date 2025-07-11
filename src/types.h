@@ -22,6 +22,8 @@
 #define STEPS 1     // Pasos de la simulacion
 #define EPSILON 0.000001
 
+#define INVALID_INDEX UINT32_MAX
+
 typedef struct {
     unsigned long *id;
     double *ra, *dec, *distance, *pmra, *pmdec, *radial_velocity;
