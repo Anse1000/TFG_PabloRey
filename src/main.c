@@ -1,12 +1,15 @@
 #include <errno.h>
-
+#include <stdlib.h>
+#include <string.h>
 #include "aux_fun.h"
 #include "file_handler.h"
 #include "types.h"
+#include "octree.h"
 #include "simulation.h"
 #ifdef CUDA
 #include "cuda_functions.cuh"
 #endif
+
 void print_estrellas(Star *stars) {
     for (size_t i = 300000; i < 301000 && i < stars->size; i++) {
         printf("------------------------------------------------------------\n");
@@ -59,14 +62,30 @@ void findminmax(Star *stars) {
     fflush(stdout);
 }
 
+void print_to_file(Star *estrellas, char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        perror("Error abriendo el archivo");
+        return;
+    }
+    for (size_t i = 0; i < estrellas->size; i++) {
+        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
+        estrellas->Cz[i]);
+    }
+    printf("Posiciones iniciales guardadas en %s\n", filename);
+}
+
 int main(int argc, char *argv[]) {
+    int steps = 0;
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
-    if (argc < 3) {
+    if (argc < 4) {
         fprintf(stderr, "Error: Número incorrecto de argumentos\n");
-        fprintf(stderr, "Uso: %s <archivo_estrellas> <archivo_salida>\n", argv[0]);
+        fprintf(stderr, "Uso: %s <archivo_estrellas> <archivo_posiciones_iniciales> <archivo_salida> STEPS\n", argv[0]);
         fprintf(stderr, "  <archivo_estrellas>: Archivo con los datos de entrada de las estrellas\n");
+        fprintf(stderr, "  <archivo_posiciones_iniciales>: Archivo con las posiciones iniciales de las estrellas\n");
         fprintf(stderr, "  <archivo_salida>: Archivo donde se guardarán los resultados\n");
+        fprintf(stderr, "  Numero de pasos de la simulacion\n");
         free(estrellas);
         return -1;
     }
@@ -75,18 +94,20 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
+    //print_to_file(estrellas, argv[2]);
     free_aux(estrellas);
-    //findminmax(estrellas);
+    steps = atoi(argv[4]);
+    if (steps <= 0) {
+        perror("Numero de pasos incorrecto");
+        return -1;
+    }
+    test_simulation(estrellas);
+/*
 #ifdef CUDA
-    simulate_multi_gpu_unified(estrellas,10000000,argv[2]);
+    simulate_multi_gpu_unified(estrellas,steps,10000000,argv[3]);
 #else
-    simulate(estrellas,estrellas->size,argv[2]);
-#endif
-    //print_estrellas(estrellas);
-    //for (int i = 1000; i <= 1000000; i *= 10) {
-    //    simulate(estrellas, i);
-    //}
-    //predict_tree(estrellas);
+    simulate(estrellas,steps,estrellas->size,argv[3]);
+#endif*/
     free_stars(estrellas);
     return 0;
 }

@@ -1,11 +1,6 @@
 #ifndef TYPES_H
 #define TYPES_H
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdint.h>
-#include <sys/time.h>
 
 #define G 4.30091e-6
 #define KAPPA 4.74047   // AS/año * parsecs -> km/s
@@ -19,11 +14,8 @@
 #define W_SOL 7.25   // Perpendicular a plano galáctico
 
 #define DT 0.0001    // Paso de tiempo en millones de años
-#define STEPS 1     // Pasos de la simulacion
 #define EPSILON 0.000001
-
-#define INVALID_INDEX UINT32_MAX
-
+#define MIN_SUBDIVISIONS 1e12
 typedef struct {
     unsigned long *id;
     double *ra, *dec, *distance, *pmra, *pmdec, *radial_velocity;
@@ -34,25 +26,6 @@ typedef struct {
     size_t size;
     size_t capacity;
 } Star;
-
-typedef struct {
-    // Bounding box (centro y tamaño)
-    float *center_x, *center_y, *center_z;
-    float *half_size;
-
-    // Agregado de masa
-    float *mass;
-    double *com_x, *com_y, *com_z;  // centro de masa
-
-    // Hijos (índices, -1 si no existe). 8 hijos por nodo.
-    unsigned int (*children)[8];  // tamaño = capacity
-
-    // Índice de estrella si hoja, -1 si nodo interno
-    long *star_index;
-
-    size_t size;      // nodos usados
-    size_t capacity;  // capacidad total
-} Octree;
 
 
 #endif // TYPES_H

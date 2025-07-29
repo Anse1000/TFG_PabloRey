@@ -1,4 +1,7 @@
 #include "aux_fun.h"
+#include <stdlib.h>
+#include <math.h>
+#include "octree.h"
 
 static void *safe_realloc(void *ptr, const size_t size) {
     void *tmp = realloc(ptr, size);
@@ -8,6 +11,7 @@ static void *safe_realloc(void *ptr, const size_t size) {
     }
     return tmp;
 }
+
 double get_seconds(const struct timeval start, const struct timeval end) {
     time_t diff = end.tv_sec - start.tv_sec;
     suseconds_t diff_us = end.tv_usec - start.tv_usec;
@@ -47,16 +51,17 @@ void resize_stars(Star *stars) {
     stars->radius = safe_realloc(stars->radius, sizeof(float) * stars->capacity);
     stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
 }
+
 void resize_tree(Octree *tree) {
-    tree->center_x = safe_realloc(tree->center_x, sizeof(float) * tree->capacity);
-    tree->center_y = safe_realloc(tree->center_y, sizeof(float) * tree->capacity);
-    tree->center_z = safe_realloc(tree->center_z, sizeof(float) * tree->capacity);
-    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
+    tree->center_x = safe_realloc(tree->center_x, sizeof(double) * tree->capacity);
+    tree->center_y = safe_realloc(tree->center_y, sizeof(double) * tree->capacity);
+    tree->center_z = safe_realloc(tree->center_z, sizeof(double) * tree->capacity);
+    tree->half_size = safe_realloc(tree->half_size, sizeof(double) * tree->capacity);
     tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
     tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
     tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
     tree->com_z = safe_realloc(tree->com_z, sizeof(double) * tree->capacity);
-    tree->children = safe_realloc(tree->children, sizeof(long[8]) * tree->capacity);
+    tree->children = safe_realloc(tree->children, sizeof(unsigned int[8]) * tree->capacity);
     tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
 }
 void compute_root_bounds(Star *estrellas, float *center_x, float *center_y, float *center_z, float *half_size,double *min_node_size) {
@@ -123,6 +128,7 @@ void free_aux(Star *estrellas) {
                          );
     printf("Liberados %.2lu MB de recursos auxiliares\n",total_bytes/1024/1024);
 }
+
 void swap_star_elements(Star *star, size_t i, size_t j) {
 #define SWAP(arr) do { typeof((arr)[0]) tmp = (arr)[i]; (arr)[i] = (arr)[j]; (arr)[j] = tmp; } while (0)
 

@@ -23,6 +23,7 @@ set(SRC
         src/simulation.c
         src/calculations.c
         src/aux_fun.c
+        src/octree.c
 )
 
 set(HEADERS
@@ -31,6 +32,7 @@ set(HEADERS
         src/types.h
         src/calculations.h
         src/aux_fun.h
+        src/octree.h
 )
 
 # CUDA
@@ -82,4 +84,9 @@ endif()
 # Salida del ejecutable
 set_target_properties(TFG_PRA PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+# === Definir macros según el tipo de build ===
+target_compile_definitions(TFG_PRA PRIVATE
+        $<$<CONFIG:Debug>:DEBUG_BUILD>
+        $<$<CONFIG:Release>:RELEASE_BUILD>
 )

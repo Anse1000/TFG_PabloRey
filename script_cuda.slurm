@@ -2,7 +2,7 @@
 #SBATCH -J test_cuda
 #SBATCH -t 02:00:00
 #SBATCH -o test_cuda_%j.out
-#SBATCH --mem=245GB
+#SBATCH --mem=247GB
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 32
@@ -20,4 +20,4 @@ mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build
 # Ejecutar
-./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_cuda.txt
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/initial_positions_cuda.txt /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_cuda.txt 1

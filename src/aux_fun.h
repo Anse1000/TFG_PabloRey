@@ -1,17 +1,18 @@
 #ifndef AUX_FUN_H
 #define AUX_FUN_H
 #include "types.h"
+#include <sys/time.h>
 
-void free_stars(Star *stars);
-void resize_stars(Star *stars);
-
-void free_tree(Octree *tree);
-void resize_tree(Octree *tree);
-
-void free_aux(Star *stars);
+#include "octree.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+void free_stars(Star *stars);
+void resize_stars(Star *stars);
+void resize_tree(Octree *tree);
+
+void free_aux(Star *stars);
+void free_tree(Octree *tree);
 double get_seconds(struct timeval start, struct timeval end);
 
 void compute_root_bounds(Star *estrellas, float *center_x, float *center_y, float *center_z, float *half_size,double *min_node_size);

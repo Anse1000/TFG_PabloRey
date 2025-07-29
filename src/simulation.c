@@ -1,8 +1,10 @@
 #include "simulation.h"
 #include <omp.h>
+#include <math.h>
+#include <stdlib.h>
+#include <sys/time.h>
 #include "aux_fun.h"
-
-double MIN_NODE_SIZE=1e-10;
+#include "octree.h"
 
 //funcion de prueba: calcula la aceleracion de una sola estrella con TODAS
 void compute_aceleration_single(const Star *stars, double *ax, double *ay, double *az, const unsigned long index,
@@ -26,99 +28,6 @@ void compute_aceleration_single(const Star *stars, double *ax, double *ay, doubl
     }
     gettimeofday(&end, NULL);
     *seconds = get_seconds(start, end);
-}
-
-long octree_new_node(Octree *tree, float cx, float cy, float cz, float half_size) {
-    if (tree->size >= tree->capacity) {
-        tree->capacity *= 1.2;
-        resize_tree(tree);
-    }
-    size_t i = tree->size++;
-
-    tree->center_x[i] = cx;
-    tree->center_y[i] = cy;
-    tree->center_z[i] = cz;
-    tree->half_size[i] = half_size;
-
-    tree->mass[i] = 0.0F;
-    tree->com_x[i] = 0.0;
-    tree->com_y[i] = 0.0;
-    tree->com_z[i] = 0.0;
-    tree->star_index[i] = -1;
-
-    for (int j = 0; j < 8; j++)
-        tree->children[i][j] = INVALID_INDEX;
-    return i;
-}
-
-inline int get_octant(double cx, double cy, double cz, double x, double y, double z) {
-    return ((x >= cx) << 2) | ((y >= cy) << 1) | (z >= cz);
-}
-
-void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) {
-    float cx = tree->center_x[node_index];
-    float cy = tree->center_y[node_index];
-    float cz = tree->center_z[node_index];
-    float hs = tree->half_size[node_index];
-
-    double x = stars->Cx[star_index];
-    double y = stars->Cy[star_index];
-    double z = stars->Cz[star_index];
-    float m = stars->mass[star_index];
-
-    // Actualizar masa y centro de masa del nodo
-    float old_mass = tree->mass[node_index];
-    float new_mass = old_mass + m;
-
-    tree->com_x[node_index] = (tree->com_x[node_index] * old_mass + x * m) / new_mass;
-    tree->com_y[node_index] = (tree->com_y[node_index] * old_mass + y * m) / new_mass;
-    tree->com_z[node_index] = (tree->com_z[node_index] * old_mass + z * m) / new_mass;
-    tree->mass[node_index] = new_mass;
-
-    // Si el nodo es demasiado pequeño, no subdividir más
-    if (hs * 2.0 <= MIN_NODE_SIZE) {
-        if (tree->star_index[node_index] == -1)
-            tree->star_index[node_index] = star_index;  // asignar primera estrella
-        // si ya hay una, se quedan varias aquí (no se subdivide más)
-        return;
-    }
-
-    int oct = get_octant(cx, cy, cz, x, y, z);
-
-    if (tree->children[node_index][oct] == INVALID_INDEX) {
-        // Crear nuevo nodo hijo
-        float offset = hs * 0.5F;
-        float new_cx = cx + ((oct & 4) ? offset : -offset);
-        float new_cy = cy + ((oct & 2) ? offset : -offset);
-        float new_cz = cz + ((oct & 1) ? offset : -offset);
-
-        long child_index = octree_new_node(tree, new_cx, new_cy, new_cz, offset);
-        tree->children[node_index][oct] = child_index;
-
-        // Insertar directamente en el hijo
-        tree->star_index[child_index] = star_index;
-        tree->mass[child_index] = m;
-        tree->com_x[child_index] = x;
-        tree->com_y[child_index] = y;
-        tree->com_z[child_index] = z;
-    } else {
-        long child = tree->children[node_index][oct];
-        if (tree->star_index[child] >= 0) {
-            long existing_star = tree->star_index[child];
-            tree->star_index[child] = -1;
-
-            // Resetear propiedades acumuladas del hijo antes de reinserciones
-            tree->mass[child] = 0.0F;
-            tree->com_x[child] = 0.0;
-            tree->com_y[child] = 0.0;
-            tree->com_z[child] = 0.0;
-
-            octree_insert(tree, stars, child, existing_star);
-            octree_insert(tree, stars, child, star_index);
-        } else {
-            octree_insert(tree, stars, child, star_index);
-        }
-    }
 }
 
 void compute_acceleration_bh(const Star *stars, const Octree *tree,
@@ -163,55 +72,8 @@ void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long inde
     *seconds = get_seconds(start, end);
 }
 
-Octree *build_tree(Star *stars) {
-    struct timeval start, end;
-    size_t initial_capacity = 10000;
-    gettimeofday(&start, NULL);
-    printf("Iniciando construccion del Arbol\n");
-    fflush(stdout);
-
-    Octree *tree = malloc(sizeof(Octree));
-    memset(tree, 0, sizeof(Octree));
-
-    tree->capacity = initial_capacity;
-    tree->size = 0;
-    resize_tree(tree);
-
-    for (size_t i = 0; i < initial_capacity; i++) {
-        for (int j = 0; j < 8; j++) tree->children[i][j] = INVALID_INDEX;
-        tree->star_index[i] = -1;
-    }
-
-    float cx, cy, cz;
-    float hs;
-    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&MIN_NODE_SIZE);
-    printf("MIN_NODE_SIZE = %f\n", MIN_NODE_SIZE); fflush(stdout);
-
-    long root = octree_new_node(tree, cx, cy, cz, hs);
-
-    for (unsigned long i = 0; i < stars->size; i++) {
-        octree_insert(tree, stars, root, i);
-    }
-    if (tree->size < tree->capacity) {
-        tree->capacity = tree->size;
-        resize_tree(tree);
-    }
-    gettimeofday(&end, NULL);
-    size_t memory = tree->capacity * (
-                        sizeof(double) * 3 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
-                        sizeof(double) + // mass
-                        sizeof(float) * 4 +
-                        sizeof(unsigned int[8]) + // children (8 longs por nodo)
-                        sizeof(long) // star_index
-                    );
-    double secs = get_seconds(start, end);
-    printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs, memory / 1024 / 1024);
-    fflush(stdout);
-    return tree;
-}
-
 // Función principal de simulación
-void simulate(Star *estrellas, const long N, const char* outputfile) {
+void simulate(Star *estrellas,const int steps, const long N, const char* outputfile) {
     struct timeval start, end;
     double DT2 = 0.5 * DT;
     double *ax = malloc(N * sizeof(double));
@@ -219,7 +81,9 @@ void simulate(Star *estrellas, const long N, const char* outputfile) {
     double *az = malloc(N * sizeof(double));
 
     gettimeofday(&start, NULL);
-    for (int step = 0; step < STEPS; step++) {
+    printf("Iniciando simulacion usando %d threads\n",omp_get_max_threads()); fflush(stdout);
+    for (int step = 0; step < steps; step++) {
+        printf("Iniciando paso %d\n", step + 1); fflush(stdout);
         Octree *octree = build_tree(estrellas);
         printf("Iniciando fase 1\n"); fflush(stdout);
         #pragma omp parallel for
@@ -269,4 +133,48 @@ void simulate(Star *estrellas, const long N, const char* outputfile) {
         fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
                 estrellas->Cz[i]);
     }
+}
+
+void test_simulation(Star *estrellas) {
+    Octree *octree = build_tree(estrellas);
+
+    // Test con 10 estrellas aleatorias
+    int num_tests = 20;
+    long test_stars[20];  // IDs específicas para repetibilidad
+
+    // Usar estrellas específicas o generar aleatorias
+    srand(42); // Semilla fija para reproducibilidad
+    for (int i = 0; i < num_tests; i++) {
+        test_stars[i] = rand() % estrellas->size;
+    }
+
+    for (int star_test = 0; star_test < num_tests; star_test++) {
+        long star_index = test_stars[star_test];
+
+        printf("------------------------------------------------------\n");
+        printf("Estrella: %lu\n", estrellas->id[star_index]);
+
+        // Calcular referencia (fuerza bruta)
+        double ref_ax, ref_ay, ref_az, ref_time;
+        compute_aceleration_single(estrellas, &ref_ax, &ref_ay, &ref_az, star_index, &ref_time);
+
+        printf("Referencia:              X= %+.6e Y= %+.6e Z= %+.6e  %f segundos\n",
+               ref_ax, ref_ay, ref_az, ref_time);
+
+        // Test con diferentes valores de theta
+        double theta_values[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+        int num_theta = sizeof(theta_values) / sizeof(theta_values[0]);
+
+        for (int t = 0; t < num_theta; t++) {
+            double bh_ax, bh_ay, bh_az, bh_time;
+
+            // Calcular usando Barnes-Hut
+            aux_time_bh(estrellas, octree, 0, star_index, theta_values[t],
+                       &bh_ax, &bh_ay, &bh_az, &bh_time);
+
+            printf("BarnesHut THETA %.1f:     X= %+.6e Y= %+.6e Z= %+.6e  %f segundos\n",
+                   theta_values[t], bh_ax, bh_ay, bh_az, bh_time);
+        }
+    }
+    free_tree(octree);
 }

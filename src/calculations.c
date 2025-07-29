@@ -1,5 +1,5 @@
 #include "calculations.h"
-
+#include <math.h>
 //Matriz de cambio de coordenadas celestes a galácticas X,Y,Z
 //Usando Norte galáctico Epoch 2016.0
 const double R[3][3] = {

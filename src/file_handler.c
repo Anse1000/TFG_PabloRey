@@ -1,6 +1,9 @@
 #include "file_handler.h"
 #include <dirent.h>
 #include <omp.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
 #include "calculations.h"
 #include "aux_fun.h"
 
