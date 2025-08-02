@@ -9,8 +9,8 @@
 
 typedef struct {
     // Bounding box (centro y tamaño)
-    double *center_x, *center_y, *center_z;
-    double *half_size;
+    float *center_x, *center_y, *center_z;
+    float *half_size;
 
     // Agregado de masa
     float *mass;

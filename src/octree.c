@@ -48,7 +48,7 @@ void count_cpu_octant_stars(Octree *cpu_tree, long *cpu_counts) {
 #endif
 
 // Función para calcular límites usando centro de masa
-void compute_root_bounds_mass_centered(Star *stars, double *cx, double *cy, double *cz, double *hs, double *min_node_size) {
+void compute_root_bounds_mass_centered(Star *stars, float *cx, float *cy, float *cz, float *hs, double *min_node_size) {
     if (stars->size == 0) return;
 
     // Calcular centro de masa
@@ -88,7 +88,7 @@ void compute_root_bounds_mass_centered(Star *stars, double *cx, double *cy, doub
     fflush(stdout);
 }
 
-long octree_new_node(Octree *tree, double cx, double cy, double cz, double half_size) {
+long octree_new_node(Octree *tree, float cx, float cy, float cz, float half_size) {
     if (tree->size >= tree->capacity) {
         tree->capacity *= 1.2;
         resize_tree(tree);
@@ -111,15 +111,11 @@ long octree_new_node(Octree *tree, double cx, double cy, double cz, double half_
     return i;
 }
 
-inline int get_octant(double cx, double cy, double cz, double x, double y, double z) {
-    return ((x >= cx) << 2) | ((y >= cy) << 1) | (z >= cz);
-}
-
 void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) {
-    double cx = tree->center_x[node_index];
-    double cy = tree->center_y[node_index];
-    double cz = tree->center_z[node_index];
-    double hs = tree->half_size[node_index];
+    float cx = tree->center_x[node_index];
+    float cy = tree->center_y[node_index];
+    float cz = tree->center_z[node_index];
+    float hs = tree->half_size[node_index];
 
     double x = stars->Cx[star_index];
     double y = stars->Cy[star_index];
@@ -147,10 +143,10 @@ void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) 
 
     if (tree->children[node_index][oct] == INVALID_INDEX) {
         // Crear nuevo nodo hijo
-        double offset = hs * 0.5F;
-        double new_cx = cx + ((oct & 4) ? offset : -offset);
-        double new_cy = cy + ((oct & 2) ? offset : -offset);
-        double new_cz = cz + ((oct & 1) ? offset : -offset);
+        float offset = hs * 0.5F;
+        float new_cx = cx + ((oct & 4) ? offset : -offset);
+        float new_cy = cy + ((oct & 2) ? offset : -offset);
+        float new_cz = cz + ((oct & 1) ? offset : -offset);
 
         long child_index = octree_new_node(tree, new_cx, new_cy, new_cz, offset);
         tree->children[node_index][oct] = child_index;
@@ -200,8 +196,8 @@ Octree *build_tree(Star *stars) {
         tree->star_index[i] = -1;
     }
 
-    double cx, cy, cz;
-    double hs;
+    float cx, cy, cz;
+    float hs;
     compute_root_bounds_mass_centered(stars, &cx, &cy, &cz, &hs,&MIN_NODE_SIZE);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
@@ -215,8 +211,9 @@ Octree *build_tree(Star *stars) {
     }
     gettimeofday(&end, NULL);
 
-    size_t node_memory = sizeof(double) * 7 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
+    size_t node_memory = sizeof(double) * 3 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
                          sizeof(float) + // mass
+                         sizeof(float) * 4 +
                          sizeof(unsigned int[8]) + // children (8 longs por nodo)
                          sizeof(long); // star_index
     double secs = get_seconds(start, end);

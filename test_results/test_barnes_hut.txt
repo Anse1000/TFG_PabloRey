@@ -1,0 +1,293 @@
+Iniciando lectura de 3386 archivos usando 32 threads
+Leídas y trasladadas 1061986807 estrellas a memoria ocupando 129637.06 MB en 321.48 segundos
+Liberados 64818 MB de recursos auxiliares
+Iniciando construccion del Arbol
+Árbol de 1939519312 nodos creado en 439.2629 segundos usando 155372 MB
+Subarbol 0: 144663065 nodos -> 11588 MB
+Subarbol 1: 162329467 nodos -> 13003 MB
+Subarbol 2: 127823076 nodos -> 10239 MB
+Subarbol 3: 165456597 nodos -> 13254 MB
+Subarbol 4: 126996864 nodos -> 10173 MB
+Subarbol 5: 80718088 nodos -> 6466 MB
+Subarbol 6: 133940673 nodos -> 10729 MB
+Subarbol 7: 85099664 nodos -> 6817 MB
+------------------------------------------------------
+Estrella: 742302576
+Referencia:              X= +5.407921e-06 Y= -1.296703e-04 Z= -2.478794e-04  4.256223 segundos
+BarnesHut THETA 0.1:     X= +5.413159e-06 Y= -1.296643e-04 Z= -2.478644e-04  0.035244 segundos
+BarnesHut THETA 0.2:     X= +5.144912e-06 Y= -1.298133e-04 Z= -2.478524e-04  0.004801 segundos
+BarnesHut THETA 0.3:     X= +3.150157e-05 Y= -1.074858e-04 Z= -2.438717e-04  0.001191 segundos
+BarnesHut THETA 0.4:     X= +1.010945e-04 Y= -9.343720e-05 Z= -2.245768e-04  0.000471 segundos
+BarnesHut THETA 0.5:     X= +1.267207e-04 Y= -9.438192e-05 Z= -2.079181e-04  0.000275 segundos
+BarnesHut THETA 0.6:     X= +1.314775e-04 Y= -7.732971e-05 Z= -1.983166e-04  0.000155 segundos
+BarnesHut THETA 0.7:     X= +1.359047e-04 Y= -5.491129e-05 Z= -1.832107e-04  0.000081 segundos
+BarnesHut THETA 0.8:     X= +1.381347e-04 Y= -3.063624e-05 Z= -1.757126e-04  0.000048 segundos
+BarnesHut THETA 0.9:     X= +1.344563e-04 Y= -1.885563e-05 Z= -1.643331e-04  0.000033 segundos
+BarnesHut THETA 1.0:     X= +1.405722e-04 Y= -1.387108e-06 Z= -5.949434e-05  0.000023 segundos
+------------------------------------------------------
+Estrella: 846930886
+Referencia:              X= +4.310954e-04 Y= +5.652964e-05 Z= +2.695394e-05  4.255195 segundos
+BarnesHut THETA 0.1:     X= +4.310958e-04 Y= +5.652978e-05 Z= +2.695046e-05  0.035682 segundos
+BarnesHut THETA 0.2:     X= +4.313092e-04 Y= +5.652789e-05 Z= +2.692999e-05  0.004814 segundos
+BarnesHut THETA 0.3:     X= +4.300213e-04 Y= +5.639836e-05 Z= +2.667870e-05  0.001198 segundos
+BarnesHut THETA 0.4:     X= +4.279523e-04 Y= +5.632369e-05 Z= +2.662039e-05  0.000429 segundos
+BarnesHut THETA 0.5:     X= +2.607539e-04 Y= +8.786095e-05 Z= -2.037288e-04  0.000239 segundos
+BarnesHut THETA 0.6:     X= +2.360733e-04 Y= +8.353648e-05 Z= -2.060558e-04  0.000151 segundos
+BarnesHut THETA 0.7:     X= +7.374468e-05 Y= +2.287167e-04 Z= -1.294318e-04  0.000065 segundos
+BarnesHut THETA 0.8:     X= +6.815118e-05 Y= +2.260076e-04 Z= -1.295668e-04  0.000033 segundos
+BarnesHut THETA 0.9:     X= -1.010469e-04 Y= +3.003785e-05 Z= -6.274479e-05  0.000014 segundos
+BarnesHut THETA 1.0:     X= -7.849086e-05 Y= +6.387118e-05 Z= -4.229291e-05  0.000005 segundos
+------------------------------------------------------
+Estrella: 619705970
+Referencia:              X= -7.880212e-05 Y= +8.502249e-05 Z= -3.393441e-04  4.254685 segundos
+BarnesHut THETA 0.1:     X= -7.880462e-05 Y= +8.501988e-05 Z= -3.393297e-04  0.037379 segundos
+BarnesHut THETA 0.2:     X= -7.874814e-05 Y= +8.503859e-05 Z= -3.392334e-04  0.004977 segundos
+BarnesHut THETA 0.3:     X= -7.827209e-05 Y= +8.521242e-05 Z= -3.390927e-04  0.001248 segundos
+BarnesHut THETA 0.4:     X= +1.289226e-04 Y= +4.674844e-05 Z= -1.860942e-04  0.000220 segundos
+BarnesHut THETA 0.5:     X= +1.273953e-04 Y= +4.632833e-05 Z= -1.853725e-04  0.000102 segundos
+BarnesHut THETA 0.6:     X= +1.218932e-04 Y= +8.359931e-06 Z= -5.532053e-05  0.000044 segundos
+BarnesHut THETA 0.7:     X= +1.010402e-04 Y= -1.740604e-05 Z= -5.021020e-05  0.000030 segundos
+BarnesHut THETA 0.8:     X= +1.030143e-04 Y= -1.850604e-05 Z= -4.936655e-05  0.000017 segundos
+BarnesHut THETA 0.9:     X= +9.827030e-05 Y= -1.926174e-05 Z= -4.443913e-05  0.000008 segundos
+BarnesHut THETA 1.0:     X= +6.919612e-05 Y= -2.253900e-05 Z= -2.026519e-05  0.000003 segundos
+------------------------------------------------------
+Estrella: 652650108
+Referencia:              X= +1.843065e-04 Y= +1.122963e-04 Z= +1.573674e-04  4.253011 segundos
+BarnesHut THETA 0.1:     X= +1.843023e-04 Y= +1.122913e-04 Z= +1.573553e-04  0.037451 segundos
+BarnesHut THETA 0.2:     X= +1.843698e-04 Y= +1.123818e-04 Z= +1.572571e-04  0.005047 segundos
+BarnesHut THETA 0.3:     X= +1.846560e-04 Y= +1.120173e-04 Z= +1.568795e-04  0.001252 segundos
+BarnesHut THETA 0.4:     X= +2.386956e-04 Y= +2.559246e-05 Z= -3.905765e-05  0.000461 segundos
+BarnesHut THETA 0.5:     X= +2.318555e-04 Y= +2.137986e-05 Z= -4.032099e-05  0.000248 segundos
+BarnesHut THETA 0.6:     X= +1.252327e-04 Y= -1.208528e-06 Z= +4.055309e-05  0.000072 segundos
+BarnesHut THETA 0.7:     X= +1.279824e-04 Y= -6.137839e-06 Z= +3.847410e-05  0.000030 segundos
+BarnesHut THETA 0.8:     X= +1.228919e-04 Y= -8.358177e-06 Z= +2.777607e-05  0.000017 segundos
+BarnesHut THETA 0.9:     X= +1.291247e-04 Y= +5.231319e-06 Z= +2.954310e-05  0.000009 segundos
+BarnesHut THETA 1.0:     X= +1.271861e-04 Y= +9.768216e-07 Z= +2.643048e-05  0.000003 segundos
+------------------------------------------------------
+Estrella: 895760986
+Referencia:              X= -3.213461e-05 Y= -1.539084e-04 Z= -1.245094e-04  4.319800 segundos
+BarnesHut THETA 0.1:     X= -3.213622e-05 Y= -1.539135e-04 Z= -1.245059e-04  0.028515 segundos
+BarnesHut THETA 0.2:     X= -2.931109e-05 Y= -1.492135e-04 Z= -1.223574e-04  0.004216 segundos
+BarnesHut THETA 0.3:     X= -2.193615e-05 Y= -1.304043e-04 Z= -1.127454e-04  0.001067 segundos
+BarnesHut THETA 0.4:     X= -5.917892e-06 Y= -1.044414e-04 Z= -9.219690e-05  0.000460 segundos
+BarnesHut THETA 0.5:     X= -9.762445e-07 Y= -8.810046e-05 Z= -7.844465e-05  0.000260 segundos
+BarnesHut THETA 0.6:     X= +6.484683e-08 Y= -8.616753e-05 Z= -7.785174e-05  0.000159 segundos
+BarnesHut THETA 0.7:     X= +6.684048e-06 Y= -8.101737e-05 Z= -7.004569e-05  0.000079 segundos
+BarnesHut THETA 0.8:     X= +7.871190e-06 Y= -7.711698e-05 Z= -6.699040e-05  0.000048 segundos
+BarnesHut THETA 0.9:     X= +7.721042e-06 Y= -7.719520e-05 Z= -6.682758e-05  0.000034 segundos
+BarnesHut THETA 1.0:     X= +4.900911e-06 Y= -6.065187e-05 Z= -5.835900e-05  0.000025 segundos
+------------------------------------------------------
+Estrella: 424238335
+Referencia:              X= +1.423310e-05 Y= -4.510288e-05 Z= +2.451058e-04  7.157947 segundos
+BarnesHut THETA 0.1:     X= +1.422775e-05 Y= -4.510088e-05 Z= +2.450981e-04  0.039220 segundos
+BarnesHut THETA 0.2:     X= +1.417892e-05 Y= -4.510157e-05 Z= +2.450261e-04  0.005312 segundos
+BarnesHut THETA 0.3:     X= +1.478316e-05 Y= -4.523283e-05 Z= +2.448883e-04  0.001378 segundos
+BarnesHut THETA 0.4:     X= +4.017473e-05 Y= +6.176360e-05 Z= +1.409774e-04  0.000486 segundos
+BarnesHut THETA 0.5:     X= +4.428407e-05 Y= -1.298239e-05 Z= -1.115488e-05  0.000274 segundos
+BarnesHut THETA 0.6:     X= +6.125809e-05 Y= +1.260720e-04 Z= +1.618304e-05  0.000155 segundos
+BarnesHut THETA 0.7:     X= +2.833872e-05 Y= +1.222543e-04 Z= +5.135677e-06  0.000085 segundos
+BarnesHut THETA 0.8:     X= +8.898919e-06 Y= -1.022539e-06 Z= +3.718762e-06  0.000016 segundos
+BarnesHut THETA 0.9:     X= +6.247245e-06 Y= -1.867473e-07 Z= +1.524347e-06  0.000007 segundos
+BarnesHut THETA 1.0:     X= -8.910655e-06 Y= +1.152883e-06 Z= +2.472344e-06  0.000003 segundos
+------------------------------------------------------
+Estrella: 719885386
+Referencia:              X= -5.406427e-05 Y= -4.921803e-06 Z= -3.124666e-04  4.254157 segundos
+BarnesHut THETA 0.1:     X= -5.406866e-05 Y= -4.922940e-06 Z= -3.124565e-04  0.024820 segundos
+BarnesHut THETA 0.2:     X= -5.407061e-05 Y= -4.962735e-06 Z= -3.124243e-04  0.003405 segundos
+BarnesHut THETA 0.3:     X= -1.190012e-05 Y= +2.394371e-05 Z= -2.799511e-04  0.000784 segundos
+BarnesHut THETA 0.4:     X= +4.391774e-05 Y= +1.170309e-05 Z= -2.210760e-04  0.000331 segundos
+BarnesHut THETA 0.5:     X= +5.304650e-05 Y= +6.727326e-06 Z= -1.953559e-04  0.000183 segundos
+BarnesHut THETA 0.6:     X= +4.570891e-05 Y= +8.976790e-06 Z= -1.788571e-04  0.000099 segundos
+BarnesHut THETA 0.7:     X= +4.206921e-05 Y= +1.051366e-05 Z= -1.240836e-04  0.000057 segundos
+BarnesHut THETA 0.8:     X= +4.180934e-05 Y= +1.016968e-05 Z= -1.189864e-04  0.000032 segundos
+BarnesHut THETA 0.9:     X= +1.963009e-05 Y= -1.390339e-05 Z= -6.226041e-05  0.000010 segundos
+BarnesHut THETA 1.0:     X= +3.466603e-06 Y= +5.096249e-06 Z= -2.093398e-05  0.000003 segundos
+------------------------------------------------------
+Estrella: 587773685
+Referencia:              X= -2.907259e-04 Y= -1.005229e-05 Z= -3.418204e-05  4.252781 segundos
+BarnesHut THETA 0.1:     X= -2.907105e-04 Y= -1.004911e-05 Z= -3.418158e-05  0.034695 segundos
+BarnesHut THETA 0.2:     X= -2.840096e-04 Y= -8.860923e-06 Z= -3.478301e-05  0.004676 segundos
+BarnesHut THETA 0.3:     X= -2.506193e-04 Y= -8.048306e-06 Z= -3.862047e-05  0.001188 segundos
+BarnesHut THETA 0.4:     X= -2.219869e-04 Y= -4.153742e-06 Z= -3.407826e-05  0.000475 segundos
+BarnesHut THETA 0.5:     X= -2.073067e-04 Y= +7.363809e-07 Z= -3.278094e-05  0.000272 segundos
+BarnesHut THETA 0.6:     X= -1.813371e-04 Y= +7.761747e-07 Z= -3.237982e-05  0.000155 segundos
+BarnesHut THETA 0.7:     X= +3.328172e-05 Y= -3.198096e-05 Z= -7.369104e-06  0.000078 segundos
+BarnesHut THETA 0.8:     X= +6.526331e-05 Y= +1.815069e-06 Z= -1.702119e-05  0.000038 segundos
+BarnesHut THETA 0.9:     X= +6.520688e-05 Y= +9.814109e-07 Z= -1.679150e-05  0.000025 segundos
+BarnesHut THETA 1.0:     X= +2.560163e-05 Y= +8.308203e-06 Z= -5.979830e-05  0.000009 segundos
+------------------------------------------------------
+Estrella: 596516649
+Referencia:              X= -1.069537e-04 Y= -1.050822e-04 Z= -5.041637e-05  4.253070 segundos
+BarnesHut THETA 0.1:     X= -1.070062e-04 Y= -1.051339e-04 Z= -5.042100e-05  0.024550 segundos
+BarnesHut THETA 0.2:     X= -1.039367e-04 Y= -1.025737e-04 Z= -5.008064e-05  0.003760 segundos
+BarnesHut THETA 0.3:     X= -8.503384e-05 Y= -8.721823e-05 Z= -4.709428e-05  0.000997 segundos
+BarnesHut THETA 0.4:     X= -7.292328e-05 Y= -7.146473e-05 Z= -4.272936e-05  0.000395 segundos
+BarnesHut THETA 0.5:     X= -7.097946e-05 Y= -6.940197e-05 Z= -4.214025e-05  0.000226 segundos
+BarnesHut THETA 0.6:     X= -6.499757e-05 Y= -6.368698e-05 Z= -3.998169e-05  0.000116 segundos
+BarnesHut THETA 0.7:     X= -6.407712e-05 Y= -6.084141e-05 Z= -3.923751e-05  0.000060 segundos
+BarnesHut THETA 0.8:     X= -5.681537e-05 Y= -4.736153e-05 Z= -3.518001e-05  0.000039 segundos
+BarnesHut THETA 0.9:     X= -5.059956e-05 Y= -3.282235e-05 Z= -3.078090e-05  0.000029 segundos
+BarnesHut THETA 1.0:     X= -5.077663e-05 Y= -3.298727e-05 Z= -3.031546e-05  0.000021 segundos
+------------------------------------------------------
+Estrella: 127654614
+Referencia:              X= -7.520869e-05 Y= -5.261657e-06 Z= +3.721999e-04  4.253554 segundos
+BarnesHut THETA 0.1:     X= -7.519809e-05 Y= -5.256821e-06 Z= +3.721850e-04  0.039594 segundos
+BarnesHut THETA 0.2:     X= -7.502485e-05 Y= -5.244712e-06 Z= +3.720485e-04  0.005028 segundos
+BarnesHut THETA 0.3:     X= -2.659154e-05 Y= +2.121594e-05 Z= +3.529877e-04  0.001242 segundos
+BarnesHut THETA 0.4:     X= +6.025579e-05 Y= +2.199110e-05 Z= +3.361966e-04  0.000478 segundos
+BarnesHut THETA 0.5:     X= +1.025747e-04 Y= +1.701277e-06 Z= +3.402503e-04  0.000258 segundos
+BarnesHut THETA 0.6:     X= +1.117029e-04 Y= +8.441246e-06 Z= +3.369348e-04  0.000142 segundos
+BarnesHut THETA 0.7:     X= +1.158209e-04 Y= +8.998638e-06 Z= +3.373437e-04  0.000077 segundos
+BarnesHut THETA 0.8:     X= +6.010510e-05 Y= -2.537028e-04 Z= +1.126707e-04  0.000022 segundos
+BarnesHut THETA 0.9:     X= +2.232269e-05 Y= -6.612447e-05 Z= +6.938447e-05  0.000009 segundos
+BarnesHut THETA 1.0:     X= +8.136837e-06 Y= -1.630271e-05 Z= +4.963749e-06  0.000003 segundos
+------------------------------------------------------
+Estrella: 1025202362
+Referencia:              X= -4.798457e-05 Y= +5.843239e-05 Z= -3.403831e-04  4.253442 segundos
+BarnesHut THETA 0.1:     X= -4.798048e-05 Y= +5.843137e-05 Z= -3.403663e-04  0.035001 segundos
+BarnesHut THETA 0.2:     X= -4.796542e-05 Y= +5.840708e-05 Z= -3.402878e-04  0.004617 segundos
+BarnesHut THETA 0.3:     X= -1.547180e-05 Y= +5.798335e-05 Z= -3.385189e-04  0.001120 segundos
+BarnesHut THETA 0.4:     X= +1.200651e-04 Y= +4.328526e-05 Z= -3.226037e-04  0.000416 segundos
+BarnesHut THETA 0.5:     X= +1.800168e-04 Y= +3.847967e-05 Z= -2.655726e-04  0.000221 segundos
+BarnesHut THETA 0.6:     X= +1.771548e-04 Y= +3.687469e-05 Z= -2.635372e-04  0.000125 segundos
+BarnesHut THETA 0.7:     X= +1.507075e-04 Y= -7.062501e-05 Z= -2.194983e-04  0.000064 segundos
+BarnesHut THETA 0.8:     X= +1.443148e-04 Y= -6.639968e-05 Z= -2.059712e-04  0.000035 segundos
+BarnesHut THETA 0.9:     X= +1.341824e-04 Y= -8.620456e-05 Z= -2.031559e-04  0.000023 segundos
+BarnesHut THETA 1.0:     X= +1.333180e-04 Y= -8.045250e-05 Z= -2.012559e-04  0.000013 segundos
+------------------------------------------------------
+Estrella: 288503220
+Referencia:              X= -1.385795e-06 Y= -7.556109e-05 Z= +1.343596e-04  4.255052 segundos
+BarnesHut THETA 0.1:     X= -1.379633e-06 Y= -7.555661e-05 Z= +1.343533e-04  0.039371 segundos
+BarnesHut THETA 0.2:     X= -1.327414e-06 Y= -7.560605e-05 Z= +1.342949e-04  0.005191 segundos
+BarnesHut THETA 0.3:     X= +3.229436e-05 Y= -3.777240e-05 Z= +1.220559e-04  0.001329 segundos
+BarnesHut THETA 0.4:     X= +1.602486e-04 Y= -2.287188e-05 Z= +7.674901e-05  0.000473 segundos
+BarnesHut THETA 0.5:     X= +1.600839e-04 Y= -1.998088e-05 Z= +7.635464e-05  0.000268 segundos
+BarnesHut THETA 0.6:     X= +2.514405e-04 Y= -2.464033e-05 Z= +1.026559e-04  0.000149 segundos
+BarnesHut THETA 0.7:     X= +2.439740e-04 Y= +1.942239e-05 Z= +1.050573e-04  0.000082 segundos
+BarnesHut THETA 0.8:     X= +2.316106e-04 Y= +5.153882e-05 Z= +9.670503e-05  0.000045 segundos
+BarnesHut THETA 0.9:     X= +2.216311e-04 Y= +6.698496e-05 Z= +9.638042e-05  0.000027 segundos
+BarnesHut THETA 1.0:     X= +2.264470e-04 Y= +6.355111e-05 Z= +9.643903e-05  0.000017 segundos
+------------------------------------------------------
+Estrella: 783368690
+Referencia:              X= +7.688770e-05 Y= +3.935612e-05 Z= +1.264592e-04  4.255468 segundos
+BarnesHut THETA 0.1:     X= +7.688946e-05 Y= +3.935870e-05 Z= +1.264578e-04  0.041207 segundos
+BarnesHut THETA 0.2:     X= +7.693529e-05 Y= +3.936317e-05 Z= +1.264405e-04  0.005305 segundos
+BarnesHut THETA 0.3:     X= +1.075335e-04 Y= +4.406364e-05 Z= +1.190519e-04  0.001235 segundos
+BarnesHut THETA 0.4:     X= +2.334538e-04 Y= +3.277070e-05 Z= +6.575068e-05  0.000454 segundos
+BarnesHut THETA 0.5:     X= +3.353063e-04 Y= +3.415917e-05 Z= +1.079238e-04  0.000241 segundos
+BarnesHut THETA 0.6:     X= +3.358608e-04 Y= +3.183404e-05 Z= +1.077730e-04  0.000128 segundos
+BarnesHut THETA 0.7:     X= +3.407954e-04 Y= +4.565554e-05 Z= +1.091963e-04  0.000070 segundos
+BarnesHut THETA 0.8:     X= +2.403250e-04 Y= -1.574904e-04 Z= +9.155430e-05  0.000036 segundos
+BarnesHut THETA 0.9:     X= +2.349171e-04 Y= -1.582090e-04 Z= +9.169843e-05  0.000022 segundos
+BarnesHut THETA 1.0:     X= +2.236690e-04 Y= -1.836545e-04 Z= +8.750324e-05  0.000011 segundos
+------------------------------------------------------
+Estrella: 40533252
+Referencia:              X= -4.773475e-05 Y= +1.156963e-04 Z= -3.677441e-04  4.254985 segundos
+BarnesHut THETA 0.1:     X= -4.773639e-05 Y= +1.156924e-04 Z= -3.677288e-04  0.030179 segundos
+BarnesHut THETA 0.2:     X= -4.770868e-05 Y= +1.157270e-04 Z= -3.676503e-04  0.004052 segundos
+BarnesHut THETA 0.3:     X= -1.020169e-05 Y= +1.024259e-04 Z= -3.546902e-04  0.001023 segundos
+BarnesHut THETA 0.4:     X= +1.126793e-04 Y= +6.476064e-05 Z= -2.561241e-04  0.000289 segundos
+BarnesHut THETA 0.5:     X= +1.384540e-04 Y= +4.503886e-05 Z= -1.866483e-04  0.000148 segundos
+BarnesHut THETA 0.6:     X= +1.154308e-04 Y= +1.446109e-06 Z= -1.648529e-04  0.000070 segundos
+BarnesHut THETA 0.7:     X= +1.259602e-04 Y= +4.022847e-06 Z= -1.596890e-04  0.000037 segundos
+BarnesHut THETA 0.8:     X= +1.219516e-04 Y= -6.537964e-06 Z= -1.421827e-04  0.000024 segundos
+BarnesHut THETA 0.9:     X= +1.133042e-04 Y= -1.147817e-05 Z= -1.396025e-04  0.000014 segundos
+BarnesHut THETA 1.0:     X= +1.137272e-04 Y= -1.162147e-05 Z= -1.395754e-04  0.000008 segundos
+------------------------------------------------------
+Estrella: 982910956
+Referencia:              X= +1.085831e-05 Y= +8.689965e-06 Z= -4.251931e-05  4.253213 segundos
+BarnesHut THETA 0.1:     X= +1.086134e-05 Y= +8.694710e-06 Z= -4.251018e-05  0.040220 segundos
+BarnesHut THETA 0.2:     X= +1.090353e-05 Y= +8.722514e-06 Z= -4.247429e-05  0.005202 segundos
+BarnesHut THETA 0.3:     X= +4.551702e-05 Y= +3.173593e-05 Z= -4.917536e-05  0.001363 segundos
+BarnesHut THETA 0.4:     X= +2.265512e-04 Y= -2.049660e-06 Z= -1.756413e-04  0.000274 segundos
+BarnesHut THETA 0.5:     X= +2.498675e-04 Y= +4.792589e-05 Z= -1.494690e-04  0.000141 segundos
+BarnesHut THETA 0.6:     X= +3.027305e-04 Y= +2.079061e-06 Z= -4.149387e-05  0.000062 segundos
+BarnesHut THETA 0.7:     X= +3.161503e-04 Y= +5.509395e-06 Z= -4.240717e-05  0.000034 segundos
+BarnesHut THETA 0.8:     X= +2.770978e-04 Y= +3.821939e-05 Z= -2.505667e-05  0.000020 segundos
+BarnesHut THETA 0.9:     X= +1.965423e-05 Y= +1.351448e-05 Z= -3.711401e-06  0.000006 segundos
+BarnesHut THETA 1.0:     X= +1.841469e-05 Y= +2.140818e-05 Z= +1.313613e-06  0.000002 segundos
+------------------------------------------------------
+Estrella: 905527119
+Referencia:              X= -1.636121e-04 Y= -1.338442e-04 Z= +2.940246e-04  4.255045 segundos
+BarnesHut THETA 0.1:     X= -1.636069e-04 Y= -1.338378e-04 Z= +2.940115e-04  0.028601 segundos
+BarnesHut THETA 0.2:     X= -1.570092e-04 Y= -1.295807e-04 Z= +2.909672e-04  0.003942 segundos
+BarnesHut THETA 0.3:     X= -1.162517e-04 Y= -1.159989e-04 Z= +2.679263e-04  0.000965 segundos
+BarnesHut THETA 0.4:     X= -1.049050e-04 Y= -1.033352e-04 Z= +2.656276e-04  0.000402 segundos
+BarnesHut THETA 0.5:     X= -7.404168e-05 Y= -8.990786e-05 Z= +2.543314e-04  0.000220 segundos
+BarnesHut THETA 0.6:     X= -6.101650e-05 Y= -5.057084e-05 Z= +2.355590e-04  0.000117 segundos
+BarnesHut THETA 0.7:     X= -5.972124e-05 Y= -4.599226e-05 Z= +2.304286e-04  0.000060 segundos
+BarnesHut THETA 0.8:     X= -5.735729e-05 Y= -4.628064e-05 Z= +2.304517e-04  0.000036 segundos
+BarnesHut THETA 0.9:     X= -4.565358e-05 Y= -2.190461e-05 Z= +1.677581e-04  0.000027 segundos
+BarnesHut THETA 1.0:     X= -4.025539e-05 Y= +1.785983e-06 Z= +1.484830e-04  0.000021 segundos
+------------------------------------------------------
+Estrella: 303193733
+Referencia:              X= -1.705387e-04 Y= +2.132735e-04 Z= -3.452676e-06  4.253733 segundos
+BarnesHut THETA 0.1:     X= -1.705239e-04 Y= +2.132637e-04 Z= -3.458010e-06  0.041248 segundos
+BarnesHut THETA 0.2:     X= -1.713756e-04 Y= +2.138004e-04 Z= -3.315925e-06  0.005472 segundos
+BarnesHut THETA 0.3:     X= -7.866090e-05 Y= +1.849896e-04 Z= -2.796124e-05  0.001371 segundos
+BarnesHut THETA 0.4:     X= -6.610451e-05 Y= +1.695177e-04 Z= -2.507062e-05  0.000506 segundos
+BarnesHut THETA 0.5:     X= -8.340511e-06 Y= +1.717729e-04 Z= -8.871853e-06  0.000291 segundos
+BarnesHut THETA 0.6:     X= -1.094618e-05 Y= +9.487732e-05 Z= -1.224855e-05  0.000165 segundos
+BarnesHut THETA 0.7:     X= +3.849656e-06 Y= +1.052363e-04 Z= -1.165342e-05  0.000086 segundos
+BarnesHut THETA 0.8:     X= +2.715083e-06 Y= +9.493636e-05 Z= -1.314367e-05  0.000046 segundos
+BarnesHut THETA 0.9:     X= -1.325227e-06 Y= +8.544861e-05 Z= -1.294397e-05  0.000032 segundos
+BarnesHut THETA 1.0:     X= -3.590830e-07 Y= +8.394080e-05 Z= -1.304015e-05  0.000024 segundos
+------------------------------------------------------
+Estrella: 478396619
+Referencia:              X= +5.844564e-05 Y= +1.607191e-06 Z= -5.548749e-05  4.253570 segundos
+BarnesHut THETA 0.1:     X= +5.844853e-05 Y= +1.612948e-06 Z= -5.548009e-05  0.042269 segundos
+BarnesHut THETA 0.2:     X= +5.847746e-05 Y= +1.639201e-06 Z= -5.545207e-05  0.005538 segundos
+BarnesHut THETA 0.3:     X= +1.188221e-04 Y= +5.553862e-05 Z= -7.150355e-05  0.001380 segundos
+BarnesHut THETA 0.4:     X= +2.383099e-04 Y= +6.608823e-06 Z= -1.089982e-04  0.000507 segundos
+BarnesHut THETA 0.5:     X= +2.703732e-04 Y= +4.085612e-05 Z= -9.224823e-05  0.000291 segundos
+BarnesHut THETA 0.6:     X= +3.372304e-04 Y= +1.531390e-05 Z= -5.281381e-05  0.000160 segundos
+BarnesHut THETA 0.7:     X= +3.439776e-04 Y= +2.240851e-05 Z= -5.299710e-05  0.000093 segundos
+BarnesHut THETA 0.8:     X= +2.925185e-04 Y= +9.004853e-05 Z= -2.269593e-05  0.000046 segundos
+BarnesHut THETA 0.9:     X= +1.887637e-05 Y= +8.506869e-06 Z= +2.531933e-07  0.000007 segundos
+BarnesHut THETA 1.0:     X= +1.412809e-05 Y= +2.151832e-05 Z= +3.617272e-06  0.000003 segundos
+------------------------------------------------------
+Estrella: 304089172
+Referencia:              X= -9.974486e-05 Y= +2.624898e-04 Z= -1.122625e-04  4.253303 segundos
+BarnesHut THETA 0.1:     X= -9.973837e-05 Y= +2.624839e-04 Z= -1.122555e-04  0.030424 segundos
+BarnesHut THETA 0.2:     X= -9.973694e-05 Y= +2.626107e-04 Z= -1.122120e-04  0.004377 segundos
+BarnesHut THETA 0.3:     X= -6.447083e-05 Y= +2.221938e-04 Z= -1.115018e-04  0.001147 segundos
+BarnesHut THETA 0.4:     X= -4.321492e-05 Y= +1.773370e-04 Z= -9.831552e-05  0.000451 segundos
+BarnesHut THETA 0.5:     X= -4.287758e-05 Y= +1.687093e-04 Z= -9.711597e-05  0.000248 segundos
+BarnesHut THETA 0.6:     X= -4.252228e-05 Y= +1.672994e-04 Z= -9.638346e-05  0.000138 segundos
+BarnesHut THETA 0.7:     X= -1.781294e-05 Y= +1.551342e-04 Z= -8.887167e-05  0.000070 segundos
+BarnesHut THETA 0.8:     X= -2.236772e-05 Y= +1.500467e-04 Z= -8.761438e-05  0.000041 segundos
+BarnesHut THETA 0.9:     X= -2.403537e-05 Y= +1.487308e-04 Z= -8.648639e-05  0.000028 segundos
+BarnesHut THETA 1.0:     X= -2.434934e-05 Y= +1.485410e-04 Z= -8.546396e-05  0.000021 segundos
+------------------------------------------------------
+Estrella: 241468929
+Referencia:              X= -1.275360e-04 Y= +9.781929e-05 Z= +2.896998e-04  4.268616 segundos
+BarnesHut THETA 0.1:     X= -1.275263e-04 Y= +9.781359e-05 Z= +2.896869e-04  0.045128 segundos
+BarnesHut THETA 0.2:     X= -1.273763e-04 Y= +9.775648e-05 Z= +2.895697e-04  0.005888 segundos
+BarnesHut THETA 0.3:     X= -3.100397e-05 Y= +7.961431e-05 Z= +2.494665e-04  0.001443 segundos
+BarnesHut THETA 0.4:     X= -3.104662e-05 Y= +7.988984e-05 Z= +2.493465e-04  0.000551 segundos
+BarnesHut THETA 0.5:     X= +5.052333e-05 Y= +7.508999e-05 Z= +2.599376e-04  0.000288 segundos
+BarnesHut THETA 0.6:     X= +4.807300e-05 Y= +2.694329e-05 Z= +2.392384e-04  0.000174 segundos
+BarnesHut THETA 0.7:     X= +4.862538e-05 Y= -3.089703e-05 Z= +2.350949e-04  0.000094 segundos
+BarnesHut THETA 0.8:     X= +5.139078e-05 Y= -3.043939e-05 Z= +2.344766e-04  0.000046 segundos
+BarnesHut THETA 0.9:     X= +4.503489e-05 Y= -5.112401e-05 Z= +2.308609e-04  0.000035 segundos
+BarnesHut THETA 1.0:     X= +4.869636e-05 Y= -9.194693e-06 Z= +2.231226e-04  0.000020 segundos
+
+*****************************************************************************
+*                                                                           *
+*                    JOB EFFICIENCY REPORT (seff 15365805)                   *
+*                                                                           *
+*****************************************************************************
+
+Job ID: 15365805
+Cluster: finisterrae3
+User/Group: ulcespra/ulc
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 32
+CPU Utilized: 00:47:11
+CPU Efficiency: 8.83% of 08:54:24 core-walltime
+Job Wall-clock time: 00:16:42
+Memory Utilized: 212.43 GB
+Memory Efficiency: 70.81% of 300.00 GB
+
+*****************************************************************************

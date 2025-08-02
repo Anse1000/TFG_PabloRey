@@ -15,7 +15,8 @@
 
 #define DT 0.0001    // Paso de tiempo en millones de años
 #define EPSILON 0.000001
-#define MIN_SUBDIVISIONS 1e12
+#define MIN_SUBDIVISIONS 1e8
+
 typedef struct {
     unsigned long *id;
     double *ra, *dec, *distance, *pmra, *pmdec, *radial_velocity;

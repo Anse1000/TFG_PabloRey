@@ -101,13 +101,13 @@ int main(int argc, char *argv[]) {
         perror("Numero de pasos incorrecto");
         return -1;
     }
-    test_simulation(estrellas);
-/*
+    //test_simulation(estrellas);
+
 #ifdef CUDA
-    simulate_multi_gpu_unified(estrellas,steps,10000000,argv[3]);
+    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[3]);
 #else
     simulate(estrellas,steps,estrellas->size,argv[3]);
-#endif*/
+#endif
     free_stars(estrellas);
     return 0;
 }

@@ -1,6 +1,8 @@
 #include "aux_fun.h"
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
+
 #include "octree.h"
 
 static void *safe_realloc(void *ptr, const size_t size) {
@@ -53,10 +55,10 @@ void resize_stars(Star *stars) {
 }
 
 void resize_tree(Octree *tree) {
-    tree->center_x = safe_realloc(tree->center_x, sizeof(double) * tree->capacity);
-    tree->center_y = safe_realloc(tree->center_y, sizeof(double) * tree->capacity);
-    tree->center_z = safe_realloc(tree->center_z, sizeof(double) * tree->capacity);
-    tree->half_size = safe_realloc(tree->half_size, sizeof(double) * tree->capacity);
+    tree->center_x = safe_realloc(tree->center_x, sizeof(float) * tree->capacity);
+    tree->center_y = safe_realloc(tree->center_y, sizeof(float) * tree->capacity);
+    tree->center_z = safe_realloc(tree->center_z, sizeof(float) * tree->capacity);
+    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
     tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
     tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
     tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
@@ -64,39 +66,7 @@ void resize_tree(Octree *tree) {
     tree->children = safe_realloc(tree->children, sizeof(unsigned int[8]) * tree->capacity);
     tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
 }
-void compute_root_bounds(Star *estrellas, float *center_x, float *center_y, float *center_z, float *half_size,double *min_node_size) {
-    // Inicializar límites
-    double min_cx = estrellas->Cx[0], max_cx = estrellas->Cx[0];
-    double min_cy = estrellas->Cy[0], max_cy = estrellas->Cy[0];
-    double min_cz = estrellas->Cz[0], max_cz = estrellas->Cz[0];
 
-    // Calcular límites de posición
-    for (unsigned long i = 0; i < estrellas->size; i++) {
-        if (estrellas->Cx[i] < min_cx) min_cx = estrellas->Cx[i];
-        else if (estrellas->Cx[i] > max_cx) max_cx = estrellas->Cx[i];
-        if (estrellas->Cy[i] < min_cy) min_cy = estrellas->Cy[i];
-        else if (estrellas->Cy[i] > max_cy) max_cy = estrellas->Cy[i];
-        if (estrellas->Cz[i] < min_cz) min_cz = estrellas->Cz[i];
-        else if (estrellas->Cz[i] > max_cz) max_cz = estrellas->Cz[i];
-    }
-
-    // Calcular centro
-    *center_x = 0.5F * (min_cx + max_cx);
-    *center_y = 0.5F * (min_cy + max_cy);
-    *center_z = 0.5F * (min_cz + max_cz);
-
-    // Calcular rango máximo
-    double dx = max_cx - min_cx;
-    double dy = max_cy - min_cy;
-    double dz = max_cz - min_cz;
-    double max_range = fmax(dx, fmax(dy, dz));
-
-    // Usar margen de seguridad (20%) y dividir entre 2
-    *half_size = 0.5F * max_range * 1.2F;
-
-    //Elegir precisión para subdivisiones
-    *min_node_size = max_range * 1e-7;
-}
 void free_tree(Octree *tree) {
     if (!tree) return;
     free(tree->center_x);
@@ -129,6 +99,7 @@ void free_aux(Star *estrellas) {
     printf("Liberados %.2lu MB de recursos auxiliares\n",total_bytes/1024/1024);
 }
 
+
 void swap_star_elements(Star *star, size_t i, size_t j) {
 #define SWAP(arr) do { typeof((arr)[0]) tmp = (arr)[i]; (arr)[i] = (arr)[j]; (arr)[j] = tmp; } while (0)
 
@@ -145,4 +116,31 @@ void swap_star_elements(Star *star, size_t i, size_t j) {
     SWAP(star->mass);
 
 #undef SWAP
+}
+//reordenar estrellas por octante para hacer calculos en gpu
+void reorder_stars(Star *stars,double cx, double cy, double cz, unsigned int *offsets) {
+    size_t counts[8] = {0};
+    for (size_t i = 0; i < stars->size; i++) {
+        int oct = get_octant(cx, cy, cz, stars->Cx[i], stars->Cy[i], stars->Cz[i]);
+        counts[oct]++;
+    }
+    offsets[0] = 0;
+    for (int i = 1; i < 8; i++) {
+        offsets[i] = offsets[i - 1] + counts[i - 1];
+    }
+    unsigned int ends[8];
+    memcpy(ends, offsets, 8*sizeof(unsigned int));
+    for (size_t i = 0; i < stars->size;) {
+        int oct = get_octant(cx, cy, cz, stars->Cx[i], stars->Cy[i], stars->Cz[i]);
+        if (i >= offsets[oct] && i < ends[oct]) {
+            // Ya está en su rango
+            i++;
+        } else {
+            // Debe ir en ends[oct]
+            size_t dest = ends[oct];
+            swap_star_elements(stars, i, dest);
+            ends[oct]++;
+        }
+    }
+    printf("Estrellas ordenadas por octante\n"); fflush(stdout);
 }

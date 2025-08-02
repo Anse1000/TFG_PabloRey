@@ -136,45 +136,31 @@ void simulate(Star *estrellas,const int steps, const long N, const char* outputf
 }
 
 void test_simulation(Star *estrellas) {
+    double THETA[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
+    int indexes[20];
+    double seconds[20], seconds_bh[200];
+    for (int i = 0; i < 20; i++) {
+        indexes[i] = rand() % estrellas->size;
+    }
+    double ax[20] = {0}, ay[20] = {0}, az[20] = {0};
+    double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
+
     Octree *octree = build_tree(estrellas);
 
-    // Test con 10 estrellas aleatorias
-    int num_tests = 20;
-    long test_stars[20];  // IDs específicas para repetibilidad
-
-    // Usar estrellas específicas o generar aleatorias
-    srand(42); // Semilla fija para reproducibilidad
-    for (int i = 0; i < num_tests; i++) {
-        test_stars[i] = rand() % estrellas->size;
-    }
-
-    for (int star_test = 0; star_test < num_tests; star_test++) {
-        long star_index = test_stars[star_test];
-
+    for (int i = 0; i < 20; i++) {
+        compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);
+        for (int j = 0; j < 10; j++) {
+            int idex=i*10+j;
+            aux_time_bh(estrellas, octree, 0, indexes[i], THETA[j], &axb[idex], &ayb[idex], &azb[idex], &seconds_bh[idex]);
+        }
         printf("------------------------------------------------------\n");
-        printf("Estrella: %lu\n", estrellas->id[star_index]);
-
-        // Calcular referencia (fuerza bruta)
-        double ref_ax, ref_ay, ref_az, ref_time;
-        compute_aceleration_single(estrellas, &ref_ax, &ref_ay, &ref_az, star_index, &ref_time);
-
-        printf("Referencia:              X= %+.6e Y= %+.6e Z= %+.6e  %f segundos\n",
-               ref_ax, ref_ay, ref_az, ref_time);
-
-        // Test con diferentes valores de theta
-        double theta_values[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
-        int num_theta = sizeof(theta_values) / sizeof(theta_values[0]);
-
-        for (int t = 0; t < num_theta; t++) {
-            double bh_ax, bh_ay, bh_az, bh_time;
-
-            // Calcular usando Barnes-Hut
-            aux_time_bh(estrellas, octree, 0, star_index, theta_values[t],
-                       &bh_ax, &bh_ay, &bh_az, &bh_time);
-
-            printf("BarnesHut THETA %.1f:     X= %+.6e Y= %+.6e Z= %+.6e  %f segundos\n",
-                   theta_values[t], bh_ax, bh_ay, bh_az, bh_time);
+        printf("Estrella: %d\n", indexes[i]);
+        printf("Referencia:              X= %+e Y= %+e Z= %+e  %f segundos\n", ax[i], ay[i], az[i], seconds[i]);
+        for (int j = 0; j < 10; j++) {
+            int idex=i*10+j;
+            printf("BarnesHut THETA %0.1f:     X= %+e Y= %+e Z= %+e  %f segundos\n",THETA[j], axb[idex], ayb[idex], azb[idex],seconds_bh[idex]);
         }
     }
+
     free_tree(octree);
 }

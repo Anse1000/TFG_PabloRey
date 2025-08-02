@@ -13,7 +13,6 @@
 
 ulimit -s unlimited
 # Cargar módulos
-module purge
 module load cesga/2025 nvhpc/25.3-CUDA-system
 # Compilar el programa
 mkdir -p build
