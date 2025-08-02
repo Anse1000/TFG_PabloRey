@@ -60,6 +60,12 @@ endif()
 # Añadir flags de OpenMP
 target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
 
+# Añadir OpenMP también para archivos CUDA
+if(ENABLE_CUDA)
+    target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
+
 # Flags de depuración
 if(CMAKE_C_COMPILER_ID MATCHES "Intel")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -fno-omit-frame-pointer")
@@ -78,7 +84,10 @@ if(ENABLE_CUDA)
             CUDA_SEPARABLE_COMPILATION ON
             CUDA_ARCHITECTURES 80
     )
-    target_compile_options(TFG_PRA PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3>)
+    target_compile_options(TFG_PRA PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fopenmp>
+    )
 endif()
 
 # Salida del ejecutable

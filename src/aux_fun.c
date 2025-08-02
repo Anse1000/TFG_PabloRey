@@ -5,6 +5,47 @@
 
 #include "octree.h"
 
+// Función para calcular límites usando centro de masa
+void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size) {
+    if (stars->size == 0) return;
+
+    // Calcular centro de masa
+    double total_mass = 0.0;
+    double com_x = 0.0, com_y = 0.0, com_z = 0.0;
+
+    for (size_t i = 0; i < stars->size; i++) {
+        double mass = stars->mass[i];
+        total_mass += mass;
+        com_x += stars->Cx[i] * mass;
+        com_y += stars->Cy[i] * mass;
+        com_z += stars->Cz[i] * mass;
+    }
+
+    com_x /= total_mass;
+    com_y /= total_mass;
+    com_z /= total_mass;
+
+    // Encontrar la estrella más lejana del centro de masa
+    double max_dist_sq = 0.0;
+    for (size_t i = 0; i < stars->size; i++) {
+        double dx = stars->Cx[i] - com_x;
+        double dy = stars->Cy[i] - com_y;
+        double dz = stars->Cz[i] - com_z;
+        double dist_sq = dx*dx + dy*dy + dz*dz;
+        if (dist_sq > max_dist_sq) {
+            max_dist_sq = dist_sq;
+        }
+    }
+
+    *cx = com_x;
+    *cy = com_y;
+    *cz = com_z;
+    *hs = sqrt(max_dist_sq) * 1.1; // 10% de margen
+
+    *min_node_size = *hs / MIN_SUBDIVISIONS;
+    fflush(stdout);
+}
+
 static void *safe_realloc(void *ptr, const size_t size) {
     void *tmp = realloc(ptr, size);
     if (!tmp) {
@@ -98,7 +139,6 @@ void free_aux(Star *estrellas) {
                          );
     printf("Liberados %.2lu MB de recursos auxiliares\n",total_bytes/1024/1024);
 }
-
 
 void swap_star_elements(Star *star, size_t i, size_t j) {
 #define SWAP(arr) do { typeof((arr)[0]) tmp = (arr)[i]; (arr)[i] = (arr)[j]; (arr)[j] = tmp; } while (0)

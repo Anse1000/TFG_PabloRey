@@ -30,7 +30,7 @@ extern "C" {
 #endif
 Octree *build_tree(Star *stars);
 #ifdef CUDA
-Octree **build_tree_gpu(Star *stars,float *center_x,float *center_y, float *center_z);
+Octree **build_tree_gpu(Star *stars, float cx, float cy, float cz, float hs, float min_node_size,const unsigned int *offsets);
 #endif
 
 #ifdef __cplusplus

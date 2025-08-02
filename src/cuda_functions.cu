@@ -189,10 +189,12 @@ void free_tree_gpu(Octree *d_tree) {
 __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, double *ax, double *ay, double *az,
                                              const unsigned int *offsets, int device_count, Octree **trees,
                                              const Star *estrellas, cudaStream_t *streams) {
+
     for (int i = 0; i < iterations; i++) {
+        #pragma omp parallel for num_threads(device_count)
         for (int dev = 0; dev < device_count; dev++) {
             int octant = i * device_count + dev;
-            if (octant >= 8) break;
+            if (octant >= 8) continue;
             
             cudaError_t err = cudaSetDevice(dev);
             if (err != cudaSuccess) {
@@ -215,10 +217,6 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
                 printf("Error: árbol nulo para octante %d\n", octant);
                 continue;
             }
-
-            printf("Memoria reservada en GPU it: %d dev: %d count: %ld\n", i, dev, count); 
-            fflush(stdout);
-
             // Copiar árbol a GPU
             Octree *d_tree;
             copy_tree_to_gpu(&d_tree, tree, streams[dev]);
@@ -241,6 +239,8 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
                 free_tree_gpu(d_tree);
                 continue;
             }
+            printf("Memoria reservada en GPU it: %d dev: %d count: %ld\n", i, dev, count);
+            fflush(stdout);
 
             // Copiar datos a GPU
             cudaMemcpyAsync(d_x, &estrellas->Cx[start], count * sizeof(double), 
@@ -258,7 +258,7 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             // CRÍTICO: Sincronizar el stream antes de lanzar el kernel
             cudaStreamSynchronize(streams[dev]);
 
-            printf("Lanzando kernel para octante %d\n", octant); fflush(stdout);
+            printf("Kernel iniciado it:%d dev:%d\n", i, dev); fflush(stdout);
 
             // Lanzar kernel
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -268,17 +268,17 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             // Verificar errores del kernel
             err = cudaGetLastError();
             if (err != cudaSuccess) {
-                printf("Error en kernel: %s\n", cudaGetErrorString(err));
+                printf("Error en kernel it:%d dev:%d: %s\n", i, dev,cudaGetErrorString(err));
+                fflush(stdout);
                 cudaFree(d_x); cudaFree(d_y); cudaFree(d_z);
                 cudaFree(d_ax); cudaFree(d_ay); cudaFree(d_az);
                 free_tree_gpu(d_tree);
-                return -1;
+                continue;
             }
 
             // Sincronizar antes de copiar resultados
             cudaStreamSynchronize(streams[dev]);
             printf("Kernel terminado it:%d dev:%d\n", i, dev); fflush(stdout);
-            printf("Copia resultados it:%d dev:%d start:%ld end%ld\n", i, dev,start,end); fflush(stdout);
 
             // Copiar resultados
             cudaMemcpyAsync(&ax[start], d_ax, count * sizeof(double),
@@ -289,8 +289,6 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
                             cudaMemcpyDeviceToHost, streams[dev]);
 
             cudaStreamSynchronize(streams[dev]);
-
-            printf("Copia resultados terminada it:%d dev:%d\n", i, dev); fflush(stdout);
 
             // Liberar memoria
             cudaFree(d_x); cudaFree(d_y); cudaFree(d_z);
@@ -311,6 +309,7 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
 extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, const long N, const char *outputfile) {
     struct timeval start, end;
     float cx,cy,cz;
+    float hs,min_node_size;
     gettimeofday(&start, NULL);
     int device_count = 0;
     cudaGetDeviceCount(&device_count);
@@ -336,10 +335,13 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
 
     for (int step = 0; step < steps; step++) {
         printf("\n--- Paso %d ---\n", step + 1);
-        // Construir árbol
-        Octree **octrees = build_tree_gpu(estrellas,&cx,&cy,&cz);
+
+        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size);
+
         unsigned int offsets[8];
         reorder_stars(estrellas, cx,cy,cz, offsets);
+        // Construir árbol
+        Octree **octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
         printf("Iniciando fase 1\n"); fflush(stdout);
         if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
             printf("Error en fase 1\n");
@@ -356,7 +358,10 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
             estrellas->Cy[i] = fma(DT, estrellas->Vy[i], estrellas->Cy[i]);
             estrellas->Cz[i] = fma(DT, estrellas->Vz[i], estrellas->Cz[i]);
         }
-        octrees = build_tree_gpu(estrellas,&cx,&cy,&cz);
+        for (int i=0;i<8;i++) {
+            free_tree(octrees[i]);
+        }
+        octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
         reorder_stars(estrellas, cx,cy,cz, offsets);
         printf("Iniciando fase 2\n"); fflush(stdout);
         if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {

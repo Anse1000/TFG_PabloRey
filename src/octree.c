@@ -6,8 +6,6 @@
 #include <math.h>
 #include "types.h"
 
-double MIN_NODE_SIZE=1e-10;
-
 #ifdef DEBUG_BUILD
 // Función para contar estrellas en un árbol recursivamente
 long count_stars_in_subtree(Octree *tree, long node_index) {
@@ -47,47 +45,6 @@ void count_cpu_octant_stars(Octree *cpu_tree, long *cpu_counts) {
 }
 #endif
 
-// Función para calcular límites usando centro de masa
-void compute_root_bounds_mass_centered(Star *stars, float *cx, float *cy, float *cz, float *hs, double *min_node_size) {
-    if (stars->size == 0) return;
-
-    // Calcular centro de masa
-    double total_mass = 0.0;
-    double com_x = 0.0, com_y = 0.0, com_z = 0.0;
-
-    for (size_t i = 0; i < stars->size; i++) {
-        double mass = stars->mass[i];
-        total_mass += mass;
-        com_x += stars->Cx[i] * mass;
-        com_y += stars->Cy[i] * mass;
-        com_z += stars->Cz[i] * mass;
-    }
-
-    com_x /= total_mass;
-    com_y /= total_mass;
-    com_z /= total_mass;
-
-    // Encontrar la estrella más lejana del centro de masa
-    double max_dist_sq = 0.0;
-    for (size_t i = 0; i < stars->size; i++) {
-        double dx = stars->Cx[i] - com_x;
-        double dy = stars->Cy[i] - com_y;
-        double dz = stars->Cz[i] - com_z;
-        double dist_sq = dx*dx + dy*dy + dz*dz;
-        if (dist_sq > max_dist_sq) {
-            max_dist_sq = dist_sq;
-        }
-    }
-
-    *cx = com_x;
-    *cy = com_y;
-    *cz = com_z;
-    *hs = sqrt(max_dist_sq) * 1.1; // 10% de margen
-
-    *min_node_size = *hs / MIN_SUBDIVISIONS;
-    fflush(stdout);
-}
-
 long octree_new_node(Octree *tree, float cx, float cy, float cz, float half_size) {
     if (tree->size >= tree->capacity) {
         tree->capacity *= 1.2;
@@ -111,7 +68,7 @@ long octree_new_node(Octree *tree, float cx, float cy, float cz, float half_size
     return i;
 }
 
-void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) {
+void octree_insert(Octree *tree, Star *stars, long node_index, long star_index,const float min_node_size) {
     float cx = tree->center_x[node_index];
     float cy = tree->center_y[node_index];
     float cz = tree->center_z[node_index];
@@ -132,7 +89,7 @@ void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) 
     tree->mass[node_index] = new_mass;
 
     // Si el nodo es demasiado pequeño, no subdividir más
-    if (hs * 2.0 <= MIN_NODE_SIZE) {
+    if (hs * 2.0 <= min_node_size) {
         if (tree->star_index[node_index] == -1)
             tree->star_index[node_index] = star_index;  // asignar primera estrella
         // si ya hay una, se quedan varias aquí (no se subdivide más)
@@ -169,10 +126,10 @@ void octree_insert(Octree *tree, Star *stars, long node_index, long star_index) 
             tree->com_y[child] = 0.0;
             tree->com_z[child] = 0.0;
 
-            octree_insert(tree, stars, child, existing_star);
-            octree_insert(tree, stars, child, star_index);
+            octree_insert(tree, stars, child, existing_star,min_node_size);
+            octree_insert(tree, stars, child, star_index,min_node_size);
         } else {
-            octree_insert(tree, stars, child, star_index);
+            octree_insert(tree, stars, child, star_index,min_node_size);
         }
     }
 }
@@ -197,13 +154,13 @@ Octree *build_tree(Star *stars) {
     }
 
     float cx, cy, cz;
-    float hs;
-    compute_root_bounds_mass_centered(stars, &cx, &cy, &cz, &hs,&MIN_NODE_SIZE);
+    float hs,min_node_size;
+    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&min_node_size);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
 
     for (unsigned long i = 0; i < stars->size; i++) {
-        octree_insert(tree, stars, root, i);
+        octree_insert(tree, stars, root, i,min_node_size);
     }
     if (tree->size < tree->capacity) {
         tree->capacity = tree->size;
@@ -228,19 +185,19 @@ Octree *build_tree(Star *stars) {
     fflush(stdout);
     return tree;
 }
+
 #ifdef CUDA
-Octree **build_tree_gpu(Star *stars,float *center_x,float *center_y, float *center_z) {
+Octree **build_tree_gpu(Star *stars, const float cx, const float cy, const float cz, const float hs, const float min_node_size,const unsigned int *offsets) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
-    printf("Iniciando construccion de los subarboles para GPU\n");fflush(stdout);
+    printf("Iniciando construccion de los subarboles para GPU\n");
+    fflush(stdout);
     
-    Octree **trees = malloc(sizeof(Octree*)*8);
-    
-    // Calcular los límites del espacio total
-    float cx, cy, cz, hs;
-    compute_root_bounds_mass_centered(stars, &cx, &cy, &cz, &hs, &MIN_NODE_SIZE);
-    
+    Octree **trees = malloc(sizeof(Octree*) * 8);
+
+    // Paralelizar la inicialización de los 8 subárboles
+    #pragma omp parallel for num_threads(8)
     for (int i = 0; i < 8; i++) {
         trees[i] = malloc(sizeof(Octree));
         memset(trees[i], 0, sizeof(Octree));
@@ -260,23 +217,27 @@ Octree **build_tree_gpu(Star *stars,float *center_x,float *center_y, float *cent
         float oct_cy = cy + ((i & 2) ? offset : -offset);
         float oct_cz = cz + ((i & 1) ? offset : -offset);
         
-        // Crear el nodo raíz con las coordenadas correctas del octante
         long root_index = octree_new_node(trees[i], oct_cx, oct_cy, oct_cz, offset);
         
-        // Verificar que el nodo raíz sea efectivamente el índice 0
         if (root_index != 0) {
             printf("Error: el nodo raíz del octante %d no es el índice 0\n", i);
             exit(1);
         }
     }
     
-    // Insertar las estrellas en sus respectivos subárboles
-    for (unsigned long i = 0; i < stars->size; i++) {
-        int octant = get_octant(cx, cy, cz, stars->Cx[i], stars->Cy[i], stars->Cz[i]);
-        octree_insert(trees[octant], stars, 0, i);
+    // Paralelizar la inserción usando los rangos de reorder_stars
+    #pragma omp parallel for num_threads(8)
+    for (int octant = 0; octant < 8; octant++) {
+        unsigned long start_idx = offsets[octant];
+        unsigned long end_idx = (octant == 7) ? stars->size : offsets[octant + 1];
+        
+        // Insertar todas las estrellas de este octante
+        for (unsigned long i = start_idx; i < end_idx; i++) {
+            octree_insert(trees[octant], stars, 0, i,min_node_size);
+        }
     }
     
-    // Ajustar capacidades
+    //reajustar tamaños
     for (int i = 0; i < 8; i++) {
         if (trees[i]->size < trees[i]->capacity) {
             trees[i]->capacity = trees[i]->size;
@@ -290,11 +251,11 @@ Octree **build_tree_gpu(Star *stars,float *center_x,float *center_y, float *cent
     size_t memory[8];
     for (int i = 0; i < 8; i++) {
         memory[i] = trees[i]->capacity * (
-                        sizeof(double) * 3 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
-                        sizeof(double) + // mass
+                        sizeof(double) * 3 + 
+                        sizeof(double) + 
                         sizeof(float) * 4 +
-                        sizeof(unsigned int[8]) + // children (8 longs por nodo)
-                        sizeof(long) // star_index
+                        sizeof(unsigned int[8]) + 
+                        sizeof(long)
                     );
     }
     
@@ -303,10 +264,6 @@ Octree **build_tree_gpu(Star *stars,float *center_x,float *center_y, float *cent
         printf("Arbol %d: %lu nodos %lu MB\n", i, trees[i]->capacity, memory[i]/1024/1024);
     }
     fflush(stdout);
-    
-    *center_x = cx;
-    *center_y = cy;
-    *center_z = cz;
     return trees;
 }
 #endif
