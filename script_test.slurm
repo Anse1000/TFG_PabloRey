@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J test_trees
-#SBATCH -t 00:30:00
+#SBATCH -t 02:00:00
 #SBATCH -o test_trees_%j.out
 #SBATCH --mem=300GB
 #SBATCH -n 1

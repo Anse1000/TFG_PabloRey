@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -J test_gaia
-#SBATCH -t 00:30:00
+#SBATCH -t 4-00:00:00
 #SBATCH -o test_gaia_%j.out
-#SBATCH --mem=245GB
+#SBATCH --mem=247GB
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 64

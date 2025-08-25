@@ -130,7 +130,7 @@ void simulate(Star *estrellas,const int steps, const long N, const char* outputf
         exit(1);
     }
     for (int i = 0; i < N; i++) {
-        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
+        fprintf(file, "ID: %lu X: %.20f Y = %.20f Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
                 estrellas->Cz[i]);
     }
 }

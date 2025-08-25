@@ -3,31 +3,26 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include "types.h"
 
 #ifdef DEBUG_BUILD
-// Función para contar estrellas en un árbol recursivamente
-long count_stars_in_subtree(Octree *tree, long node_index) {
+double test_subdivisions = 1e7;
+// Contar nodos en un subárbol recursivamente
+long count_nodes_in_subtree(Octree *tree, long node_index) {
     if (node_index == INVALID_INDEX) return 0;
 
-    long count = 0;
+    long count = 1; // Contamos este nodo
 
-    // Si este nodo tiene una estrella, contarla
-    if (tree->star_index[node_index] >= 0) {
-        count = 1;
-    }
-
-    // Contar estrellas en los hijos recursivamente
+    // Contar nodos en los hijos recursivamente
     for (int i = 0; i < 8; i++) {
-        count += count_stars_in_subtree(tree, tree->children[node_index][i]);
+        count += count_nodes_in_subtree(tree, tree->children[node_index][i]);
     }
 
     return count;
 }
 
-// Función para contar estrellas en cada octante del árbol CPU
-void count_cpu_octant_stars(Octree *cpu_tree, long *cpu_counts) {
+// Contar nodos en cada octante del nodo raíz
+void count_cpu_octant_nodes(Octree *cpu_tree, long *cpu_counts) {
     // Inicializar contadores
     for (int i = 0; i < 8; i++) {
         cpu_counts[i] = 0;
@@ -36,12 +31,33 @@ void count_cpu_octant_stars(Octree *cpu_tree, long *cpu_counts) {
     // Si el árbol está vacío, retornar
     if (cpu_tree->size == 0) return;
 
-    // Contar estrellas en cada octante del nodo raíz del árbol CPU
+    // Contar nodos en cada octante del nodo raíz
     for (int octant = 0; octant < 8; octant++) {
-        if (cpu_tree->children[0][octant] != INVALID_INDEX) {
-            cpu_counts[octant] = count_stars_in_subtree(cpu_tree, cpu_tree->children[0][octant]);
+        long child_index = cpu_tree->children[0][octant];
+        if (child_index != INVALID_INDEX) {
+            cpu_counts[octant] = count_nodes_in_subtree(cpu_tree, child_index);
         }
     }
+}
+
+void test_tree(Star *stars) {
+    Octree *tree = build_tree(stars);
+    free_tree(tree);
+    test_subdivisions = 1e8;
+    tree=build_tree(stars);
+    free_tree(tree);
+    test_subdivisions = 1e9;
+    tree=build_tree(stars);
+    free_tree(tree);
+    test_subdivisions = 1e10;
+    tree=build_tree(stars);
+    free_tree(tree);
+    test_subdivisions = 1e11;
+    tree=build_tree(stars);
+    free_tree(tree);
+    test_subdivisions = 1e12;
+    tree=build_tree(stars);
+    free_tree(tree);
 }
 #endif
 
@@ -155,7 +171,7 @@ Octree *build_tree(Star *stars) {
 
     float cx, cy, cz;
     float hs,min_node_size;
-    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&min_node_size);
+    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&min_node_size,MIN_SUBDIVISIONS);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
 
@@ -174,10 +190,10 @@ Octree *build_tree(Star *stars) {
                          sizeof(unsigned int[8]) + // children (8 longs por nodo)
                          sizeof(long); // star_index
     double secs = get_seconds(start, end);
-    printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB \n", tree->capacity, secs,tree->capacity * node_memory / 1024 / 1024);
+    printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB\n", tree->capacity, secs,tree->capacity * node_memory / 1024 / 1024);
 #ifdef DEBUG_BUILD
     long cpu_counts[8];
-    count_cpu_octant_stars(tree, cpu_counts);
+    count_cpu_octant_nodes(tree, cpu_counts);
     for (int i=0;i<8;i++) {
         printf("Subarbol %d: %ld nodos -> %lu MB\n",i,cpu_counts[i],cpu_counts[i]*node_memory/1024/1024);
     }

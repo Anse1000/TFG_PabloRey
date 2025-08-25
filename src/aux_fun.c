@@ -2,48 +2,65 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-
 #include "octree.h"
 
-// Función para calcular límites usando centro de masa
-void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size) {
+// Función mejorada para nodo raíz Barnes-Hut
+void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,double min_subdivisions) {
     if (stars->size == 0) return;
 
-    // Calcular centro de masa
+    // 1. Centro de masa inicial
     double total_mass = 0.0;
-    double com_x = 0.0, com_y = 0.0, com_z = 0.0;
+    double center_x = 0.0, center_y = 0.0, center_z = 0.0;
 
     for (size_t i = 0; i < stars->size; i++) {
-        double mass = stars->mass[i];
-        total_mass += mass;
-        com_x += stars->Cx[i] * mass;
-        com_y += stars->Cy[i] * mass;
-        com_z += stars->Cz[i] * mass;
+        double m = stars->mass[i];
+        total_mass += m;
+        center_x += stars->Cx[i] * m;
+        center_y += stars->Cy[i] * m;
+        center_z += stars->Cz[i] * m;
     }
 
-    com_x /= total_mass;
-    com_y /= total_mass;
-    com_z /= total_mass;
+    center_x /= total_mass;
+    center_y /= total_mass;
+    center_z /= total_mass;
 
-    // Encontrar la estrella más lejana del centro de masa
+    // 2. Calcular bounding sphere inicial desde COM
     double max_dist_sq = 0.0;
     for (size_t i = 0; i < stars->size; i++) {
-        double dx = stars->Cx[i] - com_x;
-        double dy = stars->Cy[i] - com_y;
-        double dz = stars->Cz[i] - com_z;
+        double dx = stars->Cx[i] - center_x;
+        double dy = stars->Cy[i] - center_y;
+        double dz = stars->Cz[i] - center_z;
         double dist_sq = dx*dx + dy*dy + dz*dz;
         if (dist_sq > max_dist_sq) {
             max_dist_sq = dist_sq;
         }
     }
 
-    *cx = com_x;
-    *cy = com_y;
-    *cz = com_z;
-    *hs = sqrt(max_dist_sq) * 1.1; // 10% de margen
+    double radius = sqrt(max_dist_sq);
 
-    *min_node_size = *hs / MIN_SUBDIVISIONS;
-    fflush(stdout);
+    // 3. Algoritmo tipo Ritter: expandir esfera hacia puntos externos
+    for (size_t i = 0; i < stars->size; i++) {
+        double dx = stars->Cx[i] - center_x;
+        double dy = stars->Cy[i] - center_y;
+        double dz = stars->Cz[i] - center_z;
+        double dist = sqrt(dx*dx + dy*dy + dz*dz);
+
+        if (dist > radius) {
+            // Mover el centro hacia este punto para mantener esfera compacta
+            double shift = (dist - radius) * 0.5 / dist;
+            center_x += dx * shift;
+            center_y += dy * shift;
+            center_z += dz * shift;
+            radius += (dist - radius) * 0.5;
+        }
+    }
+
+    // 4. Ajustar valores de salida
+    *cx = (float)center_x;
+    *cy = (float)center_y;
+    *cz = (float)center_z;
+    *hs = (float)(radius * 1.1); // margen 10%
+    *min_node_size = *hs / min_subdivisions;
 }
 
 static void *safe_realloc(void *ptr, const size_t size) {

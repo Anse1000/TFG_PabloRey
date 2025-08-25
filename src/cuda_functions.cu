@@ -336,7 +336,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     for (int step = 0; step < steps; step++) {
         printf("\n--- Paso %d ---\n", step + 1);
 
-        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size);
+        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
 
         unsigned int offsets[8];
         reorder_stars(estrellas, cx,cy,cz, offsets);
@@ -361,8 +361,9 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
         for (int i=0;i<8;i++) {
             free_tree(octrees[i]);
         }
-        octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
+        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx,cy,cz, offsets);
+        octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
         printf("Iniciando fase 2\n"); fflush(stdout);
         if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
             printf("Error en fase 2\n");
@@ -399,7 +400,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     }
     printf("Escribiendo resultados en %s\n", outputfile); fflush(stdout);
     for (int i = 0; i < N; i++) {
-        fprintf(file, "ID: %lu X: %.20f Y = %.20f, Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
+        fprintf(file, "ID: %lu X: %.20f Y = %.20f Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
                 estrellas->Cz[i]);
     }
 }

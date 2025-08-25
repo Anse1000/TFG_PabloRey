@@ -4,7 +4,6 @@
 #include "aux_fun.h"
 #include "file_handler.h"
 #include "types.h"
-#include "octree.h"
 #include "simulation.h"
 #ifdef CUDA
 #include "cuda_functions.cuh"
@@ -101,7 +100,7 @@ int main(int argc, char *argv[]) {
         perror("Numero de pasos incorrecto");
         return -1;
     }
-    //test_simulation(estrellas);
+    //test_tree(estrellas);
 
 #ifdef CUDA
     simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[3]);
