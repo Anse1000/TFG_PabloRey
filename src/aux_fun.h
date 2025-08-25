@@ -26,6 +26,8 @@ static inline int get_octant(double cx, double cy, double cz, double x, double y
 void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *offsets);
 
 void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,double min_subdivisions);
+
+    void write_chunks(Star *estrellas, const char *base_filename, const char *directory, int num_chunks);
 #ifdef __cplusplus
 }
 #endif

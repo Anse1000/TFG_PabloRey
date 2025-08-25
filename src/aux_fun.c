@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include "octree.h"
 
 // Función mejorada para nodo raíz Barnes-Hut
@@ -200,4 +202,49 @@ void reorder_stars(Star *stars,double cx, double cy, double cz, unsigned int *of
         }
     }
     printf("Estrellas ordenadas por octante\n"); fflush(stdout);
+}
+void write_chunks(Star *estrellas, const char *base_filename, const char *directory, int num_chunks) {
+    // Crear directorio si no existe
+    struct stat st = {0};
+    if (stat(directory, &st) == -1) {
+        if (mkdir(directory, 0755) == -1) {
+            perror("Error creando directorio");
+            return;
+        }
+#ifdef DEBUG_BUILD
+        printf("Directorio '%s' creado\n", directory);
+#endif
+    }
+
+    size_t chunk_size = estrellas->size / num_chunks;
+    size_t remainder = estrellas->size % num_chunks;
+
+    size_t start_idx = 0;
+    for (int chunk = 0; chunk < num_chunks; chunk++) {
+        size_t current_chunk_size = chunk_size + (chunk < remainder ? 1 : 0);
+
+        char filename[512];
+        snprintf(filename, sizeof(filename), "%s/%s_%02d.csv", directory, base_filename, chunk);
+
+        FILE *file = fopen(filename, "w");
+        if (!file) {
+            perror("Error abriendo archivo de chunk");
+            continue;
+        }
+
+        fprintf(file, "ID,X,Y,Z\n");
+
+        for (size_t i = start_idx; i < start_idx + current_chunk_size; i++) {
+            fprintf(file, "%lu,%.20f,%.20f,%.20f\n",
+                   estrellas->id[i],
+                   estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
+        }
+
+        fclose(file);
+#ifdef DEBUG_BUILD
+        printf("Chunk %d guardado en %s (%zu estrellas)\n", chunk, filename, current_chunk_size);
+#endif
+        start_idx += current_chunk_size;
+    }
+    printf("Chunks guardados en %s\n",directory); fflush(stdout);
 }

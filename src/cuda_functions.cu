@@ -393,14 +393,5 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     free(ax);
     free(ay);
     free(az);
-    FILE *file = fopen(outputfile, "w");
-    if (!file) {
-        fprintf(stderr, "Error al abrir el archivo de salida\n");
-        exit(1);
-    }
-    printf("Escribiendo resultados en %s\n", outputfile); fflush(stdout);
-    for (int i = 0; i < N; i++) {
-        fprintf(file, "ID: %lu X: %.20f Y = %.20f Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
-                estrellas->Cz[i]);
-    }
+    write_chunks(estrellas,"results_cuda",outputfile,25);
 }

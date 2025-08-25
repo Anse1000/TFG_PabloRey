@@ -124,15 +124,7 @@ void simulate(Star *estrellas,const int steps, const long N, const char* outputf
     free(ax);
     free(ay);
     free(az);
-    FILE *file = fopen(outputfile, "w");
-    if (!file) {
-        fprintf(stderr, "Error al abrir el archivo de salida\n");
-        exit(1);
-    }
-    for (int i = 0; i < N; i++) {
-        fprintf(file, "ID: %lu X: %.20f Y = %.20f Z = %.20f\n", estrellas->id[i], estrellas->Cx[i], estrellas->Cy[i],
-                estrellas->Cz[i]);
-    }
+    write_chunks(estrellas,"normal_results",outputfile,25);
 }
 
 void test_simulation(Star *estrellas) {
