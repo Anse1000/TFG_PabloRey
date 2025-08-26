@@ -28,7 +28,7 @@ print(f"[RANK {rank}] procesando chunks {my_chunks}")
 
 # --- configuración global de render ---
 view = CreateView("RenderView")
-view.ViewSize = [1920, 1080]
+view.ViewSize = [3840, 2160]
 view.Background = [0, 0, 0]
 
 view.EnableRayTracing = 1
@@ -76,7 +76,7 @@ for f in range(nframes+1):
     # render y guardar
     view.ResetCamera()
     filename = os.path.join(out_dir, f"frame_{f:04d}.png")
-    SaveScreenshot(filename, view, ImageResolution=[1920,1080])
+    SaveScreenshot(filename, view, ImageResolution=[3840,2160])
 
     # limpiar objetos de este frame
     for src, table, glyph in sources:

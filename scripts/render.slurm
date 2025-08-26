@@ -10,7 +10,7 @@
 #SBATCH --mail-type=end
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
-module load paraview/5.11.0
+module load cesga/2020 gcc/system openmpi/4.0.5_ft3 paraview/5.10.1
 # paths
 INIT_DIR=
 FINAL_DIR=/path/to/chunks_final

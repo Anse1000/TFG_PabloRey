@@ -124,7 +124,7 @@ void simulate(Star *estrellas,const int steps, const long N, const char* outputf
     free(ax);
     free(ay);
     free(az);
-    write_chunks(estrellas,"normal_results",outputfile,25);
+    write_chunks(estrellas,"normal_results",outputfile,25,0);
 }
 
 void test_simulation(Star *estrellas) {

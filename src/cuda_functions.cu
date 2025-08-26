@@ -393,5 +393,5 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     free(ax);
     free(ay);
     free(az);
-    write_chunks(estrellas,"results_cuda",outputfile,25);
+    write_chunks(estrellas,"results_cuda",outputfile,25,0);
 }

@@ -7,7 +7,8 @@
 #include "octree.h"
 
 // Función mejorada para nodo raíz Barnes-Hut
-void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,double min_subdivisions) {
+void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,
+                         double min_subdivisions) {
     if (stars->size == 0) return;
 
     // 1. Centro de masa inicial
@@ -32,7 +33,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
         double dx = stars->Cx[i] - center_x;
         double dy = stars->Cy[i] - center_y;
         double dz = stars->Cz[i] - center_z;
-        double dist_sq = dx*dx + dy*dy + dz*dz;
+        double dist_sq = dx * dx + dy * dy + dz * dz;
         if (dist_sq > max_dist_sq) {
             max_dist_sq = dist_sq;
         }
@@ -45,7 +46,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
         double dx = stars->Cx[i] - center_x;
         double dy = stars->Cy[i] - center_y;
         double dz = stars->Cz[i] - center_z;
-        double dist = sqrt(dx*dx + dy*dy + dz*dz);
+        double dist = sqrt(dx * dx + dy * dy + dz * dz);
 
         if (dist > radius) {
             // Mover el centro hacia este punto para mantener esfera compacta
@@ -58,10 +59,10 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
     }
 
     // 4. Ajustar valores de salida
-    *cx = (float)center_x;
-    *cy = (float)center_y;
-    *cz = (float)center_z;
-    *hs = (float)(radius * 1.1); // margen 10%
+    *cx = (float) center_x;
+    *cy = (float) center_y;
+    *cz = (float) center_z;
+    *hs = (float) (radius * 1.1); // margen 10%
     *min_node_size = *hs / min_subdivisions;
 }
 
@@ -156,7 +157,7 @@ void free_aux(Star *estrellas) {
                              sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
                              sizeof(float) * 4 // color, radius, gravity, mean_g
                          );
-    printf("Liberados %.2lu MB de recursos auxiliares\n",total_bytes/1024/1024);
+    printf("Liberados %.2lu MB de recursos auxiliares\n", total_bytes / 1024 / 1024);
 }
 
 void swap_star_elements(Star *star, size_t i, size_t j) {
@@ -176,8 +177,9 @@ void swap_star_elements(Star *star, size_t i, size_t j) {
 
 #undef SWAP
 }
+
 //reordenar estrellas por octante para hacer calculos en gpu
-void reorder_stars(Star *stars,double cx, double cy, double cz, unsigned int *offsets) {
+void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *offsets) {
     size_t counts[8] = {0};
     for (size_t i = 0; i < stars->size; i++) {
         int oct = get_octant(cx, cy, cz, stars->Cx[i], stars->Cy[i], stars->Cz[i]);
@@ -188,7 +190,7 @@ void reorder_stars(Star *stars,double cx, double cy, double cz, unsigned int *of
         offsets[i] = offsets[i - 1] + counts[i - 1];
     }
     unsigned int ends[8];
-    memcpy(ends, offsets, 8*sizeof(unsigned int));
+    memcpy(ends, offsets, 8 * sizeof(unsigned int));
     for (size_t i = 0; i < stars->size;) {
         int oct = get_octant(cx, cy, cz, stars->Cx[i], stars->Cy[i], stars->Cz[i]);
         if (i >= offsets[oct] && i < ends[oct]) {
@@ -201,9 +203,12 @@ void reorder_stars(Star *stars,double cx, double cy, double cz, unsigned int *of
             ends[oct]++;
         }
     }
-    printf("Estrellas ordenadas por octante\n"); fflush(stdout);
+    printf("Estrellas ordenadas por octante\n");
+    fflush(stdout);
 }
-void write_chunks(Star *estrellas, const char *base_filename, const char *directory, int num_chunks) {
+
+void write_chunks(Star *estrellas, const char *base_filename, const char *directory, unsigned int num_chunks,
+                  int add_mass) {
     // Crear directorio si no existe
     struct stat st = {0};
     if (stat(directory, &st) == -1) {
@@ -220,7 +225,7 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
     size_t remainder = estrellas->size % num_chunks;
 
     size_t start_idx = 0;
-    for (int chunk = 0; chunk < num_chunks; chunk++) {
+    for (unsigned int chunk = 0; chunk < num_chunks; chunk++) {
         size_t current_chunk_size = chunk_size + (chunk < remainder ? 1 : 0);
 
         char filename[512];
@@ -231,13 +236,21 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
             perror("Error abriendo archivo de chunk");
             continue;
         }
-
-        fprintf(file, "ID,X,Y,Z\n");
-
+        if (add_mass) {
+            fprintf(file, "ID,X,Y,Z,MASS\n");
+        } else {
+            fprintf(file, "ID,X,Y,Z\n");
+        }
         for (size_t i = start_idx; i < start_idx + current_chunk_size; i++) {
-            fprintf(file, "%lu,%.20f,%.20f,%.20f\n",
-                   estrellas->id[i],
-                   estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
+            if (add_mass) {
+                fprintf(file, "%lu,%.20f,%.20f,%.20f,%.20f\n",
+                        estrellas->id[i],
+                        estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], estrellas->mass[i]);
+            } else {
+                fprintf(file, "%lu,%.20f,%.20f,%.20f\n",
+                        estrellas->id[i],
+                        estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
+            }
         }
 
         fclose(file);
@@ -246,5 +259,6 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
 #endif
         start_idx += current_chunk_size;
     }
-    printf("Chunks guardados en %s\n",directory); fflush(stdout);
+    printf("Chunks guardados en %s\n", directory);
+    fflush(stdout);
 }

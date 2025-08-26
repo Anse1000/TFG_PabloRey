@@ -67,7 +67,7 @@ void write_initial_positions(Star *estrellas, const char *directory) {
     unsigned int offsets[8];
     compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
     reorder_stars(estrellas,cx,cy,cz,offsets);
-    write_chunks(estrellas,"initial_positions",directory,25);
+    write_chunks(estrellas,"initial_positions",directory,25,1);
 }
 
 int main(int argc, char *argv[]) {

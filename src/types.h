@@ -13,7 +13,7 @@
 #define V_SOL 12.24  // Tangencial al eje de rotacion
 #define W_SOL 7.25   // Perpendicular a plano galáctico
 
-#define DT 0.0001    // Paso de tiempo en millones de años
+#define DT 50    // Paso de tiempo en millones de años
 #define EPSILON 0.000001 //Valor para evitar divisiones por cero o muy cercanas a cero
 #define MIN_SUBDIVISIONS 1e7 //Numero maximo de subdivisiones del arbol
 
