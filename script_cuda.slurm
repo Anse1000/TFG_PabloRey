@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -J test_cuda
-#SBATCH -t 02:00:00
+#SBATCH -t 12:00:00
 #SBATCH -o test_cuda_%j.out
-#SBATCH --mem=400GB
+#SBATCH --mem=247GB
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 64
-#SBATCH --gres=gpu:a100:8
+#SBATCH --gres=gpu:a100:2
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es

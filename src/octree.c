@@ -41,6 +41,7 @@ void count_cpu_octant_nodes(Octree *cpu_tree, long *cpu_counts) {
 }
 
 void test_tree(Star *stars) {
+    //CAMBIAR en build_tree test_subdivisions para hacer el test.
     Octree *tree = build_tree(stars);
     free_tree(tree);
     test_subdivisions = 1e8;

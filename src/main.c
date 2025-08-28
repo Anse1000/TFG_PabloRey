@@ -91,8 +91,8 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
-     write_initial_positions(estrellas,argv[2]);
-     free_aux(estrellas);
+    write_initial_positions(estrellas,argv[2]);
+    free_aux(estrellas);
     steps = atoi(argv[4]);
     if (steps <= 0) {
         perror("Numero de pasos incorrecto");
@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
     }
 #ifdef CUDA
     simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[3]);
+    //mem_test_gpu(estrellas);
 #else
     simulate(estrellas,steps,estrellas->size,argv[3]);
 #endif

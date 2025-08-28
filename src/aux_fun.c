@@ -229,6 +229,7 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
     size_t remainder = estrellas->size % num_chunks;
 
     size_t start_idx = 0;
+#pragma omp parallel for num_threads(num_chunks)
     for (unsigned int chunk = 0; chunk < num_chunks; chunk++) {
         size_t current_chunk_size = chunk_size + (chunk < remainder ? 1 : 0);
 
