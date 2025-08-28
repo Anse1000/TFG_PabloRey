@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J test_trees
-#SBATCH -t 1:00:00
+#SBATCH -t 00:30:00
 #SBATCH -o test_trees_%j.out
 #SBATCH --mem=247GB
 #SBATCH -n 1
@@ -14,7 +14,7 @@ ulimit -s unlimited
 module load cesga/2025 intel
 # Compilar el programa
 mkdir -p build
-cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_CUDA=OFF -S . -B ./build
+cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build
 # Ejecutar
 ./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/initial_positions_normal /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_normal 1

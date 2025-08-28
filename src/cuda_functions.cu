@@ -7,7 +7,7 @@
 
 // --- Función para aceleración del halo NFW
 __device__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
-                                double dx, double dy, double dz) {
+                                 double dx, double dy, double dz) {
     double x = r / rs;
     double f = log(1.0 + x) - x / (1.0 + x);
     double Menc = M200 * f / (log(1.0 + 10.0) - 10.0 / 11.0);
@@ -21,7 +21,7 @@ __device__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
 
 // --- Función para aceleración del bulbo Hernquist
 __device__ double bulge_accel_gpu(double r, double *ax, double *ay, double *az,
-                                 double dx, double dy, double dz) {
+                                  double dx, double dy, double dz) {
     double acc = -G * MBULGE / ((r + A) * (r + A)) / r;
     *ax += acc * dx;
     *ay += acc * dy;
@@ -31,7 +31,7 @@ __device__ double bulge_accel_gpu(double r, double *ax, double *ay, double *az,
 
 // --- Función wrapper para aceleración analítica total
 __device__ void analytic_accel_gpu(double x, double y, double z,
-                                  double *ax, double *ay, double *az) {
+                                   double *ax, double *ay, double *az) {
     double dx = x;
     double dy = y;
     double dz = z;
@@ -44,7 +44,7 @@ __device__ void analytic_accel_gpu(double x, double y, double z,
 }
 
 
-__global__ void compute_forces_kernel(const Octree *tree, size_t star_count, 
+__global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
                                       const double *Cx, const double *Cy, const double *Cz,
                                       double *ax, double *ay, double *az,
                                       double theta) {
@@ -56,13 +56,13 @@ __global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
 
     // Añadir aceleración analítica (halo + bulbo)
     analytic_accel_gpu(Cx[star_idx], Cy[star_idx], Cz[star_idx],
-                      &acc_x, &acc_y, &acc_z);
+                       &acc_x, &acc_y, &acc_z);
 
     // Stack explícito para la traversal del árbol
     constexpr int MAX_STACK_SIZE = 512;
     long stack[MAX_STACK_SIZE];
     int top = -1;
-    
+
     // Inicializar con la raíz
     stack[++top] = 0;
 
@@ -98,7 +98,7 @@ __global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
             }
         }
     }
-    
+
     // Escribir resultados
     ax[star_idx] = acc_x;
     ay[star_idx] = acc_y;
@@ -112,7 +112,7 @@ void copy_tree_to_gpu(Octree **d_tree, const Octree *host_tree, cudaStream_t str
         *d_tree = NULL;
         return;
     }
-    
+
     // 1. Crear estructura en GPU
     Octree *gpu_tree_struct;
     cudaError_t err = cudaMalloc(&gpu_tree_struct, sizeof(Octree));
@@ -132,7 +132,7 @@ void copy_tree_to_gpu(Octree **d_tree, const Octree *host_tree, cudaStream_t str
     long *d_star_index;
 
     size_t size = host_tree->size;
-    
+
     // Verificar que size sea válido
     if (size == 0) {
         printf("Error: tamaño del árbol es 0\n");
@@ -152,14 +152,20 @@ void copy_tree_to_gpu(Octree **d_tree, const Octree *host_tree, cudaStream_t str
         (err = cudaMalloc(&d_com_z, size * sizeof(double))) != cudaSuccess ||
         (err = cudaMalloc(&d_children, size * sizeof(unsigned int[8]))) != cudaSuccess ||
         (err = cudaMalloc(&d_star_index, size * sizeof(long))) != cudaSuccess) {
-        
         printf("Error en cudaMalloc para arrays: %s\n", cudaGetErrorString(err));
-        
+
         // Limpiar memoria ya reservada
-        cudaFree(d_center_x); cudaFree(d_center_y); cudaFree(d_center_z);
-        cudaFree(d_half_size); cudaFree(d_mass); cudaFree(d_com_x);
-        cudaFree(d_com_y); cudaFree(d_com_z); cudaFree(d_children);
-        cudaFree(d_star_index); cudaFree(gpu_tree_struct);
+        cudaFree(d_center_x);
+        cudaFree(d_center_y);
+        cudaFree(d_center_z);
+        cudaFree(d_half_size);
+        cudaFree(d_mass);
+        cudaFree(d_com_x);
+        cudaFree(d_com_y);
+        cudaFree(d_com_z);
+        cudaFree(d_children);
+        cudaFree(d_star_index);
+        cudaFree(gpu_tree_struct);
         *d_tree = NULL;
         return;
     }
@@ -230,15 +236,14 @@ void free_tree_gpu(Octree *d_tree) {
 }
 
 __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, double *ax, double *ay, double *az,
-                                             const unsigned int *offsets, int device_count, Octree **trees,
-                                             const Star *estrellas, cudaStream_t *streams) {
-
+                                            const unsigned int *offsets, int device_count, Octree **trees,
+                                            const Star *estrellas, cudaStream_t *streams) {
     for (int i = 0; i < iterations; i++) {
-        #pragma omp parallel for num_threads(device_count)
+#pragma omp parallel for num_threads(device_count)
         for (int dev = 0; dev < device_count; dev++) {
             int octant = i * device_count + dev;
             if (octant >= 8) continue;
-            
+
             cudaError_t err = cudaSetDevice(dev);
             if (err != cudaSuccess) {
                 printf("Error setting device %d: %s\n", dev, cudaGetErrorString(err));
@@ -270,14 +275,13 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
 
             // Reservar memoria para coordenadas y aceleraciones
             double *d_x, *d_y, *d_z, *d_ax, *d_ay, *d_az;
-            
+
             if ((err = cudaMalloc(&d_x, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_y, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_z, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_ax, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_ay, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_az, count * sizeof(double))) != cudaSuccess) {
-                
                 printf("Error reservando memoria coordenadas: %s\n", cudaGetErrorString(err));
                 free_tree_gpu(d_tree);
                 continue;
@@ -286,12 +290,12 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             fflush(stdout);
 
             // Copiar datos a GPU
-            cudaMemcpyAsync(d_x, &estrellas->Cx[start], count * sizeof(double), 
-                           cudaMemcpyHostToDevice, streams[dev]);
-            cudaMemcpyAsync(d_y, &estrellas->Cy[start], count * sizeof(double), 
-                           cudaMemcpyHostToDevice, streams[dev]);
-            cudaMemcpyAsync(d_z, &estrellas->Cz[start], count * sizeof(double), 
-                           cudaMemcpyHostToDevice, streams[dev]);
+            cudaMemcpyAsync(d_x, &estrellas->Cx[start], count * sizeof(double),
+                            cudaMemcpyHostToDevice, streams[dev]);
+            cudaMemcpyAsync(d_y, &estrellas->Cy[start], count * sizeof(double),
+                            cudaMemcpyHostToDevice, streams[dev]);
+            cudaMemcpyAsync(d_z, &estrellas->Cz[start], count * sizeof(double),
+                            cudaMemcpyHostToDevice, streams[dev]);
 
             // Inicializar aceleraciones a cero
             cudaMemsetAsync(d_ax, 0, count * sizeof(double), streams[dev]);
@@ -301,7 +305,8 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             // CRÍTICO: Sincronizar el stream antes de lanzar el kernel
             cudaStreamSynchronize(streams[dev]);
 
-            printf("Kernel iniciado it:%d dev:%d\n", i, dev); fflush(stdout);
+            printf("Kernel iniciado it:%d dev:%d\n", i, dev);
+            fflush(stdout);
 
             // Lanzar kernel
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -311,17 +316,22 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             // Verificar errores del kernel
             err = cudaGetLastError();
             if (err != cudaSuccess) {
-                printf("Error en kernel it:%d dev:%d: %s\n", i, dev,cudaGetErrorString(err));
+                printf("Error en kernel it:%d dev:%d: %s\n", i, dev, cudaGetErrorString(err));
                 fflush(stdout);
-                cudaFree(d_x); cudaFree(d_y); cudaFree(d_z);
-                cudaFree(d_ax); cudaFree(d_ay); cudaFree(d_az);
+                cudaFree(d_x);
+                cudaFree(d_y);
+                cudaFree(d_z);
+                cudaFree(d_ax);
+                cudaFree(d_ay);
+                cudaFree(d_az);
                 free_tree_gpu(d_tree);
                 continue;
             }
 
             // Sincronizar antes de copiar resultados
             cudaStreamSynchronize(streams[dev]);
-            printf("Kernel terminado it:%d dev:%d\n", i, dev); fflush(stdout);
+            printf("Kernel terminado it:%d dev:%d\n", i, dev);
+            fflush(stdout);
 
             // Copiar resultados
             cudaMemcpyAsync(&ax[start], d_ax, count * sizeof(double),
@@ -334,11 +344,15 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             cudaStreamSynchronize(streams[dev]);
 
             // Liberar memoria
-            cudaFree(d_x); cudaFree(d_y); cudaFree(d_z);
-            cudaFree(d_ax); cudaFree(d_ay); cudaFree(d_az);
+            cudaFree(d_x);
+            cudaFree(d_y);
+            cudaFree(d_z);
+            cudaFree(d_ax);
+            cudaFree(d_ay);
+            cudaFree(d_az);
             free_tree_gpu(d_tree);
         }
-        
+
         // Sincronizar todos los dispositivos
         for (int dev = 0; dev < device_count; dev++) {
             cudaSetDevice(dev);
@@ -349,14 +363,14 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
 }
 
 // Función principal de simulacion en gpus
-extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, const long N, const char *outputfile) {
+extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, const long N, const char *outputfile) {
     struct timeval start, end;
-    float cx,cy,cz;
-    float hs,min_node_size;
+    float cx, cy, cz;
+    float hs, min_node_size;
     gettimeofday(&start, NULL);
     int device_count = 0;
     cudaGetDeviceCount(&device_count);
-    if (device_count==0) {
+    if (device_count == 0) {
         printf("No hay dispositivos disponibles\n");
         exit(1);
     }
@@ -377,16 +391,16 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     printf("Iniciando simulacion con %d GPUs\n", device_count);
     fflush(stdout);
     double DT;
-    estimate_dt(estrellas,&DT);
+    estimate_dt(estrellas, &DT);
     double DT2 = 0.5 * DT;
-    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
+    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n", steps, DT * 1000000, DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
-    compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
+    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
     unsigned int offsets[8];
-    reorder_stars(estrellas, cx,cy,cz, offsets);
+    reorder_stars(estrellas, cx, cy, cz, offsets);
     // Construir árbol
-    Octree **octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
+    Octree **octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
 
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
@@ -395,7 +409,8 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
         fflush(stdout);
         gettimeofday(&step_start, NULL);
 
-        if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
+        if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas,
+                                           streams) != 0) {
             printf("Error en fase 1\n");
             return;
         }
@@ -409,15 +424,16 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
             estrellas->Cy[i] = fma(DT, estrellas->Vy[i], estrellas->Cy[i]);
             estrellas->Cz[i] = fma(DT, estrellas->Vz[i], estrellas->Cz[i]);
         }
-        for (int i=0;i<8;i++) {
+        for (int i = 0; i < 8; i++) {
             free_tree(octrees[i]);
         }
-        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
-        reorder_stars(estrellas, cx,cy,cz, offsets);
-        octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         printf("\t  Iniciando fase 2: HalfKick\n");
         fflush(stdout);
-        if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
+        if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas,
+                                           streams) != 0) {
             printf("Error en fase 2\n");
             return;
         }
@@ -426,10 +442,10 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        write_results(estrellas, outputfile,"cuda_results",steps,step);
+        write_results(estrellas, outputfile, "cuda_results", steps, step);
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);
-        printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1,step_seconds);
+        printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1, step_seconds);
         fflush(stdout);
     }
     // Limpiar streams
@@ -443,10 +459,39 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     int minutes = (static_cast<int>(seconds) % 3600) / 60;
     double remaining_seconds = fmod(seconds, 60.0);
     printf("Simulacion de %ld estrellas completada en %02d:%02d:%05.2f (hh:mm:ss)\n",
-       N, hours, minutes, remaining_seconds);
-    printf("Resultados guardados en %s\n",outputfile);
+           N, hours, minutes, remaining_seconds);
+    printf("Resultados guardados en %s\n", outputfile);
     fflush(stdout);
     free(ax);
     free(ay);
     free(az);
 }
+#ifdef DEBUG_BUILD
+extern "C" void mem_test_gpu(Star *estrellas) {
+    float cx, cy, cz;
+    float hs, min_node_size;
+    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
+    unsigned int offsets[8];
+    reorder_stars(estrellas, cx, cy, cz, offsets);
+    // Construir árbol
+    Octree **octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+    for (int i = 0; i < 8; i++) {
+        unsigned long start_idx = offsets[i];
+        unsigned long end_idx = (i == 7) ? estrellas->size : offsets[i + 1];
+        unsigned long count = end_idx - start_idx;
+        size_t memory_tree = octrees[i]->capacity * (
+                                 sizeof(double) * 3 +
+                                 sizeof(double) +
+                                 sizeof(float) * 4 +
+                                 sizeof(unsigned int[8]) +
+                                 sizeof(long)
+                             ) / 1024 / 1024;
+        size_t memory_stars = count * sizeof(double) * 6 / 1024 / 1024;
+        size_t memory_acceleration = count * sizeof(double) * 3 / 1024 / 1024;
+        printf(
+            "Octante %d: %ld estrellas, Memoria estimada: %lu MB subarbol + %lu MB estrellas + %lu MB aceleraciones = %lu MB TOTAL\n",
+            i, count, memory_tree, memory_stars, memory_acceleration, memory_tree + memory_stars + memory_acceleration);
+        fflush(stdout);
+    }
+}
+#endif
