@@ -3,7 +3,46 @@
 #include <sys/time.h>
 #include "octree.h"
 
-#define BLOCK_SIZE 256
+#define BLOCK_SIZE 512
+
+// --- Función para aceleración del halo NFW
+__device__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
+                                double dx, double dy, double dz) {
+    double x = r / rs;
+    double f = log(1.0 + x) - x / (1.0 + x);
+    double Menc = M200 * f / (log(1.0 + 10.0) - 10.0 / 11.0);
+
+    double acc = -G * Menc / (r * r * r);
+    *ax += acc * dx;
+    *ay += acc * dy;
+    *az += acc * dz;
+    return acc;
+}
+
+// --- Función para aceleración del bulbo Hernquist
+__device__ double bulge_accel_gpu(double r, double *ax, double *ay, double *az,
+                                 double dx, double dy, double dz) {
+    double acc = -G * MBULGE / ((r + A) * (r + A)) / r;
+    *ax += acc * dx;
+    *ay += acc * dy;
+    *az += acc * dz;
+    return acc;
+}
+
+// --- Función wrapper para aceleración analítica total
+__device__ void analytic_accel_gpu(double x, double y, double z,
+                                  double *ax, double *ay, double *az) {
+    double dx = x;
+    double dy = y;
+    double dz = z;
+    double r = sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (r > 0) {
+        halo_accel_gpu(r, ax, ay, az, dx, dy, dz);
+        bulge_accel_gpu(r, ax, ay, az, dx, dy, dz);
+    }
+}
+
 
 __global__ void compute_forces_kernel(const Octree *tree, size_t star_count, 
                                       const double *Cx, const double *Cy, const double *Cz,
@@ -14,7 +53,11 @@ __global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
 
     // Inicializar aceleraciones
     double acc_x = 0.0, acc_y = 0.0, acc_z = 0.0;
-    
+
+    // Añadir aceleración analítica (halo + bulbo)
+    analytic_accel_gpu(Cx[star_idx], Cy[star_idx], Cz[star_idx],
+                      &acc_x, &acc_y, &acc_z);
+
     // Stack explícito para la traversal del árbol
     constexpr int MAX_STACK_SIZE = 512;
     long stack[MAX_STACK_SIZE];
@@ -263,7 +306,7 @@ __host__ int compute_acceleration_multi_gpu(unsigned int N, int iterations, doub
             // Lanzar kernel
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             compute_forces_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                d_tree, count, d_x, d_y, d_z, d_ax, d_ay, d_az, 0.2);
+                d_tree, count, d_x, d_y, d_z, d_ax, d_ay, d_az, THETA);
 
             // Verificar errores del kernel
             err = cudaGetLastError();
@@ -330,25 +373,33 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
         cudaStreamCreate(&streams[i]);
     }
     const int iterations = (8 + device_count - 1) / device_count;
-
-    printf("=== Iniciando simulación con %d GPUs ===\n", device_count);
+    printf("******************************************************\n");
+    printf("Iniciando simulacion con %d GPUs\n", device_count);
+    fflush(stdout);
+    double DT;
+    estimate_dt(estrellas,&DT);
+    double DT2 = 0.5 * DT;
+    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
+    printf("******************************************************\n");
+    fflush(stdout);
+    compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
+    unsigned int offsets[8];
+    reorder_stars(estrellas, cx,cy,cz, offsets);
+    // Construir árbol
+    Octree **octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
 
     for (int step = 0; step < steps; step++) {
-        printf("\n--- Paso %d ---\n", step + 1);
+        struct timeval step_start, step_end;
+        printf("****************** Iniciando paso %d ******************\n", step + 1);
+        printf("\t  Iniciando fase 1: HalfKick-Drift \n");
+        fflush(stdout);
+        gettimeofday(&step_start, NULL);
 
-        compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
-
-        unsigned int offsets[8];
-        reorder_stars(estrellas, cx,cy,cz, offsets);
-        // Construir árbol
-        Octree **octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
-        printf("Iniciando fase 1\n"); fflush(stdout);
         if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
             printf("Error en fase 1\n");
             return;
         }
         // Aplicar integración Leapfrog
-        double DT2 = 0.5 * DT;
         for (long i = 0; i < N; i++) {
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
@@ -364,7 +415,8 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
         compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx,cy,cz, offsets);
         octrees = build_tree_gpu(estrellas,cx,cy,cz,hs,min_node_size,offsets);
-        printf("Iniciando fase 2\n"); fflush(stdout);
+        printf("\t  Iniciando fase 2: HalfKick\n");
+        fflush(stdout);
         if (compute_acceleration_multi_gpu(N, iterations, ax, ay, az, offsets, device_count, octrees, estrellas, streams)!=0) {
             printf("Error en fase 2\n");
             return;
@@ -374,7 +426,10 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        printf("Paso %d completado\n", step + 1);
+        write_results(estrellas, outputfile,"cuda_results",steps,step);
+        gettimeofday(&step_end, NULL);
+        double step_seconds = get_seconds(step_start, step_end);
+        printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1,step_seconds);
         fflush(stdout);
     }
     // Limpiar streams
@@ -387,11 +442,11 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas,const int steps, cons
     int hours = static_cast<int>(seconds / 3600);
     int minutes = (static_cast<int>(seconds) % 3600) / 60;
     double remaining_seconds = fmod(seconds, 60.0);
-    printf("Simuladas %ld estrellas en %02d:%02d:%05.2f (hh:mm:ss) usando %d GPUs\n",
-           N, hours, minutes, remaining_seconds, device_count);
+    printf("Simulacion de %ld estrellas completada en %02d:%02d:%05.2f (hh:mm:ss)\n",
+       N, hours, minutes, remaining_seconds);
+    printf("Resultados guardados en %s\n",outputfile);
     fflush(stdout);
     free(ax);
     free(ay);
     free(az);
-    write_chunks(estrellas,"results_cuda",outputfile,25,0);
 }

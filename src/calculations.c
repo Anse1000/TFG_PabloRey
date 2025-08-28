@@ -60,9 +60,9 @@ void calculate_radialvelocity(double *radial_velocity, double sin_ra, double cos
 }
 
 void calculate_coords(double *Cx, double *Cy, double *Cz, double X_E, double Y_E, double Z_E, double d) {
-    *Cx = (R[0][0] * X_E + R[0][1] * Y_E + R[0][2] * Z_E) * d;
-    *Cy = (R[1][0] * X_E + R[1][1] * Y_E + R[1][2] * Z_E) * d;
-    *Cz = (R[2][0] * X_E + R[2][1] * Y_E + R[2][2] * Z_E) * d;
+    *Cx = (R[0][0] * X_E + R[0][1] * Y_E + R[0][2] * Z_E) * d/1000;
+    *Cy = (R[1][0] * X_E + R[1][1] * Y_E + R[1][2] * Z_E) * d/1000;
+    *Cz = (R[2][0] * X_E + R[2][1] * Y_E + R[2][2] * Z_E) * d/1000;
 }
 
 void calculate_vectors(double *Vx, double *Vy, double *Vz, double X_E, double Y_E, double Z_E, double pmra,
@@ -97,14 +97,14 @@ void complete_data(Star *stars) {
         calculate_coords(&stars->Cx[i], &stars->Cy[i], &stars->Cz[i], X_E, Y_E, Z_E, stars->distance[i]);
 
         if (stars->radial_velocity[i] == 0) {
-            calculate_radialvelocity(stars->radial_velocity, sin_ra, cos_ra, sin_dec, cos_dec, stars->distance[i],
+            calculate_radialvelocity(&stars->radial_velocity[i], sin_ra, cos_ra, sin_dec, cos_dec, stars->distance[i],
                                      stars->Cx[i], stars->Cy[i], stars->Cz[i], stars->pmra[i], stars->pmdec[i]);
         }
         if (stars->mass[i] == 0) {
             calculate_mass(&stars->mass[i], stars->gravity[i], stars->radius[i], stars->mean_g[i], stars->color[i],
                            stars->distance[i]);
         }
-        calculate_vectors(stars->Vx, stars->Vy, stars->Vz, X_E, Y_E, Z_E, stars->pmra[i], stars->pmdec[i],
+        calculate_vectors(&stars->Vx[i], &stars->Vy[i], &stars->Vz[i], X_E, Y_E, Z_E, stars->pmra[i], stars->pmdec[i],
                           stars->radial_velocity[i], stars->distance[i], sin_ra, sin_dec, cos_ra, cos_dec);
     }
 }

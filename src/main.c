@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "aux_fun.h"
-#include "cuda_functions.cuh"
 #include "file_handler.h"
 #include "types.h"
 #include "simulation.h"
@@ -61,6 +60,7 @@ void findminmax(Star *stars) {
     printf("Posición Z: %.8f - %.8f\n", min_cz, max_cz);
     fflush(stdout);
 }
+
 void write_initial_positions(Star *estrellas, const char *directory) {
     float cx,cy,cz;
     float hs,min_node_size;
@@ -68,6 +68,8 @@ void write_initial_positions(Star *estrellas, const char *directory) {
     compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
     reorder_stars(estrellas,cx,cy,cz,offsets);
     write_chunks(estrellas,"initial_positions",directory,25,1);
+    printf("Posiciones iniciales guardadas en %s\n",directory);
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -89,19 +91,20 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
-    write_initial_positions(estrellas,argv[2]);
-    free_aux(estrellas);
+     write_initial_positions(estrellas,argv[2]);
+     free_aux(estrellas);
     steps = atoi(argv[4]);
     if (steps <= 0) {
         perror("Numero de pasos incorrecto");
         return -1;
     }
-    //test_tree(estrellas);
 #ifdef CUDA
     simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[3]);
 #else
     simulate(estrellas,steps,estrellas->size,argv[3]);
 #endif
+    //test_simulation(estrellas);
+    //test_tree(estrellas);
     free_stars(estrellas);
     return 0;
 }

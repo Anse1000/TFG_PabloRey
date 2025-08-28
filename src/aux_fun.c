@@ -3,7 +3,6 @@
 #include <math.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <errno.h>
 #include "octree.h"
 
 // Función mejorada para nodo raíz Barnes-Hut
@@ -153,11 +152,13 @@ void free_aux(Star *estrellas) {
     free(estrellas->distance);
     free(estrellas->gravity);
     free(estrellas->mean_g);
+#ifdef DEBUG_BUILD
     size_t total_bytes = estrellas->size * (
-                             sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
-                             sizeof(float) * 4 // color, radius, gravity, mean_g
-                         );
+                         sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
+                         sizeof(float) * 4 // color, radius, gravity, mean_g
+                     );
     printf("Liberados %.2lu MB de recursos auxiliares\n", total_bytes / 1024 / 1024);
+#endif
 }
 
 void swap_star_elements(Star *star, size_t i, size_t j) {
@@ -203,8 +204,11 @@ void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *o
             ends[oct]++;
         }
     }
+#ifdef DEBUG_BUILD
     printf("Estrellas ordenadas por octante\n");
     fflush(stdout);
+#endif
+
 }
 
 void write_chunks(Star *estrellas, const char *base_filename, const char *directory, unsigned int num_chunks,
@@ -254,11 +258,52 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
         }
 
         fclose(file);
-#ifdef DEBUG_BUILD
-        printf("Chunk %d guardado en %s (%zu estrellas)\n", chunk, filename, current_chunk_size);
-#endif
         start_idx += current_chunk_size;
     }
+#ifdef DEBUG_BUILD
     printf("Chunks guardados en %s\n", directory);
     fflush(stdout);
+#endif
+}
+void write_results(Star *estrellas, const char *outputfile,const char*name,const int steps,const int step) {
+    if (steps>1) {
+        if (step==0) {
+            struct stat st = {0};
+            if (stat(outputfile, &st) == -1) {
+                if (mkdir(outputfile, 0755) == -1) {
+                    perror("Error creando directorio");
+                    return;
+                }
+            }
+        }
+        char output[500];
+        sprintf(output, "%s/step_%d",outputfile ,step + 1);
+        write_chunks(estrellas, name, output, 25, 0);
+    }else {
+        write_chunks(estrellas, name, outputfile, 25, 0);
+    }
+}
+
+// Comparador para qsort
+int cmp_double(const void *a, const void *b) {
+    double diff = (*(double *) a - *(double *) b);
+    return (diff > 0) - (diff < 0);
+}
+
+void estimate_dt(Star *stars, double *dt) {
+    double *taus = malloc(stars->size * sizeof(double));
+    for (unsigned long i = 0; i < stars->size; i++) {
+        double r = sqrt(stars->Cx[i] * stars->Cx[i] + stars->Cy[i] * stars->Cy[i] + stars->Cz[i] * stars->Cz[i]);
+        double v = sqrt(stars->Vx[i] * stars->Vx[i] + stars->Vy[i] * stars->Vy[i] + stars->Vz[i] * stars->Vz[i]);
+        if (v > 0) {
+            taus[i] = r / v;
+        }
+    }
+    qsort(taus, stars->size, sizeof(double), cmp_double);
+    unsigned long idx = (unsigned long) floor(0.01 * stars->size);
+    if (idx >= stars->size) idx = stars->size - 1;
+    double tau_p = taus[idx];
+    free(taus);
+    double aux = tau_p * ETA;
+    *dt = aux > 1.0 ? 1.0 : aux;
 }

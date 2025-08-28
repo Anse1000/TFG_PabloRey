@@ -154,9 +154,10 @@ Octree *build_tree(Star *stars) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
+#ifdef DEBUG_BUILD
     printf("Iniciando construccion del Arbol\n");
     fflush(stdout);
-
+#endif
     Octree *tree = malloc(sizeof(Octree));
     memset(tree, 0, sizeof(Octree));
 
@@ -183,22 +184,21 @@ Octree *build_tree(Star *stars) {
         resize_tree(tree);
     }
     gettimeofday(&end, NULL);
-
+#ifdef DEBUG_BUILD
     size_t node_memory = sizeof(double) * 3 + // center_x, center_y, center_z, half_size, com_x, com_y, com_z
-                         sizeof(float) + // mass
-                         sizeof(float) * 4 +
-                         sizeof(unsigned int[8]) + // children (8 longs por nodo)
-                         sizeof(long); // star_index
+                     sizeof(float) + // mass
+                     sizeof(float) * 4 +
+                     sizeof(unsigned int[8]) + // children (8 longs por nodo)
+                     sizeof(long); // star_index
     double secs = get_seconds(start, end);
     printf("Árbol de %ld nodos creado en %.4f segundos usando %lu MB\n", tree->capacity, secs,tree->capacity * node_memory / 1024 / 1024);
-#ifdef DEBUG_BUILD
     long cpu_counts[8];
     count_cpu_octant_nodes(tree, cpu_counts);
     for (int i=0;i<8;i++) {
         printf("Subarbol %d: %ld nodos -> %lu MB\n",i,cpu_counts[i],cpu_counts[i]*node_memory/1024/1024);
     }
-#endif
     fflush(stdout);
+#endif
     return tree;
 }
 
@@ -207,9 +207,10 @@ Octree **build_tree_gpu(Star *stars, const float cx, const float cy, const float
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
+#ifdef DEBUG_BUILD
     printf("Iniciando construccion de los subarboles para GPU\n");
     fflush(stdout);
-    
+#endif
     Octree **trees = malloc(sizeof(Octree*) * 8);
 
     // Paralelizar la inicialización de los 8 subárboles
@@ -262,7 +263,7 @@ Octree **build_tree_gpu(Star *stars, const float cx, const float cy, const float
     }
     
     gettimeofday(&end, NULL);
-    
+#ifdef DEBUG_BUILD
     // Calcular memoria utilizada
     size_t memory[8];
     for (int i = 0; i < 8; i++) {
@@ -280,6 +281,7 @@ Octree **build_tree_gpu(Star *stars, const float cx, const float cy, const float
         printf("Arbol %d: %lu nodos %lu MB\n", i, trees[i]->capacity, memory[i]/1024/1024);
     }
     fflush(stdout);
+#endif
     return trees;
 }
 #endif

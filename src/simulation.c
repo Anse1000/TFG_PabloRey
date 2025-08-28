@@ -1,10 +1,50 @@
 #include "simulation.h"
-#include <omp.h>
 #include <math.h>
+#include <omp.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 #include "aux_fun.h"
 #include "octree.h"
+
+// --- Halo NFW
+double halo_accel(double r, double *ax, double *ay, double *az,
+                  double dx, double dy, double dz) {
+    // concentración c = R200/rs ~ 10, R200 ~ 200 kpc
+    double x = r / rs;
+    double f = log(1.0 + x) - x / (1.0 + x);
+    double Menc = M200 * f / (log(1.0 + 10.0) - 10.0 / 11.0);
+
+    double acc = -G * Menc / (r * r * r);
+    *ax = fma(acc, dx, *ax);
+    *ay = fma(acc, dy, *ay);
+    *az = fma(acc, dz, *az);
+    return acc;
+}
+
+// --- Bulbo Hernquist
+double bulge_accel(double r, double *ax, double *ay, double *az,
+                   double dx, double dy, double dz) {
+    double acc = -G * MBULGE / ((r + A) * (r + A)) / r;
+    *ax = fma(acc, dx, *ax);
+    *ay = fma(acc, dy, *ay);
+    *az = fma(acc, dz, *az);
+    return acc;
+}
+
+// --- Wrapper total (halo + bulbo)
+void analytic_accel(double x, double y, double z,
+                    double *ax, double *ay, double *az) {
+    double dx = x;
+    double dy = y;
+    double dz = z;
+    double r = sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (r > 0) {
+        halo_accel(r, ax, ay, az, dx, dy, dz);
+        bulge_accel(r, ax, ay, az, dx, dy, dz);
+    }
+}
 
 //funcion de prueba: calcula la aceleracion de una sola estrella con TODAS
 void compute_aceleration_single(const Star *stars, double *ax, double *ay, double *az, const unsigned long index,
@@ -26,6 +66,7 @@ void compute_aceleration_single(const Star *stars, double *ax, double *ay, doubl
             *az = fma(force, dz, *az);
         }
     }
+    analytic_accel(stars->Cx[index], stars->Cy[index], stars->Cz[index], ax, ay, az);
     gettimeofday(&end, NULL);
     *seconds = get_seconds(start, end);
 }
@@ -64,31 +105,44 @@ void compute_acceleration_bh(const Star *stars, const Octree *tree,
 }
 
 void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long index, double theta, double *ax,
-                 double *ay, double *az, double *seconds)  {
+                 double *ay, double *az, double *seconds) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
     compute_acceleration_bh(stars, tree, node_idx, index, theta, ax, ay, az);
+    analytic_accel(stars->Cx[index], stars->Cy[index], stars->Cz[index], ax, ay, az);
     gettimeofday(&end, NULL);
     *seconds = get_seconds(start, end);
 }
 
 // Función principal de simulación
-void simulate(Star *estrellas,const int steps, const long N, const char* outputfile) {
+void simulate(Star *estrellas, const int steps, const long N, const char *outputfile) {
     struct timeval start, end;
-    double DT2 = 0.5 * DT;
     double *ax = malloc(N * sizeof(double));
     double *ay = malloc(N * sizeof(double));
     double *az = malloc(N * sizeof(double));
+    double DT;
 
     gettimeofday(&start, NULL);
-    printf("Iniciando simulacion usando %d threads\n",omp_get_max_threads()); fflush(stdout);
+    printf("******************************************************\n");
+    printf("Iniciando simulacion con %d threads\n", omp_get_max_threads());
+    fflush(stdout);
+    estimate_dt(estrellas, &DT);
+    double DT2 = 0.5 * DT;
+    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
+    printf("******************************************************\n");
+    fflush(stdout);
+    Octree *octree = build_tree(estrellas);
     for (int step = 0; step < steps; step++) {
-        printf("Iniciando paso %d\n", step + 1); fflush(stdout);
-        Octree *octree = build_tree(estrellas);
-        printf("Iniciando fase 1\n"); fflush(stdout);
-        #pragma omp parallel for
+        struct timeval step_start, step_end;
+        printf("****************** Iniciando paso %d ******************\n", step + 1);
+        printf("\t  Iniciando fase 1: HalfKick-Drift \n");
+        fflush(stdout);
+        gettimeofday(&step_start, NULL);
+#pragma omp parallel for
         for (long i = 0; i < N; i++) {
-            compute_acceleration_bh(estrellas, octree, 0, i, 0.2, &ax[i], &ay[i], &az[i]);
+            ax[i] = ay[i] = az[i] = 0.0;
+            compute_acceleration_bh(estrellas, octree, 0, i, THETA, &ax[i], &ay[i], &az[i]);
+            analytic_accel(estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], &ax[i], &ay[i], &az[i]);
             // Leapfrog integration: actualizar velocidad a mitad de paso
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
@@ -101,34 +155,41 @@ void simulate(Star *estrellas,const int steps, const long N, const char* outputf
         free_tree(octree);
         //Reconstruir con nuevas posiciones
         octree = build_tree(estrellas);
-        printf("Iniciando fase 2\n"); fflush(stdout);
-        #pragma omp parallel for
+        printf("\t  Iniciando fase 2: HalfKick\n");
+        fflush(stdout);
+#pragma omp parallel for
         for (long i = 0; i < N; i++) {
-            compute_acceleration_bh(estrellas, octree, 0, i, 0.2, &ax[i], &ay[i], &az[i]);
+            ax[i] = ay[i] = az[i] = 0.0;
+            compute_acceleration_bh(estrellas, octree, 0, i, THETA, &ax[i], &ay[i], &az[i]);
+            analytic_accel(estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], &ax[i], &ay[i], &az[i]);
             // Completar actualización de velocidad
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        printf("Paso %d realizado\n", step + 1);
+        write_results(estrellas, outputfile,"normal_results",steps,step);
+        gettimeofday(&step_end, NULL);
+        double step_seconds = get_seconds(step_start, step_end);
+        printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1,step_seconds);
         fflush(stdout);
     }
     gettimeofday(&end, NULL);
     double seconds = get_seconds(start, end);
-    int hours = (int)(seconds / 3600);
-    int minutes = ((int)seconds % 3600) / 60;
+    int hours = (int) (seconds / 3600);
+    int minutes = ((int) seconds % 3600) / 60;
     double remaining_seconds = fmod(seconds, 60.0);
-    printf("Simuladas %ld estrellas en %02d:%02d:%05.2f (hh:mm:ss) usando %d threads\n",
-       N, hours, minutes, remaining_seconds, omp_get_max_threads());
+    printf("Simulacion de %ld estrellas completada en %02d:%02d:%05.2f (hh:mm:ss)\n",
+           N, hours, minutes, remaining_seconds);
+    printf("Resultados guardados en %s\n",outputfile);
     fflush(stdout);
     free(ax);
     free(ay);
     free(az);
-    write_chunks(estrellas,"normal_results",outputfile,25,0);
+
 }
 
 void test_simulation(Star *estrellas) {
-    double THETA[10]= {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
+    double THETAS[10] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
     int indexes[20];
     double seconds[20], seconds_bh[200];
     for (int i = 0; i < 20; i++) {
@@ -136,23 +197,32 @@ void test_simulation(Star *estrellas) {
     }
     double ax[20] = {0}, ay[20] = {0}, az[20] = {0};
     double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
-
+    double dt;
+    estimate_dt(estrellas, &dt);
+    printf("El DT estimado máximo es %.6f\n", dt);
     Octree *octree = build_tree(estrellas);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);
         for (int j = 0; j < 10; j++) {
-            int idex=i*10+j;
-            aux_time_bh(estrellas, octree, 0, indexes[i], THETA[j], &axb[idex], &ayb[idex], &azb[idex], &seconds_bh[idex]);
+            int idex = i * 10 + j;
+            aux_time_bh(estrellas, octree, 0, indexes[i], THETAS[j], &axb[idex], &ayb[idex], &azb[idex],
+                        &seconds_bh[idex]);
         }
         printf("------------------------------------------------------\n");
         printf("Estrella: %d\n", indexes[i]);
-        printf("Referencia:              X= %+e Y= %+e Z= %+e  %f segundos\n", ax[i], ay[i], az[i], seconds[i]);
+        printf("Position (X, Y, Z):   (%.20lf, %.20lf, %.20lf)\n",
+               estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
+        printf("Velocity (Vx, Vy, Vz): (%.20lf, %.20lf, %.20lf)\n",
+               estrellas->Vx[i], estrellas->Vy[i], estrellas->Vz[i]);
+        printf("Referencia:              X= %.20lf Y= %.20lf Z= %.20lf  %f segundos\n", ax[i], ay[i], az[i],
+               seconds[i]);
         for (int j = 0; j < 10; j++) {
-            int idex=i*10+j;
-            printf("BarnesHut THETA %0.1f:     X= %+e Y= %+e Z= %+e  %f segundos\n",THETA[j], axb[idex], ayb[idex], azb[idex],seconds_bh[idex]);
+            int idex = i * 10 + j;
+            printf("BarnesHut THETA %0.1f:     X= %.20lf Y= %.20lf Z= %.20lf  %f segundos\n", THETAS[j], axb[idex],
+                   ayb[idex],
+                   azb[idex], seconds_bh[idex]);
         }
     }
-
     free_tree(octree);
 }
