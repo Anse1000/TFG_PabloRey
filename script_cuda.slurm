@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -J test_cuda
-#SBATCH -t 12:00:00
+#SBATCH -t 3:00:00
 #SBATCH -o test_cuda_%j.out
 #SBATCH --mem=247GB
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 64
-#SBATCH --gres=gpu:a100:2
+#SBATCH --gres=gpu:a100:8
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
@@ -19,4 +19,4 @@ mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build
 # Ejecutar
-./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/initial_positions_cuda /mnt/netapp2/Store_uni/home/ulc/es/pra/final_positions_cuda 1
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_cuda 1

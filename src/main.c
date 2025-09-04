@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "aux_fun.h"
@@ -61,26 +60,14 @@ void findminmax(Star *stars) {
     fflush(stdout);
 }
 
-void write_initial_positions(Star *estrellas, const char *directory) {
-    float cx,cy,cz;
-    float hs,min_node_size;
-    unsigned int offsets[8];
-    compute_root_bounds(estrellas,&cx,&cy,&cz,&hs,&min_node_size,MIN_SUBDIVISIONS);
-    reorder_stars(estrellas,cx,cy,cz,offsets);
-    write_chunks(estrellas,"initial_positions",directory,25,1);
-    printf("Posiciones iniciales guardadas en %s\n",directory);
-    fflush(stdout);
-}
-
 int main(int argc, char *argv[]) {
     int steps = 0;
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
-    if (argc < 4) {
+    if (argc < 3) {
         fprintf(stderr, "Error: Número incorrecto de argumentos\n");
-        fprintf(stderr, "Uso: %s <archivo_estrellas> <archivo_posiciones_iniciales> <archivo_salida> STEPS\n", argv[0]);
+        fprintf(stderr, "Uso: %s <archivo_estrellas> <archivo_salida> STEPS\n", argv[0]);
         fprintf(stderr, "  <archivo_estrellas>: Carpeta con los datos de entrada de las estrellas\n");
-        fprintf(stderr, "  <archivo_posiciones_iniciales>: Carpeta con las posiciones iniciales de las estrellas\n");
         fprintf(stderr, "  <archivo_salida>: Carpeta donde se guardarán los resultados\n");
         fprintf(stderr, "  Numero de pasos de la simulacion\n");
         free(estrellas);
@@ -91,18 +78,17 @@ int main(int argc, char *argv[]) {
         perror("No se encontro ninguna estrella");
         return -1;
     }
-    write_initial_positions(estrellas,argv[2]);
     free_aux(estrellas);
-    steps = atoi(argv[4]);
+    steps = atoi(argv[3]);
     if (steps <= 0) {
         perror("Numero de pasos incorrecto");
         return -1;
     }
 #ifdef CUDA
-    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[3]);
+    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[2]);
     //mem_test_gpu(estrellas);
 #else
-    simulate(estrellas,steps,estrellas->size,argv[3]);
+    simulate(estrellas,steps,estrellas->size,argv[2]);
 #endif
     //test_simulation(estrellas);
     //test_tree(estrellas);

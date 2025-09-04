@@ -121,7 +121,8 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
     double *ay = malloc(N * sizeof(double));
     double *az = malloc(N * sizeof(double));
     double DT;
-
+    float cx, cy, cz;
+    float hs, min_node_size;
     gettimeofday(&start, NULL);
     printf("******************************************************\n");
     printf("Iniciando simulacion con %d threads\n", omp_get_max_threads());
@@ -131,7 +132,11 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
     printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
-    Octree *octree = build_tree(estrellas);
+    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
+    unsigned int offsets[8];
+    reorder_stars(estrellas, cx, cy, cz, offsets);
+    write_results(estrellas, outputfile,"cpu_results",-1);
+    Octree *octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
         printf("****************** Iniciando paso %d ******************\n", step + 1);
@@ -154,7 +159,9 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
         }
         free_tree(octree);
         //Reconstruir con nuevas posiciones
-        octree = build_tree(estrellas);
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
         printf("\t  Iniciando fase 2: HalfKick\n");
         fflush(stdout);
 #pragma omp parallel for
@@ -167,7 +174,7 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        write_results(estrellas, outputfile,"normal_results",steps,step);
+        write_results(estrellas, outputfile,"cpu_results",step);
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);
         printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1,step_seconds);
@@ -200,7 +207,12 @@ void test_simulation(Star *estrellas) {
     double dt;
     estimate_dt(estrellas, &dt);
     printf("El DT estimado máximo es %.6f\n", dt);
-    Octree *octree = build_tree(estrellas);
+    float cx, cy, cz;
+    float hs, min_node_size;
+    unsigned int offsets[8];
+    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
+    reorder_stars(estrellas, cx, cy, cz, offsets);
+    Octree *octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);

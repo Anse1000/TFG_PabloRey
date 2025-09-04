@@ -6,7 +6,6 @@
 #include "types.h"
 
 #ifdef DEBUG_BUILD
-double test_subdivisions = 1e7;
 // Contar nodos en un subárbol recursivamente
 long count_nodes_in_subtree(Octree *tree, long node_index) {
     if (node_index == INVALID_INDEX) return 0;
@@ -42,22 +41,26 @@ void count_cpu_octant_nodes(Octree *cpu_tree, long *cpu_counts) {
 
 void test_tree(Star *stars) {
     //CAMBIAR en build_tree test_subdivisions para hacer el test.
-    Octree *tree = build_tree(stars);
+    float cx, cy, cz;
+    float hs, min_node_size;
+    double test_subdivisions = 1e7;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
+    Octree *tree = build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
     test_subdivisions = 1e8;
-    tree=build_tree(stars);
+    tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
     test_subdivisions = 1e9;
-    tree=build_tree(stars);
+    tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
     test_subdivisions = 1e10;
-    tree=build_tree(stars);
+    tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
     test_subdivisions = 1e11;
-    tree=build_tree(stars);
+    tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
     test_subdivisions = 1e12;
-    tree=build_tree(stars);
+    tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
 }
 #endif
@@ -151,7 +154,7 @@ void octree_insert(Octree *tree, Star *stars, long node_index, long star_index,c
     }
 }
 
-Octree *build_tree(Star *stars) {
+Octree *build_tree(Star *stars, const float cx, const float cy, const float cz, const float hs, const float min_node_size) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);
@@ -170,10 +173,6 @@ Octree *build_tree(Star *stars) {
         for (int j = 0; j < 8; j++) tree->children[i][j] = INVALID_INDEX;
         tree->star_index[i] = -1;
     }
-
-    float cx, cy, cz;
-    float hs,min_node_size;
-    compute_root_bounds(stars, &cx, &cy, &cz, &hs,&min_node_size,MIN_SUBDIVISIONS);
 
     long root = octree_new_node(tree, cx, cy, cz, hs);
 

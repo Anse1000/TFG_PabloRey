@@ -3,7 +3,7 @@
 #include <sys/time.h>
 #include "octree.h"
 
-#define BLOCK_SIZE 512
+#define BLOCK_SIZE 256
 
 // --- Función para aceleración del halo NFW
 __device__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
@@ -398,6 +398,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
     unsigned int offsets[8];
     reorder_stars(estrellas, cx, cy, cz, offsets);
+    write_results(estrellas, outputfile, "cuda_results", -1);
     // Construir árbol
     Octree **octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
 
@@ -441,7 +442,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        write_results(estrellas, outputfile, "cuda_results", steps, step);
+        write_results(estrellas, outputfile, "cuda_results", step);
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);
         printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1, step_seconds);

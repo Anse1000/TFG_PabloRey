@@ -17,4 +17,4 @@ mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF -S . -B ./build
 cmake --build ./build
 # Ejecutar
-./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/initial_positions_normal /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_normal 1
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_normal 1

@@ -154,9 +154,9 @@ void free_aux(Star *estrellas) {
     free(estrellas->mean_g);
 #ifdef DEBUG_BUILD
     size_t total_bytes = estrellas->size * (
-                         sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
-                         sizeof(float) * 4 // color, radius, gravity, mean_g
-                     );
+                             sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
+                             sizeof(float) * 4 // color, radius, gravity, mean_g
+                         );
     printf("Liberados %.2lu MB de recursos auxiliares\n", total_bytes / 1024 / 1024);
 #endif
 }
@@ -208,11 +208,9 @@ void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *o
     printf("Estrellas ordenadas por octante\n");
     fflush(stdout);
 #endif
-
 }
 
-void write_chunks(Star *estrellas, const char *base_filename, const char *directory, unsigned int num_chunks,
-                  int add_mass) {
+void write_chunks(Star *estrellas, const char *base_filename, const char *directory, unsigned int num_chunks) {
     // Crear directorio si no existe
     struct stat st = {0};
     if (stat(directory, &st) == -1) {
@@ -241,21 +239,13 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
             perror("Error abriendo archivo de chunk");
             continue;
         }
-        if (add_mass) {
-            fprintf(file, "ID,X,Y,Z,MASS\n");
-        } else {
-            fprintf(file, "ID,X,Y,Z\n");
-        }
+
+        fprintf(file, "ID,X,Y,Z,MASS\n");
+
         for (size_t i = start_idx; i < start_idx + current_chunk_size; i++) {
-            if (add_mass) {
-                fprintf(file, "%lu,%.20f,%.20f,%.20f,%.20f\n",
-                        estrellas->id[i],
-                        estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], estrellas->mass[i]);
-            } else {
-                fprintf(file, "%lu,%.20f,%.20f,%.20f\n",
-                        estrellas->id[i],
-                        estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i]);
-            }
+            fprintf(file, "%lu,%.20f,%.20f,%.20f,%.20f\n",
+                    estrellas->id[i],
+                    estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], estrellas->mass[i]);
         }
 
         fclose(file);
@@ -266,23 +256,22 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
     fflush(stdout);
 #endif
 }
-void write_results(Star *estrellas, const char *outputfile,const char*name,const int steps,const int step) {
-    if (steps>1) {
-        if (step==0) {
-            struct stat st = {0};
-            if (stat(outputfile, &st) == -1) {
-                if (mkdir(outputfile, 0755) == -1) {
-                    perror("Error creando directorio");
-                    return;
-                }
-            }
+
+void write_results(Star *estrellas, const char *outputfile, const char *name, const int step) {
+    // Crear directorio si no existe
+    struct stat st = {0};
+    if (stat(outputfile, &st) == -1) {
+        if (mkdir(outputfile, 0755) == -1) {
+            perror("Error creando directorio");
+            return;
         }
-        char output[500];
-        sprintf(output, "%s/step_%d",outputfile ,step + 1);
-        write_chunks(estrellas, name, output, 25, 0);
-    }else {
-        write_chunks(estrellas, name, outputfile, 25, 0);
+#ifdef DEBUG_BUILD
+        printf("Directorio '%s' creado\n", outputfile);
+#endif
     }
+    char output[500];
+    sprintf(output, "%s/step_%d", outputfile, step + 1);
+    write_chunks(estrellas, name, output, 25);
 }
 
 // Comparador para qsort
