@@ -1,0 +1,22 @@
+Iniciando lectura de 3386 archivos usando 64 threads
+Leídas y trasladadas 1061986807 estrellas a memoria ocupando 129637.06 MB en 329.20 segundos
+Liberados 64818 MB de recursos auxiliares
+Estrellas ordenadas por octante
+Iniciando construccion de los subarboles para GPU
+Subarboles creados en 104.3122 ocupando:
+Arbol 0: 214272579 nodos 17982 MB
+Arbol 1: 240475233 nodos 20181 MB
+Arbol 2: 189162315 nodos 15875 MB
+Arbol 3: 320591317 nodos 26905 MB
+Arbol 4: 187924833 nodos 15771 MB
+Arbol 5: 119548754 nodos 10032 MB
+Arbol 6: 198245885 nodos 16637 MB
+Arbol 7: 224557704 nodos 18845 MB
+Octante 0: 144663063 estrellas, Memoria estimada: 17982 MB subarbol + 6622 MB estrellas + 3311 MB aceleraciones = 27915 MB TOTAL
+Octante 1: 162329463 estrellas, Memoria estimada: 20181 MB subarbol + 7430 MB estrellas + 3715 MB aceleraciones = 31326 MB TOTAL
+Octante 2: 127823074 estrellas, Memoria estimada: 15875 MB subarbol + 5851 MB estrellas + 2925 MB aceleraciones = 24651 MB TOTAL
+Octante 3: 181631008 estrellas, Memoria estimada: 26905 MB subarbol + 8314 MB estrellas + 4157 MB aceleraciones = 39376 MB TOTAL
+Octante 4: 126996864 estrellas, Memoria estimada: 15771 MB subarbol + 5813 MB estrellas + 2906 MB aceleraciones = 24490 MB TOTAL
+Octante 5: 80718091 estrellas, Memoria estimada: 10032 MB subarbol + 3694 MB estrellas + 1847 MB aceleraciones = 15573 MB TOTAL
+Octante 6: 133940676 estrellas, Memoria estimada: 16637 MB subarbol + 6131 MB estrellas + 3065 MB aceleraciones = 25833 MB TOTAL
+Octante 7: 103884568 estrellas, Memoria estimada: 18845 MB subarbol + 4755 MB estrellas + 2377 MB aceleraciones = 25977 MB TOTAL

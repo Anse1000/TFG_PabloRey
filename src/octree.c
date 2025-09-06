@@ -40,26 +40,30 @@ void count_cpu_octant_nodes(Octree *cpu_tree, long *cpu_counts) {
 }
 
 void test_tree(Star *stars) {
-    //CAMBIAR en build_tree test_subdivisions para hacer el test.
     float cx, cy, cz;
     float hs, min_node_size;
-    double test_subdivisions = 1e7;
+    double test_subdivisions = 1e2;
     compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     Octree *tree = build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
-    test_subdivisions = 1e8;
+    test_subdivisions = 1e3;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
-    test_subdivisions = 1e9;
+    test_subdivisions = 1e4;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
-    test_subdivisions = 1e10;
+    test_subdivisions = 1e5;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
-    test_subdivisions = 1e11;
+    test_subdivisions = 1e6;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
-    test_subdivisions = 1e12;
+    test_subdivisions = 1e7;
+    compute_root_bounds(stars,&cx,&cy,&cz,&hs,&min_node_size,test_subdivisions);
     tree=build_tree(stars,cx,cy,cz,hs,min_node_size);
     free_tree(tree);
 }

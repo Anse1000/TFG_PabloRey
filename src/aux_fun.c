@@ -226,13 +226,18 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
     size_t chunk_size = estrellas->size / num_chunks;
     size_t remainder = estrellas->size % num_chunks;
 
-    size_t start_idx = 0;
-#pragma omp parallel for num_threads(num_chunks)
+#pragma omp parallel for
     for (unsigned int chunk = 0; chunk < num_chunks; chunk++) {
-        size_t current_chunk_size = chunk_size + (chunk < remainder ? 1 : 0);
+        size_t current_chunk_size =
+                chunk_size + (chunk < remainder ? 1 : 0);
+
+        size_t chunk_start =
+                chunk * chunk_size + (chunk < remainder ? chunk : remainder);
+        size_t chunk_end = chunk_start + current_chunk_size;
 
         char filename[512];
-        snprintf(filename, sizeof(filename), "%s/%s_%02d.csv", directory, base_filename, chunk);
+        snprintf(filename, sizeof(filename),
+                 "%s/%s_%02u.csv", directory, base_filename, chunk);
 
         FILE *file = fopen(filename, "w");
         if (!file) {
@@ -240,22 +245,53 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
             continue;
         }
 
-        fprintf(file, "ID,X,Y,Z,MASS\n");
+        // Buffer de escritura del stream (8 MB)
+        setvbuf(file, NULL, _IOFBF, 8 * 1024 * 1024);
 
-        for (size_t i = start_idx; i < start_idx + current_chunk_size; i++) {
-            fprintf(file, "%lu,%.20f,%.20f,%.20f,%.20f\n",
-                    estrellas->id[i],
-                    estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], estrellas->mass[i]);
+        // Cabecera CSV
+        fputs("ID,X,Y,Z,MASS\n", file);
+
+        // Buffer de 500 MB en memoria
+        const size_t BUF_SIZE = 100ULL * 1024ULL * 1024ULL;
+        char *buf = (char *) malloc(BUF_SIZE);
+        if (!buf) {
+            perror("Error reservando buffer de 500MB");
+            fclose(file);
+            continue;
         }
 
+        char *ptr = buf;
+        for (size_t i = chunk_start; i < chunk_end; i++) {
+            // Escribir una línea en el buffer
+            ptr += sprintf(ptr, "%lu,%.20f,%.20f,%.20f,%.20f\n",
+                           estrellas->id[i],
+                           estrellas->Cx[i],
+                           estrellas->Cy[i],
+                           estrellas->Cz[i],
+                           estrellas->mass[i]);
+
+            // Si el buffer está lleno, volcarlo al archivo
+            if ((size_t) (ptr - buf) > BUF_SIZE - 512) {
+                fwrite(buf, 1, ptr - buf, file);
+                ptr = buf; // reiniciar buffer
+            }
+        }
+
+        // Volcar lo que quede en el buffer
+        if (ptr > buf) {
+            fwrite(buf, 1, ptr - buf, file);
+        }
+
+        free(buf);
         fclose(file);
-        start_idx += current_chunk_size;
     }
+
 #ifdef DEBUG_BUILD
     printf("Chunks guardados en %s\n", directory);
     fflush(stdout);
 #endif
 }
+
 
 void write_results(Star *estrellas, const char *outputfile, const char *name, const int step) {
     // Crear directorio si no existe

@@ -15,7 +15,7 @@
 
 #define EPSILON 0.00001 //Valor para evitar divisiones por cero o muy cercanas a cero
 #define ETA 0.3 //Margen de seguridad para calculo de DT
-#define MIN_SUBDIVISIONS 1e7 //Numero maximo de subdivisiones del arbol
+#define MIN_SUBDIVISIONS 1e6 //Numero maximo de subdivisiones del arbol
 #define THETA 0.2 //Apertura del arbol BH
 
 // parámetros de halo

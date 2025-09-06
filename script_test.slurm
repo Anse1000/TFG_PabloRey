@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J test_trees
-#SBATCH -t 00:30:00
+#SBATCH -t 01:00:00
 #SBATCH -o test_trees_%j.out
 #SBATCH --mem=247GB
 #SBATCH -n 1
@@ -17,4 +17,4 @@ mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build
 # Ejecutar
-./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/initial_positions_normal /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_normal 1
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/netapp2/Store_uni/home/ulc/es/pra/galactic_positions_normal 1
