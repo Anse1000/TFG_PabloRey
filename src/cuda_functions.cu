@@ -54,10 +54,11 @@ __device__ void analytic_accel_gpu(double x, double y, double z,
     }
 }
 
-__global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
-                                      const double *Cx, const double *Cy, const double *Cz,
-                                      double *ax, double *ay, double *az,
-                                      double theta) {
+__global__ void compute_forces_kernel(const Octree *tree, const size_t star_count,
+                                      double *Cx, double *Cy, double *Cz,
+                                      double *Vx, double *Vy, double *Vz,
+                                      const double theta, const double dt2,
+                                      const double dt, const bool do_drift) {
     unsigned int star_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (star_idx >= star_count) return;
 
@@ -115,36 +116,16 @@ __global__ void compute_forces_kernel(const Octree *tree, size_t star_count,
             }
         }
     }
-
-    // Escribir resultados
-    ax[star_idx] = acc_x;
-    ay[star_idx] = acc_y;
-    az[star_idx] = acc_z;
+    Vx[star_idx] = fma(dt2, acc_x, Vx[star_idx]);
+    Vy[star_idx] = fma(dt2, acc_y, Vy[star_idx]);
+    Vz[star_idx] = fma(dt2, acc_z, Vz[star_idx]);
+    // Drift opcional
+    if (do_drift) {
+            Cx[star_idx] = fma(dt, Vx[star_idx], Cx[star_idx]);
+            Cy[star_idx] = fma(dt, Vy[star_idx], Cy[star_idx]);
+            Cz[star_idx] = fma(dt, Vz[star_idx], Cz[star_idx]);
+        }
 }
-
-__global__ void compute_kick_kernel(size_t star_count,
-                                    double *Ax, double *Ay, double *Az,
-                                    double *Vx, double *Vy, double *Vz,
-                                    double dt2) {
-    unsigned int star_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (star_idx >= star_count) return;
-
-    Vx[star_idx] = fma(dt2, Ax[star_idx], Vx[star_idx]);
-    Vy[star_idx] = fma(dt2, Ay[star_idx], Vy[star_idx]);
-    Vz[star_idx] = fma(dt2, Az[star_idx], Vz[star_idx]);
-}
-
-__global__ void compute_drift_kernel(size_t star_count,
-                                     double *Cx, double *Cy, double *Cz,
-                                     double *Vx, double *Vy, double *Vz,
-                                     double dt) {
-    unsigned int star_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (star_idx >= star_count) return;
-    Cx[star_idx] = fma(dt, Vx[star_idx], Cx[star_idx]);
-    Cy[star_idx] = fma(dt, Vy[star_idx], Cy[star_idx]);
-    Cz[star_idx] = fma(dt, Vz[star_idx], Cz[star_idx]);
-}
-
 
 void copy_tree_to_gpu(Octree **d_tree, const Octree *host_tree, cudaStream_t stream) {
     // Verificar que el árbol host no sea nulo
@@ -305,7 +286,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 printf("Error: árbol nulo para octante %d\n", octant);
                 continue;
             }
-            // Copiar árbol a GPU
+            // Copiar arbol a GPU
             Octree *d_tree;
             copy_tree_to_gpu(&d_tree, tree, streams[dev]);
             if (d_tree == NULL) {
@@ -313,17 +294,13 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 continue;
             }
 
-            // Reservar memoria para coordenadas, aceleraciones y velocidades
+            // Reservar memoria para coordenadas aceleraciones y velocidades
             double *d_cx, *d_cy, *d_cz;
-            double *d_ax, *d_ay, *d_az;
             double *d_vx, *d_vy, *d_vz;
 
             if ((err = cudaMalloc(&d_cx, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_cy, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_cz, count * sizeof(double))) != cudaSuccess ||
-                (err = cudaMalloc(&d_ax, count * sizeof(double))) != cudaSuccess ||
-                (err = cudaMalloc(&d_ay, count * sizeof(double))) != cudaSuccess ||
-                (err = cudaMalloc(&d_az, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_vx, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_vy, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_vz, count * sizeof(double))) != cudaSuccess) {
@@ -348,25 +325,13 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             cudaMemcpyAsync(d_vz, &estrellas->Vz[start], count * sizeof(double),
                             cudaMemcpyHostToDevice, streams[dev]);
 
-            // Inicializar aceleraciones a cero
-            cudaMemsetAsync(d_ax, 0, count * sizeof(double), streams[dev]);
-            cudaMemsetAsync(d_ay, 0, count * sizeof(double), streams[dev]);
-            cudaMemsetAsync(d_az, 0, count * sizeof(double), streams[dev]);
-
-            printf("Kernels iniciados it:%d dev:%d\n", i, dev);
+            printf("Kernel iniciado it:%d dev:%d\n", i, dev);
             fflush(stdout);
 
             // Lanzar kernels
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             compute_forces_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                d_tree, count, d_cx, d_cy, d_cz, d_ax, d_ay, d_az, THETA);
-            compute_kick_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                count, d_ax, d_ay, d_az, d_vx, d_vy, d_vz, DT * 0.5);
-            if (drift) {
-                compute_drift_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                    count, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, DT);
-            }
-
+                d_tree, count, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, THETA,DT*0.5,DT,drift);
             // Verificar errores del kernel
             err = cudaGetLastError();
             if (err != cudaSuccess) {
@@ -375,9 +340,6 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 cudaFree(d_cx);
                 cudaFree(d_cy);
                 cudaFree(d_cz);
-                cudaFree(d_ax);
-                cudaFree(d_ay);
-                cudaFree(d_az);
                 cudaFree(d_vx);
                 cudaFree(d_vy);
                 cudaFree(d_vz);
@@ -412,9 +374,6 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             cudaFree(d_cx);
             cudaFree(d_cy);
             cudaFree(d_cz);
-            cudaFree(d_ax);
-            cudaFree(d_ay);
-            cudaFree(d_az);
             cudaFree(d_vx);
             cudaFree(d_vy);
             cudaFree(d_vz);
@@ -442,7 +401,6 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
         printf("No hay dispositivos disponibles\n");
         exit(1);
     }
-
     // Crear streams para cada GPU
     auto *streams = static_cast<cudaStream_t *>(malloc(device_count * sizeof(cudaStream_t)));
     for (int i = 0; i < device_count; i++) {
