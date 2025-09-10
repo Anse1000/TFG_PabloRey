@@ -5,6 +5,11 @@
 
 #define BLOCK_SIZE 256
 
+__constant__ double c_dt;
+__constant__ double c_dt2;
+__constant__ double c_theta2;
+__constant__ size_t c_star_count;
+
 // --- Función para aceleración del halo NFW
 __device__ __forceinline__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
                                                  double dx, double dy, double dz) {
@@ -54,13 +59,12 @@ __device__ void analytic_accel_gpu(double x, double y, double z,
     }
 }
 
-__global__ void compute_forces_kernel(const Octree *tree, const size_t star_count,
+__global__ void compute_forces_kernel(const Octree *tree,
                                       double *Cx, double *Cy, double *Cz,
                                       double *Vx, double *Vy, double *Vz,
-                                      const double theta, const double dt2,
-                                      const double dt, const bool do_drift) {
+                                      const bool do_drift) {
     unsigned int star_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (star_idx >= star_count) return;
+    if (star_idx >= c_star_count) return;
 
     // Inicializar aceleraciones
     double acc_x = 0.0, acc_y = 0.0, acc_z = 0.0;
@@ -70,18 +74,15 @@ __global__ void compute_forces_kernel(const Octree *tree, const size_t star_coun
                        &acc_x, &acc_y, &acc_z);
 
     // Stack explícito para la traversal del árbol
-    constexpr int MAX_STACK_SIZE = 512;
-    long stack[MAX_STACK_SIZE];
+    constexpr int MAX_STACK_SIZE = 1024;
+    unsigned int stack[MAX_STACK_SIZE];
     int top = -1;
 
     // Inicializar con la raíz
     stack[++top] = 0;
 
-    // Precompute theta^2 para comparar en cuadrado y evitar sqrt cuando no es necesario
-    const double theta2 = theta * theta;
-
     while (top >= 0) {
-        long node_idx = stack[top--];
+        unsigned int node_idx = stack[top--];
 
         // Saltar si es la misma estrella
         if (tree->star_index[node_idx] == star_idx)
@@ -96,7 +97,7 @@ __global__ void compute_forces_kernel(const Octree *tree, const size_t star_coun
         double s2 = s * s;
 
         // Aplicar criterio de Barnes-Hut
-        if (s2 < theta2 * dist_sq || tree->star_index[node_idx] >= 0) {
+        if (s2 < c_theta2 * dist_sq || tree->star_index[node_idx] >= 0) {
             //calcular sqrt solo si se acepta el nodo
             double inv_dist = rsqrt(dist_sq);
             double inv_dist3 = inv_dist * inv_dist * inv_dist;
@@ -116,14 +117,14 @@ __global__ void compute_forces_kernel(const Octree *tree, const size_t star_coun
             }
         }
     }
-    Vx[star_idx] = fma(dt2, acc_x, Vx[star_idx]);
-    Vy[star_idx] = fma(dt2, acc_y, Vy[star_idx]);
-    Vz[star_idx] = fma(dt2, acc_z, Vz[star_idx]);
+    Vx[star_idx] = fma(c_dt2, acc_x, Vx[star_idx]);
+    Vy[star_idx] = fma(c_dt2, acc_y, Vy[star_idx]);
+    Vz[star_idx] = fma(c_dt2, acc_z, Vz[star_idx]);
     // Drift opcional
     if (do_drift) {
-            Cx[star_idx] = fma(dt, Vx[star_idx], Cx[star_idx]);
-            Cy[star_idx] = fma(dt, Vy[star_idx], Cy[star_idx]);
-            Cz[star_idx] = fma(dt, Vz[star_idx], Cz[star_idx]);
+            Cx[star_idx] = fma(c_dt, Vx[star_idx], Cx[star_idx]);
+            Cy[star_idx] = fma(c_dt, Vy[star_idx], Cy[star_idx]);
+            Cz[star_idx] = fma(c_dt, Vz[star_idx], Cz[star_idx]);
         }
 }
 
@@ -294,9 +295,18 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 continue;
             }
 
-            // Reservar memoria para coordenadas aceleraciones y velocidades
+            // Reservar memoria para coordenadas, velocidades y constantes
             double *d_cx, *d_cy, *d_cz;
             double *d_vx, *d_vy, *d_vz;
+
+            double DT2 = DT * 0.5;
+            double theta = THETA;
+            double theta2 = theta * theta;
+
+            cudaMemcpyToSymbol(c_dt, &DT, sizeof(double));
+            cudaMemcpyToSymbol(c_dt2, &DT2, sizeof(double));
+            cudaMemcpyToSymbol(c_theta2, &theta2, sizeof(double));
+            cudaMemcpyToSymbol(c_star_count, &count, sizeof(size_t));
 
             if ((err = cudaMalloc(&d_cx, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_cy, count * sizeof(double))) != cudaSuccess ||
@@ -331,7 +341,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             // Lanzar kernels
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             compute_forces_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                d_tree, count, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, THETA,DT*0.5,DT,drift);
+                d_tree, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, drift);
             // Verificar errores del kernel
             err = cudaGetLastError();
             if (err != cudaSuccess) {
