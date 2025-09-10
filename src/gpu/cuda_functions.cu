@@ -1,7 +1,7 @@
 #include "cuda_functions.cuh"
-#include "aux_fun.h"
+#include "../aux_fun.h"
 #include <sys/time.h>
-#include "octree.h"
+#include "../cpu/octree.h"
 
 #define BLOCK_SIZE 256
 

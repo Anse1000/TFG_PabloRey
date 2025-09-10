@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "octree.h"
+#include "cpu/octree.h"
 
 // Función mejorada para nodo raíz Barnes-Hut
 void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,

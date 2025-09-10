@@ -20,25 +20,25 @@ find_package(OpenMP REQUIRED)
 set(SRC
         src/main.c
         src/file_handler.c
-        src/simulation.c
+        src/cpu/simulation.c
         src/calculations.c
         src/aux_fun.c
-        src/octree.c
+        src/cpu/octree.c
 )
 
 set(HEADERS
         src/file_handler.h
-        src/simulation.h
+        src/cpu/simulation.h
         src/types.h
         src/calculations.h
         src/aux_fun.h
-        src/octree.h
+        src/cpu/octree.h
 )
 
 # CUDA
 if(ENABLE_CUDA)
     enable_language(CUDA)
-    list(APPEND SRC src/cuda_functions.cu)
+    list(APPEND SRC src/gpu/cuda_functions.cu)
     message(STATUS "CUDA enabled, using ${CMAKE_CUDA_COMPILER}")
 endif()
 

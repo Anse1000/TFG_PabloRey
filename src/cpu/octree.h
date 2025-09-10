@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "types.h"
+#include "../types.h"
 
 #define INVALID_INDEX UINT32_MAX
 

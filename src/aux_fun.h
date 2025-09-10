@@ -2,7 +2,7 @@
 #define AUX_FUN_H
 #include "types.h"
 #include <sys/time.h>
-#include "octree.h"
+#include "cpu/octree.h"
 
 #ifdef __cplusplus
 extern "C" {

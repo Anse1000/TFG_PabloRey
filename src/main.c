@@ -3,9 +3,9 @@
 #include "aux_fun.h"
 #include "file_handler.h"
 #include "types.h"
-#include "simulation.h"
+#include "cpu/simulation.h"
 #ifdef CUDA
-#include "cuda_functions.cuh"
+#include "gpu/cuda_functions.cuh"
 #endif
 
 void print_estrellas(Star *stars) {

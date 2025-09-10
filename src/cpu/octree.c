@@ -1,9 +1,9 @@
 #include "octree.h"
-#include "aux_fun.h"
+#include "../aux_fun.h"
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
-#include "types.h"
+#include "../types.h"
 
 #ifdef DEBUG_BUILD
 // Contar nodos en un subárbol recursivamente

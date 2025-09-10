@@ -1,6 +1,6 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
-#include "types.h"
+#include "../types.h"
 #include "octree.h"
 
 void simulate(Star *estrellas,int steps, long N, const char* outputfile);
