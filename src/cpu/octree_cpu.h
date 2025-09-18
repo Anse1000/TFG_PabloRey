@@ -29,10 +29,8 @@ typedef struct {
 extern "C" {
 #endif
 Octree *build_tree(Star *stars,float cx,float cy,float cz,float hs,float min_node_size);
-#ifdef CUDA
-Octree **build_tree_gpu(Star *stars, float cx, float cy, float cz, float hs, float min_node_size,
-                        const unsigned int *offsets);
-#endif
+
+void free_tree(Octree *tree);
 #ifdef DEBUG_BUILD
 void test_tree(Star *stars);
 #endif

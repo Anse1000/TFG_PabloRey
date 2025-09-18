@@ -1,7 +1,7 @@
 #include "cuda_functions.cuh"
 #include "../aux_fun.h"
 #include <sys/time.h>
-#include "../cpu/octree.h"
+#include "octree_gpu.h"
 
 #define BLOCK_SIZE 256
 
@@ -9,6 +9,7 @@ __constant__ double c_dt;
 __constant__ double c_dt2;
 __constant__ double c_theta2;
 __constant__ size_t c_star_count;
+__constant__ long c_base_index;
 
 // --- Función para aceleración del halo NFW
 __device__ __forceinline__ double halo_accel_gpu(double r, double *ax, double *ay, double *az,
@@ -46,7 +47,7 @@ __device__ __forceinline__ double bulge_accel_gpu(double r, double *ax, double *
 }
 
 // --- Función wrapper para aceleración analítica total
-__device__ void analytic_accel_gpu(double x, double y, double z,
+__device__ __forceinline__ void analytic_accel_gpu(double x, double y, double z,
                                    double *ax, double *ay, double *az) {
     double dx = x;
     double dy = y;
@@ -59,207 +60,167 @@ __device__ void analytic_accel_gpu(double x, double y, double z,
     }
 }
 
-__global__ void compute_forces_kernel(const Octree *tree,
-                                      double *Cx, double *Cy, double *Cz,
-                                      double *Vx, double *Vy, double *Vz,
-                                      const bool do_drift) {
+__global__ void compute_forces_kernel(const OctreeOctant * __restrict__ tree,
+                                      const FrontierGPU * __restrict__ frontier,
+                                      double * __restrict__ Cx, double * __restrict__ Cy, double * __restrict__ Cz,
+                                      double * __restrict__ Vx, double * __restrict__ Vy, double * __restrict__ Vz,
+                                      const bool do_drift)
+{
     unsigned int star_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (star_idx >= c_star_count) return;
+    long global_idx = c_base_index + star_idx;
 
     // Inicializar aceleraciones
     double acc_x = 0.0, acc_y = 0.0, acc_z = 0.0;
 
-    // Añadir aceleración analítica (halo + bulbo)
+    // --- Aceleración analítica
     analytic_accel_gpu(Cx[star_idx], Cy[star_idx], Cz[star_idx],
                        &acc_x, &acc_y, &acc_z);
 
-    // Stack explícito para la traversal del árbol
-    constexpr int MAX_STACK_SIZE = 1024;
-    unsigned int stack[MAX_STACK_SIZE];
-    int top = -1;
+    double dx, dy, dz, dist_sq, inv_dist, inv_dist3, force;
 
-    // Inicializar con la raíz
-    stack[++top] = 0;
-
-    while (top >= 0) {
-        unsigned int node_idx = stack[top--];
-
+    // --- Traversal stackless del árbol local usando ropes
+    unsigned int node_idx = 0;  // raíz del octante
+    while (node_idx != INVALID_INDEX) {
+        OctreeNode node = tree->nodes[node_idx];
         // Saltar si es la misma estrella
-        if (tree->star_index[node_idx] == star_idx)
-            continue;
+        if (node.star_index != global_idx) {
+            dx = node.com_x - Cx[star_idx];
+            dy = node.com_y - Cy[star_idx];
+            dz = node.com_z - Cz[star_idx];
+            dist_sq = dx*dx + dy*dy + dz*dz + EPSILON;
 
-        double dx = tree->com_x[node_idx] - Cx[star_idx];
-        double dy = tree->com_y[node_idx] - Cy[star_idx];
-        double dz = tree->com_z[node_idx] - Cz[star_idx];
-        double dist_sq = dx * dx + dy * dy + dz * dz + EPSILON;
+            double s = 2.0 * node.half_size;
 
-        double s = 2.0 * tree->half_size[node_idx];
-        double s2 = s * s;
+            if (s*s < c_theta2 * dist_sq || node.star_index >= 0) {
+                inv_dist = rsqrt(dist_sq);
+                inv_dist3 = inv_dist * inv_dist * inv_dist;
+                force = -G * node.mass * inv_dist3;
 
-        // Aplicar criterio de Barnes-Hut
-        if (s2 < c_theta2 * dist_sq || tree->star_index[node_idx] >= 0) {
-            //calcular sqrt solo si se acepta el nodo
-            double inv_dist = rsqrt(dist_sq);
-            double inv_dist3 = inv_dist * inv_dist * inv_dist;
-            // Calcular fuerza
-            double force = -G * tree->mass[node_idx] * inv_dist3;
+                acc_x = fma(force, dx, acc_x);
+                acc_y = fma(force, dy, acc_y);
+                acc_z = fma(force, dz, acc_z);
 
-            acc_x = fma(force, dx, acc_x);
-            acc_y = fma(force, dy, acc_y);
-            acc_z = fma(force, dz, acc_z);
-        } else {
-            // Añadir hijos al stack
-            for (int i = 0; i < 8; i++) {
-                unsigned int child = tree->children[node_idx][i];
-                if (child != INVALID_INDEX && top + 1 < MAX_STACK_SIZE) {
-                    stack[++top] = child;
-                }
+                // Saltar usando rope
+                node_idx = node.next;
+                continue;
             }
         }
+
+        // Bajar al primer hijo si existe
+        unsigned int child = INVALID_INDEX;
+        for (int i = 0; i < 8; i++) {
+            if (tree->nodes[node_idx].children[i] != INVALID_INDEX) {
+                child = tree->nodes[node_idx].children[i];
+                break;
+            }
+        }
+
+        if (child != INVALID_INDEX) {
+            node_idx = child;
+        } else {
+            // Saltar usando rope
+            node_idx = tree->nodes[node_idx].next;
+        }
     }
+
+    // --- Recorrer frontera lineal (ya filtrada en CPU)
+    for (size_t i = 0; i < frontier->size; i++) {
+        dx = frontier->nodes[i].com_x - Cx[star_idx];
+        dy = frontier->nodes[i].com_y - Cy[star_idx];
+        dz = frontier->nodes[i].com_z - Cz[star_idx];
+        dist_sq = dx*dx + dy*dy + dz*dz + EPSILON;
+
+        inv_dist = rsqrt(dist_sq);
+        inv_dist3 = inv_dist * inv_dist * inv_dist;
+        force = -G * frontier->nodes[i].mass * inv_dist3;
+
+        acc_x = fma(force, dx, acc_x);
+        acc_y = fma(force, dy, acc_y);
+        acc_z = fma(force, dz, acc_z);
+    }
+
+    // --- Actualizar velocidades
     Vx[star_idx] = fma(c_dt2, acc_x, Vx[star_idx]);
     Vy[star_idx] = fma(c_dt2, acc_y, Vy[star_idx]);
     Vz[star_idx] = fma(c_dt2, acc_z, Vz[star_idx]);
-    // Drift opcional
+
+    // --- Drift opcional
     if (do_drift) {
-            Cx[star_idx] = fma(c_dt, Vx[star_idx], Cx[star_idx]);
-            Cy[star_idx] = fma(c_dt, Vy[star_idx], Cy[star_idx]);
-            Cz[star_idx] = fma(c_dt, Vz[star_idx], Cz[star_idx]);
+        Cx[star_idx] = fma(c_dt, Vx[star_idx], Cx[star_idx]);
+        Cy[star_idx] = fma(c_dt, Vy[star_idx], Cy[star_idx]);
+        Cz[star_idx] = fma(c_dt, Vz[star_idx], Cz[star_idx]);
+    }
+}
+
+
+static cudaError_t copy_tree_to_gpu(OctreeOctant **d_oct_out, const OctreeOctant *h_oct,FrontierGPU **d_front_out,FrontierGPU *h_front, cudaStream_t stream) {
+
+    if (!h_oct || !d_oct_out || !h_front || !d_front_out) return cudaErrorInvalidValue;
+
+    cudaError_t err;
+
+    // Copiar nodos del octante
+    OctreeNode *d_nodes = nullptr;
+    if ((err = cudaMalloc(&d_nodes, h_oct->size * sizeof(OctreeNode))) != cudaSuccess) return err;
+    if ((err = cudaMemcpyAsync(d_nodes, h_oct->nodes, h_oct->size * sizeof(OctreeNode),
+                               cudaMemcpyHostToDevice, stream)) != cudaSuccess) return err;
+
+    // Construir estructura OctreeOctant en host con puntero de dispositivo
+    OctreeOctant h_oct_dev = {};
+    h_oct_dev.nodes = d_nodes;
+    h_oct_dev.size = h_oct->size;
+    h_oct_dev.capacity = h_oct->size;
+
+    // Reservar y copiar estructura OctreeOctant al dispositivo
+    OctreeOctant *d_oct = nullptr;
+    if ((err = cudaMalloc(&d_oct, sizeof(OctreeOctant))) != cudaSuccess) return err;
+    if ((err = cudaMemcpyAsync(d_oct, &h_oct_dev, sizeof(OctreeOctant),
+                               cudaMemcpyHostToDevice, stream)) != cudaSuccess) return err;
+
+    // Copiar frontera
+    FrontierNode *d_fnodes = nullptr;
+    if ((err = cudaMalloc(&d_fnodes, h_front->size * sizeof(FrontierNode))) != cudaSuccess) return err;
+    if ((err = cudaMemcpyAsync(d_fnodes, h_front->nodes, h_front->size * sizeof(FrontierNode),
+                               cudaMemcpyHostToDevice, stream)) != cudaSuccess) return err;
+
+    FrontierGPU h_front_dev = {};
+    h_front_dev.nodes = d_fnodes;
+    h_front_dev.size = h_front->size;
+    h_front_dev.capacity = h_front->size;
+
+    FrontierGPU *d_front = nullptr;
+    if ((err = cudaMalloc(&d_front, sizeof(FrontierGPU))) != cudaSuccess) return err;
+    if ((err = cudaMemcpyAsync(d_front, &h_front_dev, sizeof(FrontierGPU),
+                               cudaMemcpyHostToDevice, stream)) != cudaSuccess) return err;
+
+    *d_oct_out = d_oct;
+    *d_front_out = d_front;
+    return cudaSuccess;
+
+}
+
+// Liberación de memoria de dispositivo para octante y frontera
+static void free_octant_and_frontier_gpu(OctreeOctant *d_oct, FrontierGPU *d_front) {
+    if (d_oct) {
+        // Recuperar la estructura a host para liberar los buffers internos
+        OctreeOctant h_oct_dev;
+        if (cudaMemcpy(&h_oct_dev, d_oct, sizeof(OctreeOctant), cudaMemcpyDeviceToHost) == cudaSuccess) {
+            if (h_oct_dev.nodes) cudaFree(h_oct_dev.nodes);
         }
-}
-
-void copy_tree_to_gpu(Octree **d_tree, const Octree *host_tree, cudaStream_t stream) {
-    // Verificar que el árbol host no sea nulo
-    if (host_tree == NULL) {
-        printf("Error: host_tree es NULL\n");
-        *d_tree = NULL;
-        return;
+        cudaFree(d_oct);
     }
-
-    // 1. Crear estructura en GPU
-    Octree *gpu_tree_struct;
-    cudaError_t err = cudaMalloc(&gpu_tree_struct, sizeof(Octree));
-    if (err != cudaSuccess) {
-        printf("Error en cudaMalloc para estructura: %s\n", cudaGetErrorString(err));
-        *d_tree = NULL;
-        return;
+    if (d_front) {
+        FrontierGPU h_front_dev;
+        if (cudaMemcpy(&h_front_dev, d_front, sizeof(FrontierGPU), cudaMemcpyDeviceToHost) == cudaSuccess) {
+            if (h_front_dev.nodes) cudaFree(h_front_dev.nodes);
+        }
+        cudaFree(d_front);
     }
-
-    // 2. Crear una copia temporal en host para modificar los punteros
-    Octree temp_tree = *host_tree;
-
-    // 3. Reservar memoria para cada array en GPU
-    float *d_center_x, *d_center_y, *d_center_z, *d_half_size, *d_mass;
-    double *d_com_x, *d_com_y, *d_com_z;
-    unsigned int (*d_children)[8];
-    long *d_star_index;
-
-    size_t size = host_tree->size;
-
-    // Verificar que size sea válido
-    if (size == 0) {
-        printf("Error: tamaño del árbol es 0\n");
-        cudaFree(gpu_tree_struct);
-        *d_tree = NULL;
-        return;
-    }
-
-    // Reservar memoria para todos los arrays con verificación de errores
-    if ((err = cudaMalloc(&d_center_x, size * sizeof(float))) != cudaSuccess ||
-        (err = cudaMalloc(&d_center_y, size * sizeof(float))) != cudaSuccess ||
-        (err = cudaMalloc(&d_center_z, size * sizeof(float))) != cudaSuccess ||
-        (err = cudaMalloc(&d_half_size, size * sizeof(float))) != cudaSuccess ||
-        (err = cudaMalloc(&d_mass, size * sizeof(float))) != cudaSuccess ||
-        (err = cudaMalloc(&d_com_x, size * sizeof(double))) != cudaSuccess ||
-        (err = cudaMalloc(&d_com_y, size * sizeof(double))) != cudaSuccess ||
-        (err = cudaMalloc(&d_com_z, size * sizeof(double))) != cudaSuccess ||
-        (err = cudaMalloc(&d_children, size * sizeof(unsigned int[8]))) != cudaSuccess ||
-        (err = cudaMalloc(&d_star_index, size * sizeof(long))) != cudaSuccess) {
-        printf("Error en cudaMalloc para arrays: %s\n", cudaGetErrorString(err));
-
-        // Limpiar memoria ya reservada
-        cudaFree(d_center_x);
-        cudaFree(d_center_y);
-        cudaFree(d_center_z);
-        cudaFree(d_half_size);
-        cudaFree(d_mass);
-        cudaFree(d_com_x);
-        cudaFree(d_com_y);
-        cudaFree(d_com_z);
-        cudaFree(d_children);
-        cudaFree(d_star_index);
-        cudaFree(gpu_tree_struct);
-        *d_tree = NULL;
-        return;
-    }
-
-    // 4. Copiar datos de los arrays
-    cudaMemcpyAsync(d_center_x, host_tree->center_x, size * sizeof(float),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_center_y, host_tree->center_y, size * sizeof(float),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_center_z, host_tree->center_z, size * sizeof(float),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_half_size, host_tree->half_size, size * sizeof(float),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_mass, host_tree->mass, size * sizeof(float),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_com_x, host_tree->com_x, size * sizeof(double),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_com_y, host_tree->com_y, size * sizeof(double),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_com_z, host_tree->com_z, size * sizeof(double),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_children, host_tree->children, size * sizeof(unsigned int[8]),
-                    cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_star_index, host_tree->star_index, size * sizeof(long),
-                    cudaMemcpyHostToDevice, stream);
-
-    // 5. Actualizar los punteros en la estructura temporal
-    temp_tree.center_x = d_center_x;
-    temp_tree.center_y = d_center_y;
-    temp_tree.center_z = d_center_z;
-    temp_tree.half_size = d_half_size;
-    temp_tree.mass = d_mass;
-    temp_tree.com_x = d_com_x;
-    temp_tree.com_y = d_com_y;
-    temp_tree.com_z = d_com_z;
-    temp_tree.children = d_children;
-    temp_tree.star_index = d_star_index;
-
-    // 6. Copiar la estructura modificada a GPU
-    cudaMemcpyAsync(gpu_tree_struct, &temp_tree, sizeof(Octree),
-                    cudaMemcpyHostToDevice, stream);
-
-    // 7. Devolver el puntero a la estructura en GPU
-    *d_tree = gpu_tree_struct;
-}
-
-void free_tree_gpu(Octree *d_tree) {
-    if (d_tree == NULL) return;
-
-    // Primero obtener la estructura desde GPU para liberar los arrays
-    Octree temp;
-    cudaMemcpy(&temp, d_tree, sizeof(Octree), cudaMemcpyDeviceToHost);
-
-    // Liberar todos los arrays
-    cudaFree(temp.center_x);
-    cudaFree(temp.center_y);
-    cudaFree(temp.center_z);
-    cudaFree(temp.half_size);
-    cudaFree(temp.mass);
-    cudaFree(temp.com_x);
-    cudaFree(temp.com_y);
-    cudaFree(temp.com_z);
-    cudaFree(temp.children);
-    cudaFree(temp.star_index);
-
-    // Liberar la estructura principal
-    cudaFree(d_tree);
 }
 
 __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int *offsets, int device_count,
-                              Octree **trees, const Star *estrellas, cudaStream_t *streams, double DT, int drift) {
+                              OctreeGPU *tree, const Star *estrellas, cudaStream_t *streams, double DT, int drift) {
     for (int i = 0; i < iterations; i++) {
 #pragma omp parallel for num_threads(device_count)
         for (int dev = 0; dev < device_count; dev++) {
@@ -282,16 +243,17 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             }
 
             // Verificar que el árbol existe
-            Octree *tree = trees[octant];
-            if (tree == NULL) {
+            OctreeOctant *octtree= tree->octants[octant];
+            FrontierGPU *frontier = tree->frontier[octant];
+            if (octtree == NULL || frontier == NULL) {
                 printf("Error: árbol nulo para octante %d\n", octant);
                 continue;
             }
             // Copiar arbol a GPU
-            Octree *d_tree;
-            copy_tree_to_gpu(&d_tree, tree, streams[dev]);
-            if (d_tree == NULL) {
-                printf("Error copiando árbol a GPU\n");
+            OctreeOctant *d_tree = NULL;
+            FrontierGPU *d_front = NULL;
+            if ((err = copy_tree_to_gpu(&d_tree,octtree,&d_front,frontier,streams[dev]))) {
+                printf("Error copiando árbol/frontera a GPU: %s\n", cudaGetErrorString(err));
                 continue;
             }
 
@@ -307,6 +269,8 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             cudaMemcpyToSymbol(c_dt2, &DT2, sizeof(double));
             cudaMemcpyToSymbol(c_theta2, &theta2, sizeof(double));
             cudaMemcpyToSymbol(c_star_count, &count, sizeof(size_t));
+            cudaMemcpyToSymbol(c_base_index, &start, sizeof(long));
+
 
             if ((err = cudaMalloc(&d_cx, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_cy, count * sizeof(double))) != cudaSuccess ||
@@ -315,7 +279,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 (err = cudaMalloc(&d_vy, count * sizeof(double))) != cudaSuccess ||
                 (err = cudaMalloc(&d_vz, count * sizeof(double))) != cudaSuccess) {
                 printf("Error reservando memoria en gpu: %s\n", cudaGetErrorString(err));
-                free_tree_gpu(d_tree);
+                free_octant_and_frontier_gpu(d_tree, d_front);
                 continue;
             }
             printf("Memoria reservada en GPU it: %d dev: %d count: %ld\n", i, dev, count);
@@ -341,7 +305,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             // Lanzar kernels
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             compute_forces_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
-                d_tree, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, drift);
+                d_tree,d_front, d_cx, d_cy, d_cz, d_vx, d_vy, d_vz, drift);
             // Verificar errores del kernel
             err = cudaGetLastError();
             if (err != cudaSuccess) {
@@ -353,7 +317,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 cudaFree(d_vx);
                 cudaFree(d_vy);
                 cudaFree(d_vz);
-                free_tree_gpu(d_tree);
+                free_octant_and_frontier_gpu(d_tree, d_front);
                 continue;
             }
 
@@ -380,6 +344,9 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
 
             cudaStreamSynchronize(streams[dev]);
 
+            printf("Copia de datos terminada it:%d dev:%d\n", i, dev);
+            fflush(stdout);
+
             // Liberar memoria
             cudaFree(d_cx);
             cudaFree(d_cy);
@@ -387,7 +354,10 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             cudaFree(d_vx);
             cudaFree(d_vy);
             cudaFree(d_vz);
-            free_tree_gpu(d_tree);
+            free_octant_and_frontier_gpu(d_tree, d_front);
+
+            printf("Memoria liberada it:%d dev:%d\n", i, dev);
+            fflush(stdout);
         }
 
         // Sincronizar todos los dispositivos
@@ -431,7 +401,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     reorder_stars(estrellas, cx, cy, cz, offsets);
     write_results(estrellas, outputfile, "cuda_results", -1);
     // Construir árbol
-    Octree **octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+    OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
 
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
@@ -440,20 +410,18 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
         fflush(stdout);
         gettimeofday(&step_start, NULL);
 
-        if (compute_halfstep(N, iterations, offsets, device_count, octrees, estrellas,
+        if (compute_halfstep(N, iterations, offsets, device_count, tree, estrellas,
                              streams, DT, 1) != 0) {
             printf("Error en fase 1\n");
             return;
         }
-        for (int i = 0; i < 8; i++) {
-            free_tree(octrees[i]);
-        }
+        free_tree_gpu(tree);
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         printf("\t  Iniciando fase 2: HalfKick\n");
         fflush(stdout);
-        if (compute_halfstep(N, iterations, offsets, device_count, octrees, estrellas,
+        if (compute_halfstep(N, iterations, offsets, device_count, tree, estrellas,
                              streams, DT, 0) != 0) {
             printf("Error en fase 2\n");
             return;
@@ -487,12 +455,12 @@ extern "C" void mem_test_gpu(Star *estrellas) {
     unsigned int offsets[8];
     reorder_stars(estrellas, cx, cy, cz, offsets);
     // Construir árbol
-    Octree **octrees = build_tree_gpu(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+    OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
     for (int i = 0; i < 8; i++) {
         unsigned long start_idx = offsets[i];
         unsigned long end_idx = (i == 7) ? estrellas->size : offsets[i + 1];
         unsigned long count = end_idx - start_idx;
-        size_t memory_tree = octrees[i]->capacity * (
+        size_t memory_tree = tree->octants[i]->capacity * (
                                  sizeof(double) * 3 +
                                  sizeof(double) +
                                  sizeof(float) * 4 +
@@ -500,10 +468,11 @@ extern "C" void mem_test_gpu(Star *estrellas) {
                                  sizeof(long)
                              ) / 1024 / 1024;
         size_t memory_stars = count * sizeof(double) * 6 / 1024 / 1024;
-        size_t memory_acceleration = count * sizeof(double) * 3 / 1024 / 1024;
+        size_t memory_frontier = tree->frontier[i]->capacity * sizeof(FrontierNode) /1024 / 1024;
+        printf("Frontier nodes %lu\n",tree->frontier[i]->size);
         printf(
-            "Octante %d: %ld estrellas, Memoria estimada: %lu MB subarbol + %lu MB estrellas + %lu MB aceleraciones = %lu MB TOTAL\n",
-            i, count, memory_tree, memory_stars, memory_acceleration, memory_tree + memory_stars + memory_acceleration);
+            "Octante %d: %ld estrellas, Memoria estimada: %lu MB subarbol + %lu MB estrellas + %lu MB frontera = %lu MB TOTAL\n",
+            i, count, memory_tree, memory_stars, memory_frontier, memory_tree + memory_stars + memory_frontier);
         fflush(stdout);
     }
 }

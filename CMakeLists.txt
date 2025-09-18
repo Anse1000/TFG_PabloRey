@@ -20,26 +20,30 @@ find_package(OpenMP REQUIRED)
 set(SRC
         src/main.c
         src/file_handler.c
-        src/cpu/simulation.c
         src/calculations.c
         src/aux_fun.c
-        src/cpu/octree.c
 )
 
 set(HEADERS
         src/file_handler.h
-        src/cpu/simulation.h
         src/types.h
         src/calculations.h
         src/aux_fun.h
-        src/cpu/octree.h
 )
 
 # CUDA
 if(ENABLE_CUDA)
     enable_language(CUDA)
     list(APPEND SRC src/gpu/cuda_functions.cu)
+    list(APPEND SRC src/gpu/octree_gpu.c)
+    list(APPEND HEADERS src/gpu/octree_gpu.h)
+    list(APPEND HEADERS src/gpu/cuda_functions.cuh)
     message(STATUS "CUDA enabled, using ${CMAKE_CUDA_COMPILER}")
+else ()
+    list(APPEND SRC src/cpu/simulation.c)
+    list(APPEND SRC src/cpu/octree_cpu.c)
+    list(APPEND HEADERS src/cpu/simulation.h)
+    list(APPEND HEADERS src/cpu/octree_cpu.h)
 endif()
 
 add_executable(TFG_PRA ${SRC})
@@ -65,7 +69,6 @@ if(ENABLE_CUDA)
     target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-
 # Flags de depuración
 if(CMAKE_C_COMPILER_ID MATCHES "Intel")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -fno-omit-frame-pointer")
@@ -87,6 +90,7 @@ if(ENABLE_CUDA)
     target_compile_options(TFG_PRA PRIVATE
             $<$<COMPILE_LANGUAGE:CUDA>:-O3>
             $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fopenmp>
+            #$<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=32>
             # Solo en Debug: info de líneas y verbose de ptxas para profiling
             $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo -Xptxas=-v>
     )

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include "../aux_fun.h"
-#include "octree.h"
+#include "octree_cpu.h"
 
 // --- Halo NFW
 double halo_accel(double r, double *ax, double *ay, double *az,

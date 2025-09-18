@@ -1,10 +1,36 @@
-#include "octree.h"
+#include "octree_cpu.h"
 #include "../aux_fun.h"
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../types.h"
 
+void resize_tree(Octree *tree) {
+    tree->center_x = safe_realloc(tree->center_x, sizeof(float) * tree->capacity);
+    tree->center_y = safe_realloc(tree->center_y, sizeof(float) * tree->capacity);
+    tree->center_z = safe_realloc(tree->center_z, sizeof(float) * tree->capacity);
+    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
+    tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
+    tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
+    tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
+    tree->com_z = safe_realloc(tree->com_z, sizeof(double) * tree->capacity);
+    tree->children = safe_realloc(tree->children, sizeof(unsigned int[8]) * tree->capacity);
+    tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
+}
+
+void free_tree(Octree *tree) {
+    if (!tree) return;
+    free(tree->center_x);
+    free(tree->center_y);
+    free(tree->center_z);
+    free(tree->half_size);
+    free(tree->mass);
+    free(tree->com_x);
+    free(tree->com_y);
+    free(tree->com_z);
+    free(tree->children);
+    free(tree->star_index);
+}
 #ifdef DEBUG_BUILD
 // Contar nodos en un subárbol recursivamente
 long count_nodes_in_subtree(Octree *tree, long node_index) {
@@ -205,87 +231,3 @@ Octree *build_tree(Star *stars, const float cx, const float cy, const float cz, 
 #endif
     return tree;
 }
-
-#ifdef CUDA
-Octree **build_tree_gpu(Star *stars, const float cx, const float cy, const float cz, const float hs, const float min_node_size,const unsigned int *offsets) {
-    struct timeval start, end;
-    size_t initial_capacity = 10000;
-    gettimeofday(&start, NULL);
-#ifdef DEBUG_BUILD
-    printf("Iniciando construccion de los subarboles para GPU\n");
-    fflush(stdout);
-#endif
-    Octree **trees = malloc(sizeof(Octree*) * 8);
-
-    // Paralelizar la inicialización de los 8 subárboles
-    #pragma omp parallel for num_threads(8)
-    for (int i = 0; i < 8; i++) {
-        trees[i] = malloc(sizeof(Octree));
-        memset(trees[i], 0, sizeof(Octree));
-        trees[i]->capacity = initial_capacity;
-        trees[i]->size = 0;
-        resize_tree(trees[i]);
-        
-        // Inicializar todos los nodos como inválidos
-        for (size_t j = 0; j < initial_capacity; j++) {
-            for (int k = 0; k < 8; k++) trees[i]->children[j][k] = INVALID_INDEX;
-            trees[i]->star_index[j] = -1;
-        }
-        
-        // Crear el nodo raíz para este octante
-        float offset = hs * 0.5F;
-        float oct_cx = cx + ((i & 4) ? offset : -offset);
-        float oct_cy = cy + ((i & 2) ? offset : -offset);
-        float oct_cz = cz + ((i & 1) ? offset : -offset);
-        
-        long root_index = octree_new_node(trees[i], oct_cx, oct_cy, oct_cz, offset);
-        
-        if (root_index != 0) {
-            printf("Error: el nodo raíz del octante %d no es el índice 0\n", i);
-            exit(1);
-        }
-    }
-    
-    // Paralelizar la inserción usando los rangos de reorder_stars
-    #pragma omp parallel for num_threads(8)
-    for (int octant = 0; octant < 8; octant++) {
-        unsigned long start_idx = offsets[octant];
-        unsigned long end_idx = (octant == 7) ? stars->size : offsets[octant + 1];
-        
-        // Insertar todas las estrellas de este octante
-        for (unsigned long i = start_idx; i < end_idx; i++) {
-            octree_insert(trees[octant], stars, 0, i,min_node_size);
-        }
-    }
-    
-    //reajustar tamaños
-    for (int i = 0; i < 8; i++) {
-        if (trees[i]->size < trees[i]->capacity) {
-            trees[i]->capacity = trees[i]->size;
-            resize_tree(trees[i]);
-        }
-    }
-    
-    gettimeofday(&end, NULL);
-#ifdef DEBUG_BUILD
-    // Calcular memoria utilizada
-    size_t memory[8];
-    for (int i = 0; i < 8; i++) {
-        memory[i] = trees[i]->capacity * (
-                        sizeof(double) * 3 + 
-                        sizeof(double) + 
-                        sizeof(float) * 4 +
-                        sizeof(unsigned int[8]) + 
-                        sizeof(long)
-                    );
-    }
-    
-    printf("Subarboles creados en %.4f ocupando:\n", get_seconds(start, end));
-    for (int i = 0; i < 8; i++) {
-        printf("Arbol %d: %lu nodos %lu MB\n", i, trees[i]->capacity, memory[i]/1024/1024);
-    }
-    fflush(stdout);
-#endif
-    return trees;
-}
-#endif

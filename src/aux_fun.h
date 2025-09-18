@@ -2,20 +2,17 @@
 #define AUX_FUN_H
 #include "types.h"
 #include <sys/time.h>
-#include "cpu/octree.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+void *safe_realloc(void *ptr, size_t size);
+
 void free_stars(Star *stars);
 
 void resize_stars(Star *stars);
 
-void resize_tree(Octree *tree);
-
 void free_aux(Star *stars);
-
-void free_tree(Octree *tree);
 
 double get_seconds(struct timeval start, struct timeval end);
 

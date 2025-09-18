@@ -3,7 +3,6 @@
 #include <math.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "cpu/octree.h"
 
 // Función mejorada para nodo raíz Barnes-Hut
 void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,
@@ -65,7 +64,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
     *min_node_size = *hs / min_subdivisions;
 }
 
-static void *safe_realloc(void *ptr, const size_t size) {
+void *safe_realloc(void *ptr, const size_t size) {
     void *tmp = realloc(ptr, size);
     if (!tmp) {
         perror("Fallo al hacer el resize de memoria");
@@ -112,33 +111,6 @@ void resize_stars(Star *stars) {
     stars->mass = safe_realloc(stars->mass, sizeof(double) * stars->capacity);
     stars->radius = safe_realloc(stars->radius, sizeof(float) * stars->capacity);
     stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
-}
-
-void resize_tree(Octree *tree) {
-    tree->center_x = safe_realloc(tree->center_x, sizeof(float) * tree->capacity);
-    tree->center_y = safe_realloc(tree->center_y, sizeof(float) * tree->capacity);
-    tree->center_z = safe_realloc(tree->center_z, sizeof(float) * tree->capacity);
-    tree->half_size = safe_realloc(tree->half_size, sizeof(float) * tree->capacity);
-    tree->mass = safe_realloc(tree->mass, sizeof(float) * tree->capacity);
-    tree->com_x = safe_realloc(tree->com_x, sizeof(double) * tree->capacity);
-    tree->com_y = safe_realloc(tree->com_y, sizeof(double) * tree->capacity);
-    tree->com_z = safe_realloc(tree->com_z, sizeof(double) * tree->capacity);
-    tree->children = safe_realloc(tree->children, sizeof(unsigned int[8]) * tree->capacity);
-    tree->star_index = safe_realloc(tree->star_index, sizeof(long) * tree->capacity);
-}
-
-void free_tree(Octree *tree) {
-    if (!tree) return;
-    free(tree->center_x);
-    free(tree->center_y);
-    free(tree->center_z);
-    free(tree->half_size);
-    free(tree->mass);
-    free(tree->com_x);
-    free(tree->com_y);
-    free(tree->com_z);
-    free(tree->children);
-    free(tree->star_index);
 }
 
 void free_aux(Star *estrellas) {
@@ -291,7 +263,6 @@ void write_chunks(Star *estrellas, const char *base_filename, const char *direct
     fflush(stdout);
 #endif
 }
-
 
 void write_results(Star *estrellas, const char *outputfile, const char *name, const int step) {
     // Crear directorio si no existe
