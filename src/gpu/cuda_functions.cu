@@ -7,7 +7,7 @@
 
 __constant__ double c_dt;
 __constant__ double c_dt2;
-__constant__ double c_theta2;
+__constant__ float c_theta2;
 __constant__ size_t c_star_count;
 __constant__ long c_base_index;
 
@@ -90,7 +90,7 @@ __global__ void compute_forces_kernel(const OctreeOctant * __restrict__ tree,
             dz = node.com_z - Cz[star_idx];
             dist_sq = dx*dx + dy*dy + dz*dz + EPSILON;
 
-            double s = 2.0 * node.half_size;
+            float s = 2.0F * node.half_size;
 
             if (s*s < c_theta2 * dist_sq || node.star_index >= 0) {
                 inv_dist = rsqrt(dist_sq);
@@ -220,7 +220,7 @@ static void free_octant_and_frontier_gpu(OctreeOctant *d_oct, FrontierGPU *d_fro
 }
 
 __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int *offsets, int device_count,
-                              OctreeGPU *tree, const Star *estrellas, cudaStream_t *streams, double DT, int drift) {
+                              OctreeGPU *tree, const Star *estrellas, cudaStream_t *streams, const double DT, int drift) {
     for (int i = 0; i < iterations; i++) {
 #pragma omp parallel for num_threads(device_count)
         for (int dev = 0; dev < device_count; dev++) {
@@ -262,12 +262,12 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             double *d_vx, *d_vy, *d_vz;
 
             double DT2 = DT * 0.5;
-            double theta = THETA;
-            double theta2 = theta * theta;
+            float theta = THETA;
+            float theta2 = theta * theta;
 
             cudaMemcpyToSymbol(c_dt, &DT, sizeof(double));
             cudaMemcpyToSymbol(c_dt2, &DT2, sizeof(double));
-            cudaMemcpyToSymbol(c_theta2, &theta2, sizeof(double));
+            cudaMemcpyToSymbol(c_theta2, &theta2, sizeof(float));
             cudaMemcpyToSymbol(c_star_count, &count, sizeof(size_t));
             cudaMemcpyToSymbol(c_base_index, &start, sizeof(long));
 
@@ -282,8 +282,10 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                 free_octant_and_frontier_gpu(d_tree, d_front);
                 continue;
             }
+#ifdef DEBUG_BUILD
             printf("Memoria reservada en GPU it: %d dev: %d count: %ld\n", i, dev, count);
             fflush(stdout);
+#endif
 
             // Copiar datos a GPU
             cudaMemcpyAsync(d_cx, &estrellas->Cx[start], count * sizeof(double),
@@ -298,10 +300,10 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                             cudaMemcpyHostToDevice, streams[dev]);
             cudaMemcpyAsync(d_vz, &estrellas->Vz[start], count * sizeof(double),
                             cudaMemcpyHostToDevice, streams[dev]);
-
+#ifdef DEBUG_BUILD
             printf("Kernel iniciado it:%d dev:%d\n", i, dev);
             fflush(stdout);
-
+#endif
             // Lanzar kernels
             unsigned int grid_size = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             compute_forces_kernel<<<grid_size, BLOCK_SIZE, 0, streams[dev]>>>(
@@ -322,10 +324,10 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             }
 
             cudaStreamSynchronize(streams[dev]);
-
-            printf("Kernels terminados it:%d dev:%d\n", i, dev);
+#ifdef DEBUG_BUILD
+            printf("Kernel terminado it:%d dev:%d\n", i, dev);
             fflush(stdout);
-
+#endif
             // Copiar datos a CPU
             if (drift) {
                 cudaMemcpyAsync(&estrellas->Cx[start], d_cx, count * sizeof(double),
@@ -343,9 +345,10 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
                             cudaMemcpyDeviceToHost, streams[dev]);
 
             cudaStreamSynchronize(streams[dev]);
-
+#ifdef DEBUG_BUILD
             printf("Copia de datos terminada it:%d dev:%d\n", i, dev);
             fflush(stdout);
+#endif
 
             // Liberar memoria
             cudaFree(d_cx);
@@ -355,11 +358,11 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
             cudaFree(d_vy);
             cudaFree(d_vz);
             free_octant_and_frontier_gpu(d_tree, d_front);
-
+#ifdef DEBUG_BUILD
             printf("Memoria liberada it:%d dev:%d\n", i, dev);
             fflush(stdout);
+#endif
         }
-
         // Sincronizar todos los dispositivos
         for (int dev = 0; dev < device_count; dev++) {
             cudaSetDevice(dev);
@@ -370,7 +373,7 @@ __host__ int compute_halfstep(unsigned int N, int iterations, const unsigned int
 }
 
 // Función principal de simulacion en gpus
-extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, const long N, const char *outputfile) {
+extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, const long N, const char *outputfile, const float DT) {
     struct timeval start, end;
     float cx, cy, cz;
     float hs, min_node_size;
@@ -390,9 +393,6 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     const int iterations = (8 + device_count - 1) / device_count;
     printf("******************************************************\n");
     printf("Iniciando simulacion con %d GPUs\n", device_count);
-    fflush(stdout);
-    double DT;
-    estimate_dt(estrellas, &DT);
     printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n", steps, DT * 1000000, DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
@@ -402,7 +402,6 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     write_results(estrellas, outputfile, "cuda_results", -1);
     // Construir árbol
     OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
-
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
         printf("****************** Iniciando paso %d ******************\n", step + 1);
@@ -447,6 +446,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     printf("Resultados guardados en %s\n", outputfile);
     fflush(stdout);
 }
+
 #ifdef DEBUG_BUILD
 extern "C" void mem_test_gpu(Star *estrellas) {
     float cx, cy, cz;

@@ -62,6 +62,7 @@ void findminmax(Star *stars) {
 
 int main(int argc, char *argv[]) {
     int steps = 0;
+    float DT = 1.0F;
     Star *estrellas = malloc(sizeof(Star));
     memset(estrellas, 0, sizeof(Star));
     if (argc < 3) {
@@ -85,10 +86,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 #ifdef CUDA
-    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[2]);
+    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[2],DT);
     //mem_test_gpu(estrellas);
 #else
-    simulate(estrellas,steps,estrellas->size,argv[2]);
+    simulate(estrellas,steps,estrellas->size,argv[2],DT);
 #endif
     //test_simulation(estrellas);
     //test_tree(estrellas);

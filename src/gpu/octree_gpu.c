@@ -84,12 +84,7 @@ void octree_insert(OctreeOctant *tree, Star *stars,unsigned int node_index, long
         float new_cz = node->center_z + ((oct & 1) ? offset : -offset);
         unsigned int child_index = new_node(tree, new_cx, new_cy, new_cz, offset,m,x,y,z);
         tree->nodes[node_index].children[oct] = child_index;
-        OctreeNode *child_node = &tree->nodes[child_index];
-        child_node->star_index = star_index;
-        child_node->mass = m;
-        child_node->com_x = x;
-        child_node->com_y = y;
-        child_node->com_z = z;
+        tree->nodes[child_index].star_index = star_index;
     }else {
         unsigned int child_index = node->children[oct];
         OctreeNode *child = &tree->nodes[child_index];

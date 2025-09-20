@@ -13,6 +13,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
     double total_mass = 0.0;
     double center_x = 0.0, center_y = 0.0, center_z = 0.0;
 
+#pragma omp parallel for reduction(+:total_mass,center_x,center_y,center_z)
     for (size_t i = 0; i < stars->size; i++) {
         double m = stars->mass[i];
         total_mass += m;
@@ -27,6 +28,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
 
     // 2. Calcular bounding sphere inicial desde COM
     double max_dist_sq = 0.0;
+#pragma omp parallel for reduction(max:max_dist_sq)
     for (size_t i = 0; i < stars->size; i++) {
         double dx = stars->Cx[i] - center_x;
         double dy = stars->Cy[i] - center_y;
@@ -37,22 +39,25 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
         }
     }
 
-    double radius = sqrt(max_dist_sq);
+    double radius2 = max_dist_sq;
+    double radius = sqrt(radius2);
 
     // 3. Algoritmo tipo Ritter: expandir esfera hacia puntos externos
-    for (size_t i = 0; i < stars->size; i++) {
+    for (size_t i = 0; i < stars->size; i+= 8) {
         double dx = stars->Cx[i] - center_x;
         double dy = stars->Cy[i] - center_y;
         double dz = stars->Cz[i] - center_z;
-        double dist = sqrt(dx * dx + dy * dy + dz * dz);
+        double dist2 = dx * dx + dy * dy + dz * dz;
 
-        if (dist > radius) {
+        if (dist2 > radius2) {
+            double dist = sqrt(dist2);
             // Mover el centro hacia este punto para mantener esfera compacta
             double shift = (dist - radius) * 0.5 / dist;
             center_x += dx * shift;
             center_y += dy * shift;
             center_z += dz * shift;
             radius += (dist - radius) * 0.5;
+            radius2 = radius * radius;
         }
     }
 
@@ -279,28 +284,4 @@ void write_results(Star *estrellas, const char *outputfile, const char *name, co
     char output[500];
     sprintf(output, "%s/step_%d", outputfile, step + 1);
     write_chunks(estrellas, name, output, 25);
-}
-
-// Comparador para qsort
-int cmp_double(const void *a, const void *b) {
-    double diff = (*(double *) a - *(double *) b);
-    return (diff > 0) - (diff < 0);
-}
-
-void estimate_dt(Star *stars, double *dt) {
-    double *taus = malloc(stars->size * sizeof(double));
-    for (unsigned long i = 0; i < stars->size; i++) {
-        double r = sqrt(stars->Cx[i] * stars->Cx[i] + stars->Cy[i] * stars->Cy[i] + stars->Cz[i] * stars->Cz[i]);
-        double v = sqrt(stars->Vx[i] * stars->Vx[i] + stars->Vy[i] * stars->Vy[i] + stars->Vz[i] * stars->Vz[i]);
-        if (v > 0) {
-            taus[i] = r / v;
-        }
-    }
-    qsort(taus, stars->size, sizeof(double), cmp_double);
-    unsigned long idx = (unsigned long) floor(0.01 * stars->size);
-    if (idx >= stars->size) idx = stars->size - 1;
-    double tau_p = taus[idx];
-    free(taus);
-    double aux = tau_p * ETA;
-    *dt = aux > 1.0 ? 1.0 : aux;
 }

@@ -115,26 +115,22 @@ void aux_time_bh(const Star *stars, const Octree *tree, long node_idx, long inde
 }
 
 // Función principal de simulación
-void simulate(Star *estrellas, const int steps, const long N, const char *outputfile) {
+void simulate(Star *estrellas, const int steps, const long N, const char *outputfile, float DT) {
     struct timeval start, end;
     double *ax = malloc(N * sizeof(double));
     double *ay = malloc(N * sizeof(double));
     double *az = malloc(N * sizeof(double));
-    double DT;
     float cx, cy, cz;
     float hs, min_node_size;
     gettimeofday(&start, NULL);
     printf("******************************************************\n");
     printf("Iniciando simulacion con %d threads\n", omp_get_max_threads());
     fflush(stdout);
-    estimate_dt(estrellas, &DT);
-    double DT2 = 0.5 * DT;
+    float DT2 = 0.5F * DT;
     printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
     compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
-    unsigned int offsets[8];
-    reorder_stars(estrellas, cx, cy, cz, offsets);
     write_results(estrellas, outputfile,"cpu_results",-1);
     Octree *octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
     for (int step = 0; step < steps; step++) {
@@ -160,7 +156,6 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
         free_tree(octree);
         //Reconstruir con nuevas posiciones
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
-        reorder_stars(estrellas, cx, cy, cz, offsets);
         octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
         printf("\t  Iniciando fase 2: HalfKick\n");
         fflush(stdout);
@@ -204,9 +199,6 @@ void test_simulation(Star *estrellas) {
     }
     double ax[20] = {0}, ay[20] = {0}, az[20] = {0};
     double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
-    double dt;
-    estimate_dt(estrellas, &dt);
-    printf("El DT estimado máximo es %.6f\n", dt);
     float cx, cy, cz;
     float hs, min_node_size;
     unsigned int offsets[8];
