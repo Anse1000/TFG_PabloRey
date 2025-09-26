@@ -127,54 +127,72 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
     printf("Iniciando simulacion con %d threads\n", omp_get_max_threads());
     fflush(stdout);
     float DT2 = 0.5F * DT;
-    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n",steps, DT * 1000000,DT * steps * 1000000);
+    printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n", steps, DT * 1000000, DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
-    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
-    write_results(estrellas, outputfile,"cpu_results",-1);
-    Octree *octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
+    // Inicializar árbol y aceleraciones antes del bucle principal
+    compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+    Octree *octree = build_tree(estrellas, cx, cy, cz, hs, min_node_size);
+
+    // Array de aceleraciones (reutilizable entre pasos)
+#pragma omp parallel for
+    for (long i = 0; i < N; i++) {
+        ax[i] = ay[i] = az[i] = 0.0;
+        compute_acceleration_bh(estrellas, octree, 0, i, THETA, &ax[i], &ay[i], &az[i]);
+        analytic_accel(estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], &ax[i], &ay[i], &az[i]);
+    }
+
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
         printf("****************** Iniciando paso %d ******************\n", step + 1);
-        printf("\t  Iniciando fase 1: HalfKick-Drift \n");
-        fflush(stdout);
         gettimeofday(&step_start, NULL);
+
+        // === HalfKick usando aceleraciones previas ===
+        printf("\t  Fase 1: HalfKick-Drift\n");
+        fflush(stdout);
 #pragma omp parallel for
         for (long i = 0; i < N; i++) {
-            ax[i] = ay[i] = az[i] = 0.0;
-            compute_acceleration_bh(estrellas, octree, 0, i, THETA, &ax[i], &ay[i], &az[i]);
-            analytic_accel(estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], &ax[i], &ay[i], &az[i]);
-            // Leapfrog integration: actualizar velocidad a mitad de paso
+            // half-kick
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
-            // Actualizar posición
+
+            // drift
             estrellas->Cx[i] = fma(DT, estrellas->Vx[i], estrellas->Cx[i]);
             estrellas->Cy[i] = fma(DT, estrellas->Vy[i], estrellas->Cy[i]);
             estrellas->Cz[i] = fma(DT, estrellas->Vz[i], estrellas->Cz[i]);
         }
+
+        // Liberar y reconstruir árbol con nuevas posiciones
         free_tree(octree);
-        //Reconstruir con nuevas posiciones
-        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
-        octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
-        printf("\t  Iniciando fase 2: HalfKick\n");
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        octree = build_tree(estrellas, cx, cy, cz, hs, min_node_size);
+
+        // === Calcular nuevas aceleraciones ===
+        printf("\t  Fase 2: HalfKick\n");
         fflush(stdout);
 #pragma omp parallel for
         for (long i = 0; i < N; i++) {
             ax[i] = ay[i] = az[i] = 0.0;
             compute_acceleration_bh(estrellas, octree, 0, i, THETA, &ax[i], &ay[i], &az[i]);
             analytic_accel(estrellas->Cx[i], estrellas->Cy[i], estrellas->Cz[i], &ax[i], &ay[i], &az[i]);
-            // Completar actualización de velocidad
+
+            // completar el segundo half-kick con las nuevas aceleraciones
             estrellas->Vx[i] = fma(DT2, ax[i], estrellas->Vx[i]);
             estrellas->Vy[i] = fma(DT2, ay[i], estrellas->Vy[i]);
             estrellas->Vz[i] = fma(DT2, az[i], estrellas->Vz[i]);
         }
-        write_results(estrellas, outputfile,"cpu_results",step);
+
+        // Guardar resultados
+        write_results(estrellas, outputfile, "cpu_results", step);
+
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);
-        printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1,step_seconds);
+        printf("************ Paso %d finalizado en %6.0f segundos ************\n",
+               step + 1, step_seconds);
         fflush(stdout);
     }
+
     gettimeofday(&end, NULL);
     double seconds = get_seconds(start, end);
     int hours = (int) (seconds / 3600);
@@ -182,12 +200,11 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
     double remaining_seconds = fmod(seconds, 60.0);
     printf("Simulacion de %ld estrellas completada en %02d:%02d:%05.2f (hh:mm:ss)\n",
            N, hours, minutes, remaining_seconds);
-    printf("Resultados guardados en %s\n",outputfile);
+    printf("Resultados guardados en %s\n", outputfile);
     fflush(stdout);
     free(ax);
     free(ay);
     free(az);
-
 }
 
 void test_simulation(Star *estrellas) {
@@ -201,10 +218,8 @@ void test_simulation(Star *estrellas) {
     double axb[200] = {0}, ayb[200] = {0}, azb[200] = {0};
     float cx, cy, cz;
     float hs, min_node_size;
-    unsigned int offsets[8];
     compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
-    reorder_stars(estrellas, cx, cy, cz, offsets);
-    Octree *octree = build_tree(estrellas,cx,cy,cz,hs,min_node_size);
+    Octree *octree = build_tree(estrellas, cx, cy, cz, hs, min_node_size);
 
     for (int i = 0; i < 20; i++) {
         compute_aceleration_single(estrellas, &ax[i], &ay[i], &az[i], indexes[i], &seconds[i]);

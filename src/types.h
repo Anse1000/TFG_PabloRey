@@ -16,6 +16,7 @@
 #define EPSILON 0.00001 //Valor para evitar divisiones por cero o muy cercanas a cero
 #define ETA 0.3 //Margen de seguridad para calculo de DT
 #define MIN_SUBDIVISIONS 1e6 //Numero maximo de subdivisiones del arbol
+#define BITS_PER_AXIS 21 //Numero de bits para representar las coordenadas Mortoncodes
 #define THETA 0.2 //Apertura del arbol BH
 
 // parámetros de halo
@@ -32,6 +33,7 @@ typedef struct {
     double *Vx, *Vy, *Vz;
     float *mean_g, *color,*radius,*gravity;
     float *mass;
+    __uint64_t *morton;
     size_t size;
     size_t capacity;
 } Star;

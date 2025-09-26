@@ -43,7 +43,7 @@ void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs
     double radius = sqrt(radius2);
 
     // 3. Algoritmo tipo Ritter: expandir esfera hacia puntos externos
-    for (size_t i = 0; i < stars->size; i+= 8) {
+    for (size_t i = 0; i < stars->size; i += 8) {
         double dx = stars->Cx[i] - center_x;
         double dy = stars->Cy[i] - center_y;
         double dz = stars->Cz[i] - center_z;
