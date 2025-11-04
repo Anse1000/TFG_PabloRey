@@ -1,4 +1,260 @@
 \chapter{Diseño e implementación}
 \label{chap:diseno}
+En este capítulo se describe la arquitectura del sistema, las estructuras de datos, los algoritmos principales y las decisiones de implementación que sustentan el proyecto, desde la ingesta de datos hasta la simulación y la generación de salidas.
+\section{Obtención y preparación de los datos}\label{sec:datos}
+
+Para realizar la simulación fue necesario disponer de varios subconjuntos de datos procedentes del catálogo \textit{Gaia DR3} y del catálogo complementario de distancias \texttt{GeDR3Dist}.
+El proceso completo comprendió la descarga, reducción y combinación de los distintos catálogos, con el objetivo de obtener un conjunto coherente de parámetros espaciales, fotométricos y físicos.
+
+\subsection*{Descarga de los catálogos principales}
+
+Los catálogos \texttt{gaia\_source} y \texttt{astrophysical\_parameters} se descargaron desde el \textit{Gaia Archive}~\cite{gaia_archive} mediante el comando \texttt{wget}, automatizando la obtención de archivos comprimidos en formato \texttt{.csv.gz}:
+
+\begin{verbatim}
+wget -r -np -nd -A "*.csv.gz" "URL_archivos"
+\end{verbatim}
+
+Cada archivo contiene un subconjunto del catálogo particionado por rangos de \texttt{source\_id}, lo que facilita la descarga y el procesamiento distribuido.
+El tamaño total de la descarga es de aproximadamente 757~GB para la tabla \texttt{gaia\_source} y 258~GB para \texttt{astrophysical\_parameters}, sumando un total de 3\,386 archivos en cada caso.
+\subsection*{Descarga del catálogo de distancias}
+
+Las estimaciones de distancia derivadas del paralaje se obtuvieron a partir del catálogo \texttt{I/352/GeDR3Dist}, disponible a través del servicio \textit{TAPVizieR}~\cite{tap_vizier}.
+Dado el volumen de datos (más de mil millones de fuentes), se diseñó un script en \texttt{bash}~\ref{lst:script_descargar_distances} que divide el rango de \texttt{source\_id} en bloques y realiza consultas ADQL (\textit{Astronomical Data Query Language}) sucesivas al servidor.
+
+De esta forma se obtuvieron diversos archivos \texttt{.csv} con los campos \texttt{Source} y \texttt{rgeo}, que posteriormente se integraron en el conjunto de datos principal.
+\subsection*{Reducción de columnas}
+
+Con el fin de optimizar el almacenamiento y acelerar las operaciones de lectura, los archivos originales se redujeron manteniendo únicamente las columnas relevantes para el análisis:
+\texttt{source\_id}, \texttt{ra}, \texttt{dec}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}, \texttt{phot\_g\_mean\_mag} y \texttt{bp\_rp}.
+El filtrado se realizó mediante herramientas de línea de comandos (\texttt{awk}) y utilizando \texttt{parallel} para acelerar el proceso, generando versiones compactas de los catálogos~\ref{lst:script_reducir_astro}.
+\subsection*{Combinación de catálogos}
+
+Finalmente, los catálogos reducidos de \texttt{gaia\_source}, \texttt{astrophysical\_parameters} y \texttt{GeDR3Dist} se combinaron utilizando un script en \texttt{Python}~\ref{lst:script_combinar} con las librerías \texttt{pandas} y \texttt{duckdb}.
+Primero se creó una base de datos temporal con las distancias debido al diferente número de archivos por tabla y el orden de IDs, y posteriormente se fusionaron los catálogos mediante uniones internas sobre el campo \texttt{source\_id}, aprovechando el procesamiento en paralelo para reducir el tiempo de ejecución:
+
+\begin{verbatim}
+merged = pd.merge(main_df, astro_df, on='source_id')
+merged = pd.merge(merged, distance_df, on='source_id')
+\end{verbatim}
+
+El resultado final fue un conjunto de 3386 archivos optimizados \texttt{merged\_XXXX.csv}, listos para el filtrado y el análisis posterior ocupando 223~GB sin comprimir.
+
+Este procedimiento permitió manejar de forma eficiente el volumen total del catálogo (más de 1\,800 millones de fuentes en \textit{Gaia DR3}), garantizando coherencia y consistencia entre todos los parámetros empleados.
+\section{Arquitectura del sistema y flujo de datos}\label{sec:arquitectura}
+El sistema implementa un simulador de dinámica galáctica mediante una arquitectura modular que soporta dos implementaciones complementarias: una versión \textbf{CPU}, basada en paralelización mediante OpenMP, y una versión \textbf{GPU}, que aprovecha la capacidad de cómputo masivo de aceleradores NVIDIA mediante CUDA\@.
+
+Ambas versiones comparten la misma interfaz de entrada/salida, las mismas estructuras de datos fundamentales y el mismo pipeline de procesamiento, permitiendo una fácil validación cruzada de resultados y comparación de rendimiento.
+La selección entre la versión CPU o GPU se realiza en tiempo de compilación mediante opciones de CMake (\texttt{ENABLE\_CUDA}), facilitando la adaptación a distintas infraestructuras y volumen de datos.
+
+
+FALTA COMPLETAR
+
+\section{Estructuras de datos principales}\label{sec:estructuras}
+El sistema utiliza varias estructuras de datos fundamentales que son compartidas entre la versión CPU y GPU, además de otras especializadas en cada versión.
+Estas estructuras están diseñadas para optimizar tanto el acceso a memoria como la compatibilidad con los modelos de paralelización disponibles.
+
+\subsection{Estructura de estrella (\texttt{Star})}\label{subsec:estructura-de-estrella-(texttt{star})}
+
+La estructura central del sistema es \texttt{Star}, que agrupa los parámetros astrométricos, cinemáticos y físicos de cada objeto celeste.
+Esta estructura se organiza de forma \textit{structure-of-arrays} (SoA) en lugar de arrays de estructuras, permitiendo optimizar el acceso a memoria en operaciones paralelas y facilitar la vectorización automática en CPU y GPU.
+
+\subsubsection*{Diseño y selección de tipos de datos}
+
+La selección de tipos de datos en cada campo responde a criterios de precisión numérica y eficiencia de memoria:
+
+\begin{itemize}
+    \item \textbf{Precisión doble (\texttt{double}, 64 bits)}:
+    \begin{itemize}
+        \item \texttt{ra}, \texttt{dec}, \texttt{distance}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: Los datos originales de Gaia DR3 se proporcionan en precisión doble. Mantenerlos así preserva la precisión astrométrica y es necesario para transformaciones de coordenadas que acumulan errores.
+
+        \item \texttt{Cx}, \texttt{Cy}, \texttt{Cz}, \texttt{Vx}, \texttt{Vy}, \texttt{Vz}: Las coordenadas cartesianas heliocéntricas y velocidades se mantienen en doble precisión para garantizar estabilidad numérica durante la integración temporal de órbitas a lo largo de millones de años. Los errores de redondeo en precisión simple acumularían desviaciones significativas en las trayectorias.
+    \end{itemize}
+
+    \item \textbf{Precisión simple (\texttt{float}, 32 bits)}:
+    \begin{itemize}
+        \item \texttt{mass}, \texttt{radius}, \texttt{gravity}, \texttt{mean\_g}, \texttt{color}: Estos parámetros representan propiedades físicas derivadas o fotométricas con precisión inherente limitada. La masa se estima mediante relaciones empíricas con incertidumbre del orden del 10--20\%. El índice de color y magnitud se proporcionan con precisión limitada en el catálogo. Usar precisión simple reduce el consumo de memoria a la mitad en estos campos sin pérdida práctica de información.
+    \end{itemize}
+
+    \item \textbf{Identificador de 64 bits sin signo (\texttt{unsigned long})}:
+    \begin{itemize}
+        \item \texttt{id}: Identificador único de Gaia DR3, necesario para relacionar datos con el catálogo original.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Consumo de memoria}
+Para una estructura con $N$ estrellas y capacidad $C$:
+\[
+    \text{Memoria} = C \times (8 + 8 \times 6 + 8 \times 3 + 8 \times 3 + 4 \times 5) \text{ bytes} = C \times 152 \text{ bytes}
+\]
+
+Esto es:
+\begin{itemize}
+    \item \texttt{id}: 8 bytes $\times$ 1 = 8 bytes
+    \item \texttt{ra}, \texttt{dec}, \texttt{distance}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: 8 bytes $\times$ 6 = 48 bytes
+    \item \texttt{Cx}, \texttt{Cy}, \texttt{Cz}, \texttt{Vx}, \texttt{Vy}, \texttt{Vz}: 8 bytes $\times$ 6 = 48 bytes
+    \item \texttt{mean\_g}, \texttt{color}, \texttt{radius}, \texttt{gravity}, \texttt{mass}: 4 bytes $\times$ 5 = 20 bytes
+    \item \textbf{Total por estrella: 152 bytes}
+\end{itemize}
+
+Para una simulación con 1.100 millones de estrellas utilizadas en el proyecto como se ve en la subsección~\ref{subsec:filtrado}, la memoria requerida sería:
+
+\[
+    1.1 \times 10^9 \times 152 \text{ bytes} = 171.3 \text{ GB}
+\]
+tamaño perfectamente abarcable en los nodos disponibles en el Finisterrae III de 256 GB de RAM~\ref{subsec:especificaciones-tecnicas-de-los-nodos}.
+
+\subsubsection*{Liberación selectiva de datos}
+
+Tras la carga completa de un bloque de estrellas y la realización de los cálculos preliminares (transformación de coordenadas y estimación de masas), ciertos campos astrométricos originales dejan de ser necesarios y son liberados para reducir el consumo de memoria:
+
+\begin{itemize}
+    \item \textbf{Datos liberados después de transformación de coordenadas}:
+    \begin{itemize}
+        \item \texttt{ra}, \texttt{dec}, \texttt{distance}: Tras convertir a coordenadas cartesianas heliocéntricas (\texttt{Cx}, \texttt{Cy}, \texttt{Cz}), estos datos ecuatoriales ya no son necesarios.
+
+        \item \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: Tras convertir a velocidades cartesianas (\texttt{Vx}, \texttt{Vy}, \texttt{Vz}), estos datos originales no vuelven a usarse.
+    \end{itemize}
+
+    \item \textbf{Datos liberados después de estimación de masas}:
+    \begin{itemize}
+        \item \texttt{gravity}, \texttt{mean\_g}, \texttt{color}: Tras estimar \texttt{mass} mediante la relación masa-luminosidad que utiliza estos parámetros, pueden ser liberados si no se requieren en resultados finales.
+    \end{itemize}
+
+    \item \textbf{Impacto en memoria}:
+    Liberando los 6 campos astrométricos originales reduce el consumo en 48 bytes por objeto, correspondiendo a una reducción del 31.6\% respecto al consumo total por estrella.
+    Para 1.100 millones de estrellas, esto libera aproximadamente 49.2 GB de memoria.
+\end{itemize}
+
+Este diseño permite un balance entre precisión numérica, eficiencia de memoria y adaptabilidad a diferentes infraestructuras y volúmenes de datos, siendo crucial para gestionar simulaciones de escala galáctica en entornos de computación de altas prestaciones.
+
+\subsection{Estructura de arbol CPU(\texttt{Octree})}\label{subsec:estructura-de-arbol-cpu(texttt{octree})}
+
+La estructura \texttt{Octree} implementa el árbol jerárquico utilizado en la versión CPU del simulador para acelerar el cálculo de fuerzas gravitatorias mediante el método de Barnes-Hut.
+A diferencia de la estructura \texttt{Star}, que es plana y homogénea, el octree es una estructura (SoA) jerárquica donde cada nodo contiene referencias a hasta 8 nodos hijos.
+
+\subsubsection*{Diseño y campos de datos}
+
+Cada nodo del octree almacena información geométrica, propiedades físicas acumuladas e información topológica:
+
+\begin{itemize}
+    \item \textbf{Geometría del volumen (precisión simple, \texttt{float})}:
+    \begin{itemize}
+        \item \texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}: Coordenadas del centro del cubo (float, 3 $\times$ 4 = 12 bytes)
+
+        \item \texttt{half\_size}: Semiextensión del cubo en cada dirección (float, 4 bytes)
+
+        \textbf{Justificación de precisión simple}: La geometría del árbol se utiliza únicamente para aplicar el criterio de apertura de Barnes-Hut (comparación de distancias). La precisión simple es suficiente para estas comparaciones relativas sin afectar la validez del criterio de agrupación.
+    \end{itemize}
+
+    \item \textbf{Propiedades físicas (masa en \texttt{float}, centro de masas en \texttt{double})}:
+    \begin{itemize}
+        \item \texttt{mass}: Masa total acumulada del nodo y sus descendientes (float, 4 bytes)
+
+        \item \texttt{com\_x}, \texttt{com\_y}, \texttt{com\_z}: Centro de masas (double, 3 $\times$ 8 = 24 bytes)
+
+        \textbf{Justificación de precisión mixta}: La masa total se almacena en precisión simple ya que es el resultado de sumas acumulativas que se recomputabilizan en cada reconstrucción del árbol.
+        El centro de masas, sin embargo, se mantiene en precisión doble porque:
+        \begin{enumerate}
+            \item Se utiliza directamente en el cálculo de la aceleración gravitatoria.
+            \item Se actualiza mediante una operación de media ponderada que puede acumular errores significativos en precisión simple.
+            \item La precisión en la localización del centro de masas afecta directamente a la exactitud de la aproximación multipolar.
+        \end{enumerate}
+    \end{itemize}
+
+    \item \textbf{Información topológica}:
+    \begin{itemize}
+        \item \texttt{children}: Array de 8 referencias a nodos hijos (array de 8 enteros sin signo de 32 bits, 32 bytes).
+
+        Se utiliza \texttt{unsigned int} en lugar de \texttt{long} por dos razones críticas:
+        \begin{enumerate}
+            \item \textbf{Ahorro de memoria}: Cada referencia ocupa 4 bytes en lugar de 8, reduciendo en un 50\% el espacio dedicado a punteros.
+
+            \item \textbf{Límite máximo de nodos}: El rango de \texttt{unsigned int} es de 0 a $2^{32} - 1 = 4{,}294{,}967{,}295$, más que suficiente para los nodos esperados en una simulación de 1.100 millones de estrellas.
+        \end{enumerate}
+
+        La representación de sin hijo utiliza la constante \texttt{INVALID\_INDEX = UINT32\_MAX} (4.294 mil millones), un valor fuera del rango de nodos válidos.
+        Aunque \texttt{unsigned int} no permite directamente valores negativos como -1, el uso de \texttt{UINT32\_MAX} es una estrategia estándar que proporciona semántica equivalente: una comparación \texttt{if (child == INVALID\_INDEX)} determina de forma unívoca si el hijo existe.
+
+        \item \texttt{star\_index}: Índice de la estrella si el nodo es una hoja, o -1 si es un nodo interno (long, 8 bytes).
+
+        Este campo mantiene precisión de 64 bits porque son los mismos valores que los almacenados en Star.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Consumo de memoria}
+
+Memoria por nodo del octree:
+
+\[
+    \text{Memoria por nodo} = 4 \times 4 + 4 + 24 + 32 + 8 = 88 \text{ bytes}
+\]
+
+Esto es:
+\begin{itemize}
+    \item \texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}, \texttt{half\_size}: 4 bytes $\times$ 4 = 16 bytes
+    \item \texttt{mass}: 4 bytes
+    \item \texttt{com\_x}, \texttt{com\_y}, \texttt{com\_z}: 8 bytes $\times$ 3 = 24 bytes
+    \item \texttt{children[8]}: 4 bytes $\times$ 8 = 32 bytes
+    \item \texttt{star\_index}: 8 bytes
+    \item \textbf{Total por nodo: 88 bytes}
+\end{itemize}
+
+\subsection{Estructura de arbol GPU(\texttt{OctreeGPU})}\label{subsec:estructura-de-arbol-gpu(texttt{octreegpu})}
+La estructura \texttt{OctreeGPU} implementa el árbol jerárquico para la versión acelerada por GPU\@.
+Aunque mantiene la misma lógica algorítmica de Barnes-Hut que la versión CPU, su organización física es fundamentalmente diferente, optimizada para:
+\begin{enumerate}
+    \item Maximizar la coalesced memory access en GPU (acceso contiguo a memoria)
+    \item Minimizar las divergencias de control entre threads CUDA
+    \item Reducir la necesidad de sincronización global entre dispositivos
+    \item Facilitar la paralelización masiva de búsquedas en el árbol
+\end{enumerate}
+
+En lugar de un único árbol monolítico como en CPU, la versión GPU divide el árbol raíz en 8 subárboles independientes, uno para cada octante del espacio:
+
+\begin{lstlisting}[language=C,label=octree_gpu_struct,caption=Estructura OctreeGPU con partición en octantes]
+typedef struct {
+    OctreeOctant *octants[8];    // 8 subárboles independientes
+    FrontierGPU *frontier[8];    // 8 fronteras multipolo
+} OctreeGPU;
+\end{lstlisting}
+
+Esta partición ofrece ventajas significativas:
+
+\begin{itemize}
+    \item \textbf{Paralelización natural}: Los 8 octantes se construyen en paralelo durante la etapa de inicialización.
+    Cada thread construye un octante sin contención con los otros.
+
+    \item \textbf{Eficiencia de memoria GPU}: Cada octante se transfiere a la GPU como un bloque de memoria contiguo, evitando la busqueda de hijos por rama como en CPU.
+
+    \item \textbf{Escalabilidad multi-GPU}: En sistemas con múltiples aceleradores, cada octante puede asignarse a una GPU diferente, distribuye la carga de trabajo de forma natural.
+
+\end{itemize}
+
+A diferencia de la versión CPU donde cada nodo se almacena de forma distribuida en arrays separados (SoA), en GPU cada nodo individual se organiza como una estructura compacta \texttt{OctreeNode} (\textit{Array of Structures}, AoS) que contiene los mismos datos en una única unidad de memoria.
+Esto se debe a que en GPU el costo de divergencia de control al acceder a múltiples arrays dispersos es mayor que el costo de leer una estructura compacta.
+Cada thread de CUDA que desciende por el árbol accede a un único nodo a la vez; tener todos los datos del nodo juntos en memoria maximiza la localidad espacial, mejorando la tasa de coalesced memory access.
+
+Debido a la baja eficiencia de funciones recursivas para recorrer el árbol en GPU, la arquitectura CUDA requiere un enfoque iterativo que evite el uso de stack implícito.
+El campo añadido a la estructura \texttt{next} implementa un enlace al siguiente nodo relevante en orden de traversal horizontal, convirtiendo la búsqueda recursiva del árbol en una iteración directa sobre una lista encadenada de nodos no-hoja.
+\begin{lstlisting}[language=C,label={lst:octree_node_struct},caption=Estructura OctreeNode]
+typedef struct {
+    float center_x, center_y, center_z;
+    float half_size;
+    float mass;
+    double com_x, com_y, com_z;
+    unsigned int children[8];
+    long star_index;
+    unsigned int next;
+} OctreeNode;
+\end{lstlisting}
+
+Debido a la subdivisión por octantes, es necesario representar una porción minimal del resto de subárboles, la frontera multipolo cumple este propósito fundamental.
+La frontera multipolo \texttt{FrontierGPU} es la estructura de datos central que representa la aproximación del campo gravitatorio generado por el resto del árbol.
+En lugar de enumerar explícitamente todos los nodos que contribuyen a la aceleración de una partícula (lo cual generaría divergencia masiva entre threads), se mantiene una lista compacta de nodos que conforman la frontera válida según el criterio de apertura de Barnes-Hut.
+
+\section{Diseño algorítmico y paralelización}\label{sec:diseno-algoritmico-y-paralelizacion}
+
+
+
 
 

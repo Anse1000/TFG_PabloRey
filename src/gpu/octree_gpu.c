@@ -33,7 +33,7 @@ void free_tree_gpu(OctreeGPU *tree) {
 #endif
 }
 
-unsigned int new_node(OctreeOctant *tree,float cx, float cy, float cz, float hs,float m,double com_x,double com_y, double com_z) {
+unsigned int new_node(OctreeOctant *tree,float cx, float cy, float cz, float hs,float m,float com_x,float com_y, float com_z) {
     if (tree->size >= tree->capacity) {
         tree->capacity *= 1.2;
         resize_octant(tree);
@@ -92,7 +92,7 @@ void octree_insert(OctreeOctant *tree, Star *stars,unsigned int node_index, long
             long existing_star = child->star_index;
             child->star_index = -1;
             child->mass = 0.0F;
-            child->com_x = child->com_y = child->com_z = 0.0;
+            child->com_x = child->com_y = child->com_z = 0.0F;
 
             octree_insert(tree, stars, child_index, existing_star,min_node_size);
             octree_insert(tree, stars, child_index, star_index,min_node_size);
@@ -112,7 +112,7 @@ void init_octant(OctreeOctant *tree, float cx, float cy, float cz, float half_si
     n->center_z = cz;
     n->half_size = half_size;
     n->mass = 0.0f;
-    n->com_x = n->com_y = n->com_z = 0.0;
+    n->com_x = n->com_y = n->com_z = 0.0F;
     n->star_index = -1;
     n->next = INVALID_INDEX;
     for (int i=0;i<8;i++) n->children[i] = INVALID_INDEX;

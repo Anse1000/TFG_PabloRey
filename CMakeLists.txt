@@ -90,7 +90,7 @@ if(ENABLE_CUDA)
     target_compile_options(TFG_PRA PRIVATE
             $<$<COMPILE_LANGUAGE:CUDA>:-O3>
             $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fopenmp>
-            #$<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=32>
+            $<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=40>
             # Solo en Debug: info de líneas y verbose de ptxas para profiling
             $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo -Xptxas=-v>
     )

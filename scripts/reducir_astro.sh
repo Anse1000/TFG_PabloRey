@@ -41,7 +41,7 @@ ls *.gz | nl -v 1 -n rz | while read -r index file; do
     echo "$file $index"
 done > archivos_con_indices.txt
 
-# Ejecutar en paralelo con 4 procesos simultáneos (ajusta a tus recursos disponibles)
+# Ejecutar en paralelo
 cat archivos_con_indices.txt | parallel -j 16 --colsep ' ' procesar_archivo {1} {2}
 
 echo "Proceso completado. Archivos reducidos en la carpeta 'reducidos_astro/'."
