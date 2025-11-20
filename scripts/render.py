@@ -3,7 +3,7 @@ import glob
 from paraview.simple import *
 import argparse
 
-GAUSSIAN_RADIUS = 0.0005   # radio base de Gaussian Points
+GAUSSIAN_RADIUS = 0.0010   # radio base de Gaussian Points
 COLOR_FIELD = "MASS"        # columna para color y escala
 RES_X = 1920
 RES_Y = 1080
@@ -96,6 +96,14 @@ if __name__ == "__main__":
         ColorBy(display, ('POINTS', COLOR_FIELD))
         lut = GetColorTransferFunction(COLOR_FIELD)
         lut.ApplyPreset("Black-Body Radiation", True)
+
+        # --- Escala logarítmica ---
+        lut.MapControlPointsToLogSpace()
+        lut.UseLogScale = 1
+
+        # --- Ajustar rango para evitar "todo rojo" ---
+        lut.RescaleTransferFunction(0.05, 5)
+
         display.LookupTable = lut
         display.SetScalarBarVisibility(view, True)
 

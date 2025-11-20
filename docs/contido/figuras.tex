@@ -1,0 +1,70 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+
+% Vista de la esfera
+\tdplotsetmaincoords{65}{155}
+
+% Coordenadas IAU (ICRS / Gaia DR3 reference)
+% Polo Norte Galáctico
+\newcommand{\RAng}{192.85948} % deg
+\newcommand{\DECng}{27.12825} % deg
+
+% Centro Galáctico → eje X
+\newcommand{\RAgc}{266.40510}
+\newcommand{\DECgc}{-28.936175}
+
+\begin{document}
+    \begin{tikzpicture}[tdplot_main_coords, scale=3]
+
+% ================= Esfera limpia ======================
+        \draw[opacity=0.15] (0,0,0) circle (1);
+        \tdplotdrawarc[thick, opacity=0.4]{(0,0,0)}{1}{0}{360}{0}{}
+        \tdplotsetrotatedcoords{0}{90}{0}
+        \tdplotdrawarc[thick, opacity=0.4,tdplot_rotated_coords]{(0,0,0)}{1}{0}{360}{0}{}
+        \draw[opacity=0.3] (-1,0,0) -- (1,0,0);
+        \draw[opacity=0.3] (0,-1,0) -- (0,1,0);
+        \draw[opacity=0.3] (0,0,-1) -- (0,0,1);
+
+% ========= Ángulos α y δ en la esfera =========
+% Arco para α en el plano XY
+        \tdplotdrawarc[->,blue, thick]{(0,0,0)}{0.2}{0}{90}{anchor=north}{\(\delta\)}
+
+% Arco para δ desde plano ecuatorial hacia Z_eq
+        \tdplotsetrotatedcoords{0}{90}{0}
+        \begin{scope}[tdplot_rotated_coords]
+            \tdplotdrawarc[->,blue, thick]{(0,0,0)}{0.2}{90}{180}{anchor=west}{\(\alpha\)}
+        \end{scope}
+
+% ================= Polo Norte Galáctico (rojo) =================
+        \pgfmathsetmacro{\xZ}{cos(\DECng)*cos(\RAng)}
+        \pgfmathsetmacro{\yZ}{cos(\DECng)*sin(\RAng)}
+        \pgfmathsetmacro{\zZ}{sin(\DECng)}
+        \coordinate (Zgal) at (\xZ,\yZ,\zZ);
+        \draw[->, thick, red] (0,0,0) -- (Zgal)
+        node[right, xshift=4pt, yshift=2pt, scale=0.75] {$Z\;\rightarrow\;$Polo Norte Galáctico}
+        node[below right, xshift=4pt, yshift=-2pt, scale=0.6]
+            {$\alpha = \RAng^\circ,\;\delta = \DECng^\circ$};
+% ================= Centro Galáctico → eje X =================
+        \pgfmathsetmacro{\xX}{cos(\DECgc)*cos(\RAgc)}
+        \pgfmathsetmacro{\yX}{cos(\DECgc)*sin(\RAgc)}
+        \pgfmathsetmacro{\zX}{sin(\DECgc)}
+        \coordinate (Xgal) at (\xX,\yX,\zX);
+        % Eje X galáctico (apunta al Centro Galáctico)
+        \draw[->, thick, red] (0,0,0) -- (Xgal)
+        node[left, xshift=4pt, yshift=2pt, scale=0.75] {$X\;\rightarrow\;$Centro Galáctico}
+        node[below left, xshift=4pt, yshift=-1pt, scale=0.6]
+            {$\alpha = \RAgc^\circ,\;\delta = \DECgc^\circ$};
+
+
+% ================= Eje Y galáctico = Z × X =================
+        \pgfmathsetmacro{\xY}{\yZ*\zX - \zZ*\yX}
+        \pgfmathsetmacro{\yY}{\zZ*\xX - \xZ*\zX}
+        \pgfmathsetmacro{\zY}{\xZ*\yX - \yZ*\xX}
+        \coordinate (Ygal) at (\xY,\yY,\zY);
+
+        \draw[->, thick, red] (0,0,0) -- (Ygal) node[left] {$Y$};
+
+    \end{tikzpicture}
+\end{document}
+
