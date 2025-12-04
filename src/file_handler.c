@@ -212,8 +212,7 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
     fflush(stdout);
     return stars->size;
 }
-
-void write_hdf5_chunks(Star *estrellas,
+void write_hdf5_chunks(const Star *estrellas,
                        const char *directory,
                        const char *base_filename,
                        unsigned int num_chunks,
@@ -233,81 +232,59 @@ void write_hdf5_chunks(Star *estrellas,
         sprintf(filename, "%s/%s_%02u.h5", directory, base_filename, i);
 
         hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
-        H5Pset_fapl_sec2(plist); // óptimo para Lustre
+        H5Pset_fapl_sec2(plist);
         hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist);
         H5Pclose(plist);
 
-        hsize_t dims[1] = { count };
-        hid_t space = H5Screate_simple(1, dims, NULL);
+        // --- 1. PREPARACIÓN E INTERLEAVING (ENTRELAZADO) ---
+        // Buffer temporal de 3D (X, Y, Z intercalados)
+        double *xyz_buffer = (double *)malloc(count * 3 * sizeof(double));
 
-        #define WRITE_DATASET(name, type, ptr) \
+        for (size_t j = 0; j < count; j++) {
+            size_t idx = start + j;
+            // Almacenar X, Y, Z de forma contigua
+            xyz_buffer[j * 3 + 0] = estrellas->Cx[idx];
+            xyz_buffer[j * 3 + 1] = estrellas->Cy[idx];
+            xyz_buffer[j * 3 + 2] = estrellas->Cz[idx];
+        }
+
+        // --- 2. ESCRITURA DE DATASETS HDF5 ---
+
+        // Dataset 1D (ID, MASS)
+        hsize_t dims_1d[1] = { count };
+        hid_t space_1d = H5Screate_simple(1, dims_1d, NULL);
+
+        // Dataset 2D (XYZ_POS)
+        hsize_t dims_2d[2] = { count, 3 }; // N rows, 3 columns
+        hid_t space_2d = H5Screate_simple(2, dims_2d, NULL);
+
+        // Macro adaptado para escritura explícita
+        #define WRITE_1D_DATASET(name, type, ptr, space) \
             do { \
                 hid_t dset = H5Dcreate(file_id, name, type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); \
                 H5Dwrite(dset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, (ptr)+start); \
                 H5Dclose(dset); \
             } while(0)
 
-        WRITE_DATASET("ID",   H5T_NATIVE_UINT64, estrellas->id);
-        WRITE_DATASET("X",    H5T_NATIVE_DOUBLE, estrellas->Cx);
-        WRITE_DATASET("Y",    H5T_NATIVE_DOUBLE, estrellas->Cy);
-        WRITE_DATASET("Z",    H5T_NATIVE_DOUBLE, estrellas->Cz);
-        WRITE_DATASET("MASS", H5T_NATIVE_FLOAT, estrellas->mass);
+        // Escritura 1D (MASS, ID)
+        WRITE_1D_DATASET("ID",   H5T_NATIVE_UINT64, estrellas->id, space_1d);
+        WRITE_1D_DATASET("MASS", H5T_NATIVE_FLOAT, estrellas->mass, space_1d);
 
-        H5Sclose(space);
-        H5Fclose(file_id);
+        H5Sclose(space_1d);
+
+        // Escritura 2D (XYZ_POS)
+        hid_t dset_xyz = H5Dcreate(file_id, "XYZ_POS", H5T_NATIVE_DOUBLE, space_2d, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // Escribimos el buffer entrelazado directamente
+        H5Dwrite(dset_xyz, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, xyz_buffer);
+        H5Dclose(dset_xyz);
+
+        H5Sclose(space_2d);
+
+        // --- 3. LIMPIEZA ---
+        free(xyz_buffer);
         free(filename);
+        H5Fclose(file_id);
     }
-}
-
-// ----------------------------
-// Write master HDF5
-// ----------------------------
-void write_master_hdf5(const char *directory,
-                       const char *base_filename,
-                       int step,
-                       unsigned int num_chunks,
-                       const size_t *chunk_sizes,
-                       const size_t *id_min,
-                       const size_t *id_max)
-{
-    char *filename = malloc(strlen(directory) + strlen(base_filename) + 20);
-    sprintf(filename, "%s/step_%04d_master.h5", directory, step+1);
-
-    hid_t f = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    // No necesitamos free(filename)
-
-    hid_t g = H5Gcreate(f, "/global", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    size_t total = 0;
-    for (unsigned int i = 0; i < num_chunks; i++) total += chunk_sizes[i];
-
-    H5LTset_attribute_ulong(f, "/global", "total_stars", &total, 1);
-    H5LTset_attribute_uint(f, "/global", "num_chunks", &num_chunks, 1);
-    H5Gclose(g);
-
-    hid_t gc = H5Gcreate(f, "/chunks", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    for (unsigned int i = 0; i < num_chunks; i++)
-    {
-        char path[64];
-        snprintf(path, sizeof(path), "/chunks/chunk_%02u", i);
-        hid_t gk = H5Gcreate(f, path, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-        char chunkfile[1024];
-        snprintf(chunkfile, sizeof(chunkfile), "%s_%02u.h5", base_filename, i);
-
-        H5LTset_attribute_string(f, path, "filename", chunkfile);
-        H5LTset_attribute_ulong(f, path, "size", &chunk_sizes[i], 1);
-        H5LTset_attribute_ulong(f, path, "id_min", &id_min[i], 1);
-        H5LTset_attribute_ulong(f, path, "id_max", &id_max[i], 1);
-
-        // No necesitamos free(chunkfile)
-        H5Gclose(gk);
-    }
-
-    H5Gclose(gc);
-    H5Fclose(f);
-    free(filename);
 }
 
 // ----------------------------
@@ -327,49 +304,36 @@ void write_master_xdmf(const char *directory,
     FILE *f = fopen(filename, "w");
     if (!f) {
         perror("Error abriendo XDMF maestro");
+        free(filename);
         return;
     }
 
     fprintf(f,
-"<?xml version=\"1.0\" ?>\n"
-"<Xdmf Version=\"3.0\">\n"
-"  <Domain>\n"
-"    <Grid Name=\"Stars\" GridType=\"Collection\" CollectionType=\"Spatial\">\n");
+    "<?xml version=\"1.0\" ?>\n"
+    "<Xdmf Version=\"3.0\">\n"
+    "  <Domain>\n"
+    "    <Grid Name=\"Stars\" GridType=\"Collection\" CollectionType=\"Spatial\">\n");
 
     for (unsigned int i = 0; i < num_chunks; i++)
     {
         fprintf(f,
-"      <Grid Name=\"chunk_%02u\" GridType=\"Uniform\">\n"
+"      <Grid Name=\"chunk_%02u\" GridType=\"Uniform\">\n" // Volvemos a Uniform, que era el que intentaba el usuario
 "        <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%zu\"/>\n"
-"        <Geometry GeometryType=\"XYZ\">\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n"
-"            %s_%02u.h5:/X\n"
-"          </DataItem>\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n"
-"            %s_%02u.h5:/Y\n"
-"          </DataItem>\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">\n"
-"            %s_%02u.h5:/Z\n"
-"          </DataItem>\n"
+"        <Geometry GeometryType=\"XYZ\">\n" // <-- CAMBIO: Geometría Interleaved
+"          <DataItem Dimensions=\"%zu 3\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:XYZ_POS</DataItem>\n" // <-- CAMBIO: Solo un DataItem N x 3
 "        </Geometry>\n"
 "        <Attribute Name=\"MASS\" AttributeType=\"Scalar\" Center=\"Node\">\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">\n"
-"            %s_%02u.h5:/MASS\n"
-"          </DataItem>\n"
+"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">%s_%02u.h5:MASS</DataItem>\n"
 "        </Attribute>\n"
 "        <Attribute Name=\"ID\" AttributeType=\"Scalar\" Center=\"Node\">\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"UInt\" Precision=\"8\" Format=\"HDF\">\n"
-"            %s_%02u.h5:/ID\n"
-"          </DataItem>\n"
+"          <DataItem Dimensions=\"%zu\" NumberType=\"UInt\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:ID</DataItem>\n"
 "        </Attribute>\n"
 "      </Grid>\n",
             i,
             chunk_sizes[i],
-            chunk_sizes[i], base_filename, i,
-            chunk_sizes[i], base_filename, i,
-            chunk_sizes[i], base_filename, i,
-            chunk_sizes[i], base_filename, i,
-            chunk_sizes[i], base_filename, i
+            chunk_sizes[i], base_filename, i, // XYZ_POS (Dimensions N 3)
+            chunk_sizes[i], base_filename, i, // MASS
+            chunk_sizes[i], base_filename, i  // ID
         );
     }
 
@@ -420,8 +384,6 @@ void write_results_hdf5(Star *estrellas,
 
     write_hdf5_chunks(estrellas, stepdir, name,
                       num_chunks, chunk_sizes, chunk_offsets);
-    write_master_hdf5(stepdir, name, step,
-                      num_chunks, chunk_sizes, id_min, id_max);
     write_master_xdmf(stepdir, name, step,
                       num_chunks, chunk_sizes);
 
