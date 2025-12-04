@@ -11,7 +11,9 @@
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
 ulimit -s unlimited
 # Cargar módulos
-module load cesga/2025 intel
+module load cesga/2025 intel/2024.2.1
+# Añadir librerias
+export HDF5_ROOT=$HOME/hdf5-icc
 # Compilar el programa
 mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF -S . -B ./build

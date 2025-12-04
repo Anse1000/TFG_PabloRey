@@ -109,6 +109,10 @@ Los principales módulos empleados fueron:
     Permite inspeccionar la ejecución de kernels en GPU, analizando métricas como la utilización de memoria global, el rendimiento de cada multiprocesador o el grado de ocupación de los núcleos CUDA.
     Es una herramienta fundamental para optimizar aplicaciones paralelas que utilizan GPU NVIDIA.
 
+    \item \textbf{HDF5} (Hierarchical Data Format version 5)\footnote{The HDF Group. Disponible en: \url{https://www.hdfgroup.org/}}:
+    Es una biblioteca y formato de archivo diseñado específicamente para almacenar y organizar grandes volúmenes de datos complejos de manera eficiente.
+    En el ámbito de la computación de alto rendimiento (HPC), es el estándar para la gestión de Entrada/Salida (E/S) debido a su capacidad para manejar estructuras jerárquicas y soportar E/S paralela.
+    En este proyecto, se utiliza para el almacenamiento persistente de los resultados y datos estelares masivos (identificadores, posiciones y masas), permitiendo una escritura binaria rápida y compacta que facilita su posterior lectura y visualización.
 \end{itemize}
 
 \section{Tecnologías de paralelización: OpenMP y CUDA}\label{sec:openmp-cuda}
@@ -157,10 +161,8 @@ En general, el objetivo es minimizar el uso de sincronización para evitar bloqu
 
 \subsection{CUDA}\label{subsec:cuda}
 
-
 \textbf{CUDA} (\textit{Compute Unified Device Architecture})~\cite{cuda-guide} es una plataforma de programación paralela desarrollada por NVIDIA que permite ejecutar código en las unidades de procesamiento gráfico (GPU).
 A diferencia de OpenMP, que trabaja sobre arquitecturas de memoria compartida entre núcleos de CPU, CUDA explota el paralelismo masivo disponible en miles de núcleos de las GPU, ejecutando de forma simultánea un gran número de hilos.
-
 
 En el modelo de programación CUDA, la GPU actúa como coprocesador y recibe el nombre de dispositivo.
 El programa se inicia en la CPU, denominada host, que es responsable de decidir qué fragmento de código se ejecutará en la GPU, reservar la memoria necesaria y transferir los datos correspondientes.
@@ -174,10 +176,6 @@ El número total de hilos será el producto de ambos valores.
 
 Cada kernel se define con el calificador \texttt{\_\_global\_\_}, que indica que la función será ejecutada en el dispositivo pero invocada desde el host.
 La llamada al kernel incluye la configuración de ejecución mediante los operadores \texttt{<<<...>>>}, que especifican el tamaño de la cuadrícula (\texttt{GRID\_SIZE}) y del bloque (\texttt{BLOCK\_SIZE}):
-
-
-
-
 \begin{lstlisting}[language=C,label={lst:ejemplo_kernel}]
 __global__ void compute(double *data, int N) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -211,7 +209,8 @@ En la práctica, tamaños de 128, 256 o 512 hilos por bloque suelen ofrecer un e
 \subsubsection{Modelo de memoria}
 El modelo de memoria de CUDA se organiza en varios niveles, cada uno con distinto alcance y velocidad:
 \begin{itemize}
-    \item \textbf{Memoria global}: accesible por todos los hilos y persistente durante la ejecución. Tiene gran capacidad, pero mayor latencia.
+    \item \textbf{Memoria global}: accesible por todos los hilos y persistente durante la ejecución.
+    Tiene gran capacidad, pero mayor latencia.
     \item \textbf{Memoria compartida}: compartida entre los hilos de un mismo bloque, de acceso rápido y útil para almacenar resultados intermedios.
     \item \textbf{Registros y memoria local}: privados para cada hilo, con acceso muy rápido.
 \end{itemize}

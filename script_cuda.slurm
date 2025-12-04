@@ -15,6 +15,7 @@ ulimit -s unlimited
 # Cargar módulos
 module load cesga/2025 nvhpc/25.3-CUDA-system
 # Compilar el programa
+export HDF5_ROOT=$HOME/hdf5-nvhpc
 mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build

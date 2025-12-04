@@ -1,34 +1,11 @@
 import os
-import glob
 from paraview.simple import *
 import argparse
 
-GAUSSIAN_RADIUS = 0.0010   # radio base de Gaussian Points
-COLOR_FIELD = "MASS"        # columna para color y escala
+GAUSSIAN_RADIUS = 0.0010   # Radio de las estrellas
+COLOR_FIELD = "MASS"        # Campo para color y escala
 RES_X = 1920
 RES_Y = 1080
-
-def process_step(step_dir):
-    # Cargar todos los CSV del step
-    csv_files = sorted(glob.glob(os.path.join(step_dir, "*.csv")))
-    if not csv_files:
-        return None
-
-    point_sources = []
-    for csv_file in csv_files:
-        r = CSVReader(FileName=csv_file)
-        tableToPoints = TableToPoints(Input=r)
-        tableToPoints.XColumn = "X"
-        tableToPoints.YColumn = "Y"
-        tableToPoints.ZColumn = "Z"
-        point_sources.append(tableToPoints)
-
-    if len(point_sources) == 1:
-        merged = point_sources[0]
-    else:
-        merged = AppendDatasets(Input=point_sources)
-
-    return merged
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -41,31 +18,32 @@ if __name__ == "__main__":
     os.makedirs(args.outdir, exist_ok=True)
 
     # Detectar steps
-    step_dirs = sorted([os.path.join(args.indir, d) for d in os.listdir(args.indir) if d.startswith("step_")])
+    step_dirs = sorted([os.path.join(args.indir, d) for d in os.listdir(args.indir)
+                        if d.startswith("step_")])
     if not step_dirs:
         print("No se encontraron steps")
         exit(1)
 
-    # Crear vista
+    # Crear vista de render
     view = CreateView("RenderView")
     view.ViewSize = [args.resx, args.resy]
     view.UseColorPaletteForBackground = 0
     view.Background = [0.0, 0.0, 0.0]
 
-    # --- Calcular bounding box global ---
+    # Calcular bounding box global
     global_bounds = [1e99, -1e99, 1e99, -1e99, 1e99, -1e99]
     for step_dir in step_dirs:
-        dataset = process_step(step_dir)
-        if dataset is None:
+        xmf_file = os.path.join(step_dir, f"step_{int(step_dir.split('_')[-1]):04d}.xmf")
+        if not os.path.exists(xmf_file):
             continue
-        info = dataset.GetDataInformation().GetBounds()
+        reader = XDMFReader(FileNames=[xmf_file])
+        reader.UpdatePipeline()  # obtiene bounds
+        info = reader.GetDataInformation().GetBounds()
         for j in range(3):
             global_bounds[2*j]   = min(global_bounds[2*j], info[2*j])
             global_bounds[2*j+1] = max(global_bounds[2*j+1], info[2*j+1])
-        Delete(dataset)
-        del dataset
+        Delete(reader)
 
-    # --- Configurar cámara al bounding global ---
     cx = 0.5 * (global_bounds[0] + global_bounds[1])
     cy = 0.5 * (global_bounds[2] + global_bounds[3])
     cz = 0.5 * (global_bounds[4] + global_bounds[5])
@@ -78,14 +56,18 @@ if __name__ == "__main__":
     view.CameraPosition   = [cx, cy, cz + dist]
     view.CameraViewUp     = [0, 1, 0]
 
-    # --- Render paso a paso ---
+    # Render paso a paso
     for i, step_dir in enumerate(step_dirs):
         print(f"Procesando {step_dir} ...")
-        dataset = process_step(step_dir)
-        if dataset is None:
+        xmf_file = os.path.join(step_dir, f"step_{i:04d}.xmf")
+        if not os.path.exists(xmf_file):
             continue
 
-        display = Show(dataset, view, 'GeometryRepresentation')
+        # Lectura XDMF (paralelo automático con MPI)
+        reader = XDMFReader(FileNames=[xmf_file])
+
+        # Representación tipo Point Gaussian
+        display = Show(reader, view, 'GeometryRepresentation')
         display.Representation = 'Point Gaussian'
         display.GaussianRadius = GAUSSIAN_RADIUS
         display.Emissive = 1
@@ -93,15 +75,13 @@ if __name__ == "__main__":
         display.SetScaleArray = ['POINTS', COLOR_FIELD]
         display.UseScaleFunction = 0
 
+        # Escala de color
         ColorBy(display, ('POINTS', COLOR_FIELD))
         lut = GetColorTransferFunction(COLOR_FIELD)
         lut.ApplyPreset("Black-Body Radiation", True)
-
-        # --- Escala logarítmica ---
         lut.MapControlPointsToLogSpace()
         lut.UseLogScale = 1
 
-        # --- Ajustar rango para evitar "todo rojo" ---
         lut.RescaleTransferFunction(0.05, 5)
 
         display.LookupTable = lut
@@ -112,9 +92,8 @@ if __name__ == "__main__":
         SaveScreenshot(filename, view, ImageResolution=[args.resx, args.resy])
         print(f" -> Guardada {filename}")
 
-        # --- Liberar memoria ---
-        Hide(dataset, view)
-        Delete(dataset)
-        del dataset
+        # Liberar memoria
+        Hide(reader, view)
+        Delete(reader)
 
     print("Renderizado por pasos completado")

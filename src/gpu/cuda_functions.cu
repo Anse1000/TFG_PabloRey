@@ -2,6 +2,7 @@
 #include "../aux_fun.h"
 #include <sys/time.h>
 #include "octree_gpu.h"
+#include "../file_handler.h"
 
 #define BLOCK_SIZE 256
 
@@ -403,7 +404,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
     unsigned int offsets[8];
     reorder_stars(estrellas, cx, cy, cz, offsets);
-    write_results(estrellas, outputfile, "cuda_results", -1);
+    write_results_hdf5(estrellas, outputfile, "cuda_results", -1);
     // Construir árbol
     OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
     for (int step = 0; step < steps; step++) {
@@ -429,7 +430,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
             printf("Error en fase 2\n");
             return;
         }
-        write_results(estrellas, outputfile, "cuda_results", step);
+        write_results_hdf5(estrellas, outputfile, "cuda_results", step);
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);
         printf("************ Paso %d finalizado en %6.0f segundos ************\n", step + 1, step_seconds);

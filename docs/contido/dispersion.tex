@@ -47,11 +47,11 @@ Esta tabla contiene más de cien columnas y constituye la base de las demás tab
     Está construido mediante el sistema de indexación jerárquico HEALPix\footnote{HEALPix. Disponible en: \url{https://healpix.sourceforge.io/}{HEALPix - Features}}, lo que permite conocer la localización aproximada de la estrella en el cielo.
     Este identificador es único para cada fuente y se utiliza para realizar referencias cruzadas entre las distintas tablas del archivo Gaia y otras bases de datos astronómicas.
 
-    \item \texttt{ra}($\alpha$): Ascensión Recta , expresada en grados y referida al sistema de coordenadas ecuatoriales (epoch J2016.0).
+    \item \texttt{ra}($\alpha$): Ascensión Recta, expresada en grados y referida al sistema de coordenadas ecuatoriales (epoch J2016.0).
     \footnote{El término \textit{epoch 2016} indica la fecha de referencia para las coordenadas y los movimientos propios utilizados en el catálogo. En astronomía, las posiciones de las estrellas cambian lentamente con el tiempo debido a su movimiento real en el espacio y a efectos como la precesión. Por ello, los catálogos fijan una \textit{época} (en este caso el año 2016) como punto de referencia a partir del cual se definen y extrapolan las posiciones estelares.}
     Indica la posición de la fuente en el eje Este–Oeste del cielo y, junto con la declinación, determina su ubicación precisa en la bóveda celeste.
 
-    \item \texttt{dec}($\delta$): Declinación , también en grados, medida en el sistema ecuatorial.
+    \item \texttt{dec}($\delta$): Declinación, también en grados, medida en el sistema ecuatorial.
     Representa la posición angular de la fuente respecto al ecuador celeste, análoga a la latitud terrestre.
     Combinada con \texttt{ra}, define la posición bidimensional de la fuente observada.
 
@@ -67,14 +67,9 @@ Esta tabla contiene más de cien columnas y constituye la base de las demás tab
     Este parámetro se obtiene a partir del \textit{Radial Velocity Spectrometer} (RVS) a bordo de Gaia.
     Permite conocer el componente de la velocidad en la línea de visión y, junto con los movimientos propios, reconstruir el vector de movimiento tridimensional de la fuente.
 
-    \item \texttt{phot\_g\_mean\_mag}: Magnitud aparente media en la banda fotométrica \texttt{G}, calibrada en el sistema Vega, es una medida directa del brillo observado.
-    Este valor, combinado con la distancia, permite calcular la magnitud absoluta y, por tanto, la luminosidad estelar.
-
     \item \texttt{bp\_rp}: Color fotométrico definido como la diferencia entre las magnitudes medias en las bandas azul (\texttt{BP}) y roja (\texttt{RP}).
     Este índice de color es un indicador directo de la temperatura efectiva de la estrella.
 
-    \item \texttt{logg\_gspphot}: Logaritmo de la gravedad superficial de la estrella, expresado en cm/s$^2$ y estimado por el módulo fotométrico \texttt{GSP-Phot}.
-    Valores altos corresponden a estrellas de la secuencia principal, mientras que valores bajos son típicos de gigantes o supergigantes.
 \end{itemize}
 \subsubsection{Tabla \texttt{astrophysical\_parameters}}
 Las columnas extraídas de la tabla \texttt{astrophysical\_parameters} pertenecen al módulo \texttt{FLAME} (\textit{Final Luminosity, Age and Mass Estimator}), encargado de estimar parámetros físicos de las estrellas a partir de la información fotométrica y de modelos de evolución estelar.
@@ -86,15 +81,12 @@ A continuación se describen las columnas empleadas en este trabajo:
 
     \item \texttt{mass\_flame}: Masa estelar estimada en unidades de masa solar ($M_{\odot}$). Este valor se obtiene mediante el ajuste de modelos teóricos de evolución estelar a las observaciones fotométricas y astrométricas (paralaje, temperatura efectiva, luminosidad y metalicidad).
 
-    \item \texttt{radius\_flame}: Radio estelar estimado en unidades de radio solar ($R_{\odot}$), derivado de los mismos modelos empleados por el módulo \texttt{FLAME}.
-    Este parámetro indica el tamaño físico aproximado de la estrella.
-    En combinación con la temperatura efectiva y la luminosidad, permite situar la estrella dentro del diagrama de Hertzsprung–Russell\footnote{Más información disponible en: \url{https://es.wikipedia.org/wiki/Diagrama_de_Hertzsprung-Russell}} y estimar su estado evolutivo (secuencia principal, subgigante o gigante).
 \end{itemize}
 \subsubsection{Parámetro adicional}
 Además de las columnas anteriores, se incluye también el parámetro \texttt{rgeo}, obtenido a través del servicio \textit{TAP VizieR}\footnote{TAP VizieR. Disponible en: \url{https://tapvizier.u-strasbg.fr/adql/}}, que proporciona datos complementarios derivados de catálogos externos al archivo principal de Gaia:
 
 \begin{itemize}
-    \item \texttt{rgeo}: Distancia geométrica estimada en parsecs (pc)\footnote{1 pc equivale a 3.26 años luz o 3,0857 \times 10^{13}km} basada en el método bayesiano desarrollado por Bailer-Jones~\cite{Bailer-Jones2021}.
+    \item \texttt{rgeo}: Distancia geométrica estimada en parsecs (pc)\footnote{1 parsec equivale a 3.26 años luz o 3,0857 \times 10^{13} km} basada en el método bayesiano desarrollado por Bailer-Jones~\cite{Bailer-Jones2021}.
     Este parámetro corrige las incertidumbres y sesgos asociados al cálculo directo de la distancia mediante la inversa del paralaje, especialmente relevantes en regiones con errores elevados o valores negativos de paralaje.
     El valor de \texttt{rgeo} representa la mejor estimación estadística de la distancia a la fuente, teniendo en cuenta tanto la medida observacional como un modelo de distribución espacial de estrellas en la galaxia.
     Resulta fundamental para convertir magnitudes aparentes en magnitudes absolutas y para estimar luminosidades físicas de las estrellas con mayor precisión.
@@ -113,7 +105,7 @@ Por esta razón, se selecciona únicamente la población de \textbf{estrellas de
 Esta restricción garantiza que las estrellas analizadas se encuentren en una fase estable de evolución estelar, dominada por la fusión de hidrógeno en el núcleo.
 
 Adicionalmente, se descartan todas las fuentes con información incompleta, es decir, aquellas que presentan valores nulos (\texttt{NULL}) en alguna de las siguientes columnas esenciales:
-\texttt{bp\_rp}, \texttt{phot\_g\_mean\_mag} o \texttt{rgeo}.
+\texttt{bp\_rp} o \texttt{rgeo}.
 Este filtrado no solo garantiza la coherencia de las magnitudes físicas calculadas, sino que también reduce el tamaño efectivo del conjunto de datos, lo cual es crucial desde el punto de vista computacional.
 
 Tras aplicar ambos criterios, la restricción fotométrica de secuencia principal y la eliminación de registros incompletos, la muestra final empleada en este trabajo queda compuesta por \textbf{1.174.075.109 estrellas}.
@@ -186,7 +178,7 @@ Estos movimientos propios corresponden únicamente a la componente tangencial de
 Para convertirlos en una velocidad física en el espacio, es necesario combinarlos con la distancia \( d \) a la estrella.
 
 Primero, calculamos la velocidad tangencial tridimensional.
-Para ello se utiliza una matriz de transformación \( T \) , que permite transformar las variaciones angulares observadas sobre la esfera celeste en componentes cartesianas en un sistema de coordenadas ecuatoriales:
+Para ello se utiliza una matriz de transformación \( T \), que permite transformar las variaciones angulares observadas sobre la esfera celeste en componentes cartesianas en un sistema de coordenadas ecuatoriales:
 \[
     T =
     \begin{pmatrix}
@@ -238,7 +230,7 @@ Finalmente, la velocidad radial estimada se obtiene como:
     v_r = V_{\text{radial\_sin}} + V_{\text{rot}} - V_{\text{sol}}
 \]
 En este trabajo se adoptan los valores propuestos por Schönrich et al\cite{schonrich2010,blandhawthorn2016} para el movimiento solar:
-\( V_{\text{GAL}} = 220~\text{km s}^{-1} \), \( U_{\text{SOL}} = 11.1~\text{km s}^{-1}\), \( V_{\text{SOL}} = 12.24~\text{km s}^{-1}\), \( W_{\text{SOL}} = 7.25~\text{km s}^{-1}\).
+\( V_{\text{GAL}} = 220~\text{km s}^{-1} \),  \( U_{\text{SOL}} = 11.1~\text{km s}^{-1}\),  \( V_{\text{SOL}} = 12.24~\text{km s}^{-1}\),  \( W_{\text{SOL}} = 7.25~\text{km s}^{-1}\).
 
 De este modo, el procedimiento permite aproximar la velocidad radial de una estrella a partir de parámetros astrométricos disponibles (posición, movimientos propios y distancia), incluyendo los efectos de la rotación galáctica y del movimiento solar.
 \subsection{Cálculo de las velocidades espaciales}\label{subsec:calculo-de-las-velocidades-espaciales}
@@ -291,23 +283,30 @@ que describen el movimiento tridimensional de la estrella respecto al centro gal
 expresadas en unidades de kiloparsecs por millón de años (kpc\,Myr\(^{-1}\)).
 \subsection{Estimación de masas estelares}\label{subsec:estimacion-de-masas-estelares}
 
-Para las estrellas con parámetros atmosféricos conocidos, la masa se estima a partir de la relación entre la gravedad superficial $g$ y el radio estelar $R$~\cite{carroll2017}:
+La metodología para la estimación de masas se fundamenta en la estrecha correlación física existente entre la masa, la luminosidad y la temperatura efectiva para las estrellas que se encuentran en la fase de combustión de hidrógeno.
+Tal y como se observa en el diagrama Color-Magnitud de la Figura~\ref{fig:hr_diagram}, la Secuencia Principal (SP) no es una dispersión aleatoria, sino una banda diagonal bien definida donde la posición de una estrella está determinada casi unívocamente por su masa.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{imaxes/R}
+    \caption{Diagrama Color-Magnitud observacional del catálogo Gaia.}
+    \label{fig:hr_diagram}
+\end{figure}
+
+Dado que la muestra seleccionada para este trabajo se restringe al intervalo de color $0.3 < (G_{BP}-G_{RP}) < 2.0$ (cubriendo tipos espectrales desde F tardío hasta M tempranas), se evita la región de degeneración donde las estrellas gigantes rojas podrían confundirse con enanas de baja masa.
+Esto permite derivar la masa estelar directamente a partir del índice de color fotométrico de Gaia, una magnitud que presenta una incertidumbre instrumental significativamente menor que la paralaje o los parámetros atmosféricos derivados ($\log g$).
+
+Para cuantificar esta relación, se ha implementado un ajuste polinómico de cuarto grado basado en las tablas de propiedades estelares estándar de Pecaut \& Mamajek~\cite{pecaut2013}, utilizando sus coeficientes actualizados para las bandas pasantes de Gaia DR3. La relación funcional adoptada es:
 
 \[
-    \log_{10}\left(\frac{M}{M_\odot}\right) = \log g - \log g_\odot + 2 \log_{10}\left(\frac{R}{R_\odot}\right)
+    \log_{10}\left(\frac{M}{M_\odot}\right) = \sum_{n=0}^{4} c_n \cdot (G_{BP}-G_{RP})^n
 \]
 
-donde $\log g_\odot = 4.437$ es el valor adoptado para el Sol.
-En los casos en los que la estimación directa no es posible, se aplica una relación empírica entre la masa, el color fotométrico $(BP-RP)$ y la magnitud absoluta $M_G$, siguiendo la metodología del módulo FLAME de Gaia DR3~\cite{gaia_dr3_flame}:
+Donde los coeficientes empíricos $c_n$, optimizados para minimizar los residuos en la Secuencia Principal de edad cero (ZAMS), toman los siguientes valores:
+\[    \begin{array}{r@{\,}l@{\quad}r@{\,}l@{\quad}r@{\,}l@{\quad}r@{\,}l@{\quad}r@{\,}l}
+        c_0 &= \phantom{-}0.5293, & c_1 &= -0.7963, & c_2 &= \phantom{-}0.2741, & c_3 &= -0.0617, & c_4 &= \phantom{-}0.0039
+    \end{array}\]
 
-\[
-    \log_{10}\left(\frac{M}{M_\odot}\right) = a \,(BP-RP) + b \, M_G + c
-\]
-
-con coeficientes ajustados para estrellas de la secuencia principal solar–metalicidad:
-$a = -0.15$, $b = -0.10$, $c = 1.2$.
-Esta aproximación permite mantener la coherencia de los datos incluso para fuentes incompletas, proporcionando una estimación razonable de la masa estelar en ausencia de mediciones directas.
-\bigskip
+El uso de esta calibración empírica asegura que las masas estimadas sean consistentes con los modelos de evolución estelar modernos, evitando las anomalías numéricas que surgen al aplicar relaciones físicas directas ($g \propto M/R^2$) sobre datos observacionales con ruido estadístico.
 
 Tras estos cálculos previos y las correspondientes transformaciones, se obtienen los datos necesarios en las unidades adecuadas para realizar los cálculos de dispersión estelar:
 
@@ -323,7 +322,7 @@ Tras obtener las posiciones y velocidades galactocéntricas de las estrellas, el
 Se presentan los modelos del potencial galáctico, la forma en que se calculan las aceleraciones que rigen la dinámica del sistema y el integrador utilizado para la simulación.
 
 \subsection{Esquema de integración temporal}\label{subsec:esquema-de-integracion-temporal-(leapfrog-kick--drift--kick).}
-Para la realizar la simulación propiamente se emplea un integrador simétrico de segundo orden tipo \emph{Leapfrog} conocido como Kick--Drift--Kick~\cite{hockney1988,saha1992,springel2005}.
+Para realizar la simulación propiamente se emplea un integrador simétrico de segundo orden tipo \emph{Leapfrog} conocido como Kick--Drift--Kick~\cite{hockney1988,saha1992,springel2005}.
 Este integrador realiza actualizaciones de velocidad (v) a mitad de paso y de posicion (r) a paso completo.
 Denotando por \(\Delta t\) el paso temporal, las actualizaciones discretas son:
 \[
@@ -390,7 +389,7 @@ Para reducir el coste computacional de la suma sobre \(j\), se puede aproximar l
 Si un grupo de tamaño característico \(s\) está a distancia \(d\) del cuerpo considerado, el criterio de apertura \(\theta\) de Barnes--Hut decide si la celda puede tratarse como un único cuerpo:
 \[
     \frac{s}{d} < \theta \quad \Longrightarrow \quad
-    \mathbf{a}_{\text{celda}} \approx - G \, \frac{M_{\text{celda}}}{d^2} \,\hat{\mathbf{d}} .
+    \mathbf{a}_{\text{celda}} \approx - G \, \frac{M_{\text{celda}}}{d^2} \,\hat{\mathbf{d}}.
 \]
 Si la desigualdad no se cumple, la celda se subdivide y se consideran sus hijos (multipolo de orden superior si se desea mayor precisión).
 El parámetro \(\theta\) controla la precisión/velocidad.

@@ -14,8 +14,7 @@ void print_estrellas(Star *stars) {
         printf("ID: %lu\n", stars->id[i]);
         printf("RA: %.4f   DEC: %.4f   Distance: %.4f   Radial Velocity: %.4f\n",
                stars->ra[i], stars->dec[i], stars->distance[i], stars->radial_velocity[i]);
-        printf("Mean G: %.4f   Color: %.4f   Mass: %.4f\n",
-               stars->mean_g[i], stars->color[i], stars->mass[i]);
+        printf("Color: %.4f   Mass: %.4f\n", stars->color[i], stars->mass[i]);
         printf("Position (X, Y, Z):   (%.20lf, %.20lf, %.20lf)\n",
                stars->Cx[i], stars->Cy[i], stars->Cz[i]);
         printf("Velocity (Vx, Vy, Vz): (%.20lf, %.20lf, %.20lf)\n",

@@ -24,8 +24,6 @@ void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *o
 
 void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,double min_subdivisions);
 
-void write_results(Star *estrellas, const char *outputfile,const char*name,int step);
-
 void estimate_dt(Star *stars, double *dt);
 #ifdef __cplusplus
 }

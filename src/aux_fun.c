@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <sys/stat.h>
 
 // Función mejorada para nodo raíz Barnes-Hut
 void compute_root_bounds(Star *stars, float *cx, float *cy, float *cz, float *hs, float *min_node_size,
@@ -105,7 +104,6 @@ void resize_stars(Star *stars) {
     stars->pmra = safe_realloc(stars->pmra, sizeof(double) * stars->capacity);
     stars->pmdec = safe_realloc(stars->pmdec, sizeof(double) * stars->capacity);
     stars->radial_velocity = safe_realloc(stars->radial_velocity, sizeof(double) * stars->capacity);
-    stars->mean_g = safe_realloc(stars->mean_g, sizeof(float) * stars->capacity);
     stars->color = safe_realloc(stars->color, sizeof(float) * stars->capacity);
     stars->Cx = safe_realloc(stars->Cx, sizeof(double) * stars->capacity);
     stars->Cy = safe_realloc(stars->Cy, sizeof(double) * stars->capacity);
@@ -114,8 +112,6 @@ void resize_stars(Star *stars) {
     stars->Vy = safe_realloc(stars->Vy, sizeof(double) * stars->capacity);
     stars->Vz = safe_realloc(stars->Vz, sizeof(double) * stars->capacity);
     stars->mass = safe_realloc(stars->mass, sizeof(double) * stars->capacity);
-    stars->radius = safe_realloc(stars->radius, sizeof(float) * stars->capacity);
-    stars->gravity = safe_realloc(stars->gravity, sizeof(float) * stars->capacity);
 }
 
 void free_aux(Star *estrellas) {
@@ -124,15 +120,12 @@ void free_aux(Star *estrellas) {
     free(estrellas->pmdec);
     free(estrellas->pmra);
     free(estrellas->color);
-    free(estrellas->radius);
     free(estrellas->radial_velocity);
     free(estrellas->distance);
-    free(estrellas->gravity);
-    free(estrellas->mean_g);
 #ifdef DEBUG_BUILD
     size_t total_bytes = estrellas->size * (
                              sizeof(double) * 6 + // ra, dec, pmdec, pmra, radial_velocity, distance
-                             sizeof(float) * 4 // color, radius, gravity, mean_g
+                             sizeof(float) * 1 // color
                          );
     printf("Liberados %.2lu MB de recursos auxiliares\n", total_bytes / 1024 / 1024);
 #endif
@@ -185,103 +178,4 @@ void reorder_stars(Star *stars, double cx, double cy, double cz, unsigned int *o
     printf("Estrellas ordenadas por octante\n");
     fflush(stdout);
 #endif
-}
-
-void write_chunks(Star *estrellas, const char *base_filename, const char *directory, unsigned int num_chunks) {
-    // Crear directorio si no existe
-    struct stat st = {0};
-    if (stat(directory, &st) == -1) {
-        if (mkdir(directory, 0755) == -1) {
-            perror("Error creando directorio");
-            return;
-        }
-#ifdef DEBUG_BUILD
-        printf("Directorio '%s' creado\n", directory);
-#endif
-    }
-
-    size_t chunk_size = estrellas->size / num_chunks;
-    size_t remainder = estrellas->size % num_chunks;
-
-#pragma omp parallel for
-    for (unsigned int chunk = 0; chunk < num_chunks; chunk++) {
-        size_t current_chunk_size =
-                chunk_size + (chunk < remainder ? 1 : 0);
-
-        size_t chunk_start =
-                chunk * chunk_size + (chunk < remainder ? chunk : remainder);
-        size_t chunk_end = chunk_start + current_chunk_size;
-
-        char filename[512];
-        snprintf(filename, sizeof(filename),
-                 "%s/%s_%02u.csv", directory, base_filename, chunk);
-
-        FILE *file = fopen(filename, "w");
-        if (!file) {
-            perror("Error abriendo archivo de chunk");
-            continue;
-        }
-
-        // Buffer de escritura del stream (8 MB)
-        setvbuf(file, NULL, _IOFBF, 8 * 1024 * 1024);
-
-        // Cabecera CSV
-        fputs("ID,X,Y,Z,MASS\n", file);
-
-        // Buffer de 500 MB en memoria
-        const size_t BUF_SIZE = 100ULL * 1024ULL * 1024ULL;
-        char *buf = (char *) malloc(BUF_SIZE);
-        if (!buf) {
-            perror("Error reservando buffer de 500MB");
-            fclose(file);
-            continue;
-        }
-
-        char *ptr = buf;
-        for (size_t i = chunk_start; i < chunk_end; i++) {
-            // Escribir una línea en el buffer
-            ptr += sprintf(ptr, "%lu,%.20f,%.20f,%.20f,%.20f\n",
-                           estrellas->id[i],
-                           estrellas->Cx[i],
-                           estrellas->Cy[i],
-                           estrellas->Cz[i],
-                           estrellas->mass[i]);
-
-            // Si el buffer está lleno, volcarlo al archivo
-            if ((size_t) (ptr - buf) > BUF_SIZE - 512) {
-                fwrite(buf, 1, ptr - buf, file);
-                ptr = buf; // reiniciar buffer
-            }
-        }
-
-        // Volcar lo que quede en el buffer
-        if (ptr > buf) {
-            fwrite(buf, 1, ptr - buf, file);
-        }
-
-        free(buf);
-        fclose(file);
-    }
-
-#ifdef DEBUG_BUILD
-    printf("Chunks guardados en %s\n", directory);
-    fflush(stdout);
-#endif
-}
-
-void write_results(Star *estrellas, const char *outputfile, const char *name, const int step) {
-    // Crear directorio si no existe
-    struct stat st = {0};
-    if (stat(outputfile, &st) == -1) {
-        if (mkdir(outputfile, 0755) == -1) {
-            perror("Error creando directorio");
-            return;
-        }
-#ifdef DEBUG_BUILD
-        printf("Directorio '%s' creado\n", outputfile);
-#endif
-    }
-    char output[500];
-    sprintf(output, "%s/step_%d", outputfile, step + 1);
-    write_chunks(estrellas, name, output, 25);
 }

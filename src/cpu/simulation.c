@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include "../aux_fun.h"
 #include "octree_cpu.h"
+#include "../file_handler.h"
 
 // --- Halo NFW
 double halo_accel(double r, double *ax, double *ay, double *az,
@@ -127,6 +128,7 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
     printf("Iniciando simulacion con %d threads\n", omp_get_max_threads());
     fflush(stdout);
     float DT2 = 0.5F * DT;
+    write_results_hdf5(estrellas, outputfile, "cpu_results", -1);
     printf("Simulando %d pasos de %.0f años (Total: %.0f años)\n", steps, DT * 1000000, DT * steps * 1000000);
     printf("******************************************************\n");
     fflush(stdout);
@@ -184,7 +186,7 @@ void simulate(Star *estrellas, const int steps, const long N, const char *output
         }
 
         // Guardar resultados
-        write_results(estrellas, outputfile, "cpu_results", step);
+        write_results_hdf5(estrellas, outputfile, "cpu_results", step);
 
         gettimeofday(&step_end, NULL);
         double step_seconds = get_seconds(step_start, step_end);

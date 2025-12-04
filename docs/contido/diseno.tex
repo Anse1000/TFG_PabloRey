@@ -25,7 +25,7 @@ De esta forma se obtuvieron diversos archivos \texttt{.csv} con los campos \text
 \subsection*{Reducción de columnas}
 
 Con el fin de optimizar el almacenamiento y acelerar las operaciones de lectura, los archivos originales se redujeron manteniendo únicamente las columnas relevantes para el análisis:
-\texttt{source\_id}, \texttt{ra}, \texttt{dec}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}, \texttt{phot\_g\_mean\_mag} y \texttt{bp\_rp}.
+\texttt{source\_id}, \texttt{ra}, \texttt{dec}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity} y \texttt{bp\_rp}.
 El filtrado se realizó mediante herramientas de línea de comandos (\texttt{awk}) y utilizando \texttt{parallel} para acelerar el proceso, generando versiones compactas de los catálogos~\ref{lst:script_reducir_astro}.
 \subsection*{Combinación de catálogos}
 
@@ -45,10 +45,44 @@ El sistema implementa un simulador de dinámica galáctica mediante una arquitec
 
 Ambas versiones comparten la misma interfaz de entrada/salida, las mismas estructuras de datos fundamentales y el mismo pipeline de procesamiento, permitiendo una fácil validación cruzada de resultados y comparación de rendimiento.
 La selección entre la versión CPU o GPU se realiza en tiempo de compilación mediante opciones de CMake (\texttt{ENABLE\_CUDA}), facilitando la adaptación a distintas infraestructuras y volumen de datos.
+\subsection*{Organización del código fuente}
+El código fuente del proyecto se ha estructurado modularmente para separar claramente la lógica de cálculo físico, la gestión de estructuras de datos y las operaciones de entrada/salida. A continuación se detalla la responsabilidad de los archivos principales, divididos según su ubicación en el árbol de directorios:
 
+\subsubsection*{Núcleo del sistema (\texttt{src/})}
+Este directorio contiene los puntos de entrada y las utilidades compartidas por ambas implementaciones (CPU y GPU).
 
-FALTA COMPLETAR
+\begin{itemize}
+    \item \texttt{main.c}: Punto de entrada de la aplicación. Gestiona el análisis de argumentos de línea de comandos, inicializa la configuración global y orquesta la selección entre la simulación en CPU o GPU.
+    \item \texttt{types.h}: Archivo de cabecera central que define las constantes físicas, parámetros galácticos y las estructuras de datos fundamentales (como \texttt{Star}) utilizadas en todo el proyecto.
+    \item \texttt{file\_handler.c/h}: Módulo encargado de la capa de persistencia. Implementa la lectura paralela y eficiente de archivos CSV y gestiona la escritura de resultados en formato jerárquico HDF5 y descriptores XDMF.
+    \item \texttt{calculations.c/h}: Biblioteca de funciones matemáticas y físicas compartidas, incluyendo transformaciones de coordenadas y cálculos vectoriales básicos.
+    \item \texttt{aux\_fun.c/h}: Colección de utilidades para la medición de tiempos de ejecución, manejo de cadenas y gestión de errores.
+\end{itemize}
 
+\subsubsection*{Módulo CPU (\texttt{src/cpu/})}
+Contiene la implementación de la simulación basada en procesadores convencionales utilizando OpenMP.
+
+\begin{itemize}
+    \item \texttt{octree\_cpu.c/h}: Implementa la estructura de datos del árbol octal (\textit{Octree}) y los algoritmos recursivos para su construcción y recorrido según el método de Barnes-Hut estándar.
+    \item \texttt{simulation.c/h}: Define el bucle principal de integración temporal para la versión CPU, coordinando los pasos de \textit{kick} y \textit{drift} y la reconstrucción del árbol en cada iteración.
+\end{itemize}
+
+\subsubsection*{Módulo GPU (\texttt{src/gpu/})}
+Contiene la lógica específica para la aceleración mediante GPU NVIDIA y CUDA.
+
+\begin{itemize}
+    \item \texttt{cuda\_functions.cu/cuh}: Archivos que contienen los \textit{kernels} CUDA (.cu) que se ejecutan en el dispositivo. Gestionan el cálculo masivo de fuerzas, la actualización de posiciones y la transferencia de memoria entre \textit{host} y \textit{device}.
+    \item \texttt{octree\_gpu.c/h}: Gestiona la adaptación del árbol octal para la GPU. Se encarga de la lógica del \textit{host} para preparar las estructuras lineales y las fronteras (\textit{frontiers}) que consumirán los kernels.
+\end{itemize}
+
+\subsubsection*{Scripts y herramientas (\texttt{scripts/})}
+El directorio \texttt{scripts} alberga herramientas auxiliares desarrolladas en Python y Bash para el preprocesamiento y postprocesamiento.
+
+\begin{itemize}
+    \item \textbf{Gestión de datos:} Scripts que automatizan la descarga de catálogos desde Gaia y TAPVizieR, así como su limpieza y fusión en archivos CSV optimizados.
+    \item \textbf{Ejecución HPC:} Archivos con extensión \texttt{.slurm} que definen los trabajos por lotes para el gestor de colas del supercomputador.
+    \item \textbf{Visualización:} \texttt{render.py} permite generar representaciones gráficas rápidas de la simulación para validación visual.
+\end{itemize}
 \section{Estructuras de datos principales}\label{sec:estructuras}
 El sistema utiliza varias estructuras de datos fundamentales que son compartidas entre la versión CPU y GPU, además de otras especializadas en cada versión.
 Estas estructuras están diseñadas para optimizar tanto el acceso a memoria como la compatibilidad con los modelos de paralelización disponibles.
@@ -58,7 +92,7 @@ Estas estructuras están diseñadas para optimizar tanto el acceso a memoria com
 La estructura central del sistema es \texttt{Star}, que agrupa los parámetros astrométricos, cinemáticos y físicos de cada objeto celeste.
 Esta estructura se organiza de forma \textit{structure-of-arrays} (SoA) en lugar de arrays de estructuras, permitiendo optimizar el acceso a memoria en operaciones paralelas y facilitar la vectorización automática en CPU y GPU.
 
-\subsubsection*{Diseño y selección de tipos de datos}
+\subsubsection*{Selección de tipos de datos y consumo de memoria}
 
 La selección de tipos de datos en cada campo responde a criterios de precisión numérica y eficiencia de memoria:
 
@@ -72,7 +106,8 @@ La selección de tipos de datos en cada campo responde a criterios de precisión
 
     \item \textbf{Precisión simple (\texttt{float}, 32 bits)}:
     \begin{itemize}
-        \item \texttt{mass}, \texttt{radius}, \texttt{gravity}, \texttt{mean\_g}, \texttt{color}: Estos parámetros representan propiedades físicas derivadas o fotométricas con precisión inherente limitada. La masa se estima mediante relaciones empíricas con incertidumbre del orden del 10--20\%. El índice de color y magnitud se proporcionan con precisión limitada en el catálogo. Usar precisión simple reduce el consumo de memoria a la mitad en estos campos sin pérdida práctica de información.
+        \item \texttt{mass}, \texttt{color}: Estos parámetros representan propiedades físicas derivadas o fotométricas con precisión inherente limitada.
+        Usar precisión simple reduce el consumo de memoria a la mitad en estos campos sin pérdida práctica de información.
     \end{itemize}
 
     \item \textbf{Identificador de 64 bits sin signo (\texttt{unsigned long})}:
@@ -81,10 +116,9 @@ La selección de tipos de datos en cada campo responde a criterios de precisión
     \end{itemize}
 \end{itemize}
 
-\subsubsection*{Consumo de memoria}
 Para una estructura con $N$ estrellas y capacidad $C$:
 \[
-    \text{Memoria} = C \times (8 + 8 \times 6 + 8 \times 3 + 8 \times 3 + 4 \times 5) \text{ bytes} = C \times 152 \text{ bytes}
+    \text{Memoria} = C \times (8 + 8 \times 6 + 8 \times 3 + 8 \times 3 + 4 \times 2) \text{ bytes} = C \times 140 \text{ bytes}
 \]
 
 Esto es:
@@ -92,14 +126,14 @@ Esto es:
     \item \texttt{id}: 8 bytes $\times$ 1 = 8 bytes
     \item \texttt{ra}, \texttt{dec}, \texttt{distance}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: 8 bytes $\times$ 6 = 48 bytes
     \item \texttt{Cx}, \texttt{Cy}, \texttt{Cz}, \texttt{Vx}, \texttt{Vy}, \texttt{Vz}: 8 bytes $\times$ 6 = 48 bytes
-    \item \texttt{mean\_g}, \texttt{color}, \texttt{radius}, \texttt{gravity}, \texttt{mass}: 4 bytes $\times$ 5 = 20 bytes
-    \item \textbf{Total por estrella: 152 bytes}
+    \item \texttt{color}, \texttt{mass}: 4 bytes $\times$ 2 = 8 bytes
+    \item \textbf{Total por estrella: 140 bytes}
 \end{itemize}
 
 Para una simulación con 1.100 millones de estrellas utilizadas en el proyecto como se ve en la subsección~\ref{sec:filtrado}, la memoria requerida sería:
 
 \[
-    1.1 \times 10^9 \times 152 \text{ bytes} = 171.3 \text{ GB}
+    1.1 \times 10^9 \times 140 \text{ bytes} = 143.42 \text{ GB}
 \]
 tamaño perfectamente abarcable en los nodos disponibles en el Finisterrae III de 256 GB de RAM~\ref{subsec:especificaciones-tecnicas-de-los-nodos}.
 
@@ -108,22 +142,14 @@ tamaño perfectamente abarcable en los nodos disponibles en el Finisterrae III d
 Tras la carga completa de un bloque de estrellas y la realización de los cálculos preliminares (transformación de coordenadas y estimación de masas), ciertos campos astrométricos originales dejan de ser necesarios y son liberados para reducir el consumo de memoria:
 
 \begin{itemize}
-    \item \textbf{Datos liberados después de transformación de coordenadas}:
-    \begin{itemize}
-        \item \texttt{ra}, \texttt{dec}, \texttt{distance}: Tras convertir a coordenadas cartesianas heliocéntricas (\texttt{Cx}, \texttt{Cy}, \texttt{Cz}), estos datos ecuatoriales ya no son necesarios.
+    \item \texttt{ra}, \texttt{dec}, \texttt{distance}: Tras convertir a coordenadas cartesianas heliocéntricas (\texttt{Cx}, \texttt{Cy}, \texttt{Cz}), estos datos ecuatoriales ya no son necesarios.
 
-        \item \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: Tras convertir a velocidades cartesianas (\texttt{Vx}, \texttt{Vy}, \texttt{Vz}), estos datos originales no vuelven a usarse.
-    \end{itemize}
+    \item \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: Tras convertir a velocidades cartesianas (\texttt{Vx}, \texttt{Vy}, \texttt{Vz}), estos datos originales no vuelven a usarse.
 
-    \item \textbf{Datos liberados después de estimación de masas}:
-    \begin{itemize}
-        \item \texttt{gravity}, \texttt{mean\_g}, \texttt{color}: Tras estimar \texttt{mass} mediante la relación masa-luminosidad que utiliza estos parámetros, pueden ser liberados si no se requieren en resultados finales.
-    \end{itemize}
-
-    \item \textbf{Impacto en memoria}:
-    Liberando los 6 campos astrométricos originales reduce el consumo en 48 bytes por objeto, correspondiendo a una reducción del 31.6\% respecto al consumo total por estrella.
-    Para 1.100 millones de estrellas, esto libera aproximadamente 49.2 GB de memoria.
+    \item \texttt{color}: Tras estimar \texttt{mass} mediante la relación masa-luminosidad que utiliza estos parámetros, pueden ser liberados si no se requieren en resultados finales.
 \end{itemize}
+Liberando los 7 campos astrométricos originales reduce el consumo en 52 bytes por objeto, correspondiendo a una reducción del 37.1\% respecto al consumo total por estrella.
+Para 1.100 millones de estrellas, esto libera aproximadamente 53.27 GB de memoria.
 
 Este diseño permite un balance entre precisión numérica, eficiencia de memoria y adaptabilidad a diferentes infraestructuras y volúmenes de datos, siendo crucial para gestionar simulaciones de escala galáctica en entornos de computación de altas prestaciones.
 
@@ -132,7 +158,7 @@ Este diseño permite un balance entre precisión numérica, eficiencia de memori
 La estructura \texttt{Octree} implementa el árbol jerárquico utilizado en la versión CPU del simulador para acelerar el cálculo de fuerzas gravitatorias mediante el método de Barnes-Hut.
 A diferencia de la estructura \texttt{Star}, que es plana y homogénea, el octree es una estructura (SoA) jerárquica donde cada nodo contiene referencias a hasta 8 nodos hijos.
 
-\subsubsection*{Diseño y campos de datos}
+\subsubsection*{Campos de datos y consumo de memoria}
 
 Cada nodo del octree almacena información geométrica, propiedades físicas acumuladas e información topológica:
 
@@ -176,12 +202,9 @@ Cada nodo del octree almacena información geométrica, propiedades físicas acu
         Aunque \texttt{unsigned int} no permite directamente valores negativos como -1, el uso de \texttt{UINT32\_MAX} es una estrategia estándar que proporciona semántica equivalente: una comparación \texttt{if (child == INVALID\_INDEX)} determina de forma unívoca si el hijo existe.
 
         \item \texttt{star\_index}: Índice de la estrella si el nodo es una hoja, o -1 si es un nodo interno (long, 8 bytes).
-
         Este campo mantiene precisión de 64 bits porque son los mismos valores que los almacenados en Star.
     \end{itemize}
 \end{itemize}
-
-\subsubsection*{Consumo de memoria}
 
 Memoria por nodo del octree:
 
@@ -211,7 +234,7 @@ Aunque mantiene la misma lógica algorítmica de Barnes-Hut que la versión CPU,
 
 En lugar de un único árbol monolítico como en CPU, la versión GPU divide el árbol raíz en 8 subárboles independientes, uno para cada octante del espacio:
 
-\begin{lstlisting}[language=C,label=octree_gpu_struct,caption=Estructura OctreeGPU con partición en octantes]
+\begin{lstlisting}[language=C,label={lst:octree\_gpu\_struct},caption=Estructura OctreeGPU con partición en octantes]
 typedef struct {
     OctreeOctant *octants[8];    // 8 subárboles independientes
     FrontierGPU *frontier[8];    // 8 fronteras multipolo
@@ -236,7 +259,7 @@ Cada thread de CUDA que desciende por el árbol accede a un único nodo a la vez
 
 Debido a la baja eficiencia de funciones recursivas para recorrer el árbol en GPU, la arquitectura CUDA requiere un enfoque iterativo que evite el uso de stack implícito.
 El campo añadido a la estructura \texttt{next} implementa un enlace al siguiente nodo relevante en orden de traversal horizontal, convirtiendo la búsqueda recursiva del árbol en una iteración directa sobre una lista encadenada de nodos no-hoja.
-\begin{lstlisting}[language=C,label={lst:octree_node_struct},caption=Estructura OctreeNode]
+\begin{lstlisting}[language=C,caption=Estructura OctreeNode,label={lst:lstlisting4}]
 typedef struct {
     float center_x, center_y, center_z;
     float half_size;
@@ -291,32 +314,33 @@ La lectura se realiza mediante un modelo distribuido por archivos y procesado po
     Una vez procesados todos los archivos, se ajusta la capacidad de la estructura global al número final de estrellas, liberando memoria no utilizada.
 \end{enumerate}
 
-\subsubsection{Escritura}
+\subsubsection{Escritura y almacenamiento de datos}
 
-La salida de la simulación se realiza en paralelo, dividiendo el conjunto de estrellas en \textit{chunks} independientes:
+El sistema de salida ha sido rediseñado para utilizar el estándar \textbf{HDF5}, sustituyendo la escritura plana por un formato jerárquico binario que optimiza el espacio y facilita el acceso aleatorio a los datos.
+El proceso se divide en las siguientes etapas:
 
 \begin{enumerate}
-    \item \textbf{Creación del directorio de salida:}
-    Se comprueba la existencia del directorio de destino y, en caso necesario, se crea con permisos estándar.
+    \item \textbf{Gestión de la estructura de directorios:}
+    Para cada paso de tiempo (\texttt{step}) guardado, se genera un subdirectorio independiente.
+    Esto evita la saturación del sistema de archivos cuando se generan miles de ficheros a lo largo de la simulación.
 
-    \item \textbf{Particionado del conjunto global:}
-    El vector de estrellas se divide en \(N\) partes aproximadamente iguales, donde \(N = \texttt{num\_chunks}\).
-    Si el total no es divisible, los primeros bloques reciben un elemento adicional, garantizando un reparto equilibrado.
+    \item \textbf{Descomposición de dominio y balanceo de carga:}
+    El vector global de estrellas se divide lógicamente en \(N\) fragmentos o \textit{chunks}.
+    El tamaño de cada \textit{chunk} se calcula dinámicamente para repartir el remanente de estrellas, garantizando que todos los hilos de escritura procesen una carga de trabajo equilibrada.
 
-    \item \textbf{Paralelización por archivos:}
-    Cada bloque se escribe en un fichero independiente mediante un bucle \texttt{\#pragma omp parallel for}.
-    Esta estrategia elimina la necesidad de sincronización entre hilos, puesto que no se comparte descriptor de archivo.
-
-    \item \textbf{Optimización mediante buffers grandes:}
-    Cada archivo se escribe mediante \texttt{fwrite} utilizando dos niveles de buffering:
+    \item \textbf{Escritura paralela de archivos HDF5 (File-per-chunk):}
+    Se emplea una estrategia de paralelización mediante \textbf{OpenMP}, donde cada hilo es responsable de crear y escribir un archivo HDF5 independiente (\texttt{.h5}).
     \begin{itemize}
-        \item Buffer de flujo de 8 MB para reducir llamadas al sistema.
-        \item Buffer interno de gran capacidad (100--500 MB) donde se formatean las líneas antes de volcarlas al fichero.
+        \item Se utilizan tipos de datos nativos de HDF5 (\texttt{H5T\_NATIVE\_FLOAT} para masa,\texttt{H5T\_NATIVE\_DOUBLE} para coordenadas y \texttt{H5T\_NATIVE\_UINT64} para identificadores), lo que garantiza la portabilidad binaria entre diferentes arquitecturas.
+        \item Esta estrategia elimina la contención y el bloqueo de archivos (\textit{file locking}), permitiendo aprovechar el ancho de banda agregado del sistema de archivos paralelo (Lustre) del supercomputador.
     \end{itemize}
-    Esto minimiza escrituras fragmentadas y maximiza el ancho de banda de E/S frente a usar funciones como \texttt{fprintf}, algo crítico con millones de registros.
 
-    \item \textbf{Registro temporal de simulación:}
-    La función \texttt{write\_results} organiza automáticamente los ficheros en subdirectorios por paso temporal (\texttt{step}), facilitando el análisis posterior de la evolución dinámica.
+    \item \textbf{Generación de metadatos (Master HDF5):}
+    Una vez escritos los fragmentos, el hilo maestro genera un archivo HDF5 índice (\texttt{master.h5}) que almacena atributos globales de la simulación (número total de estrellas, límites de los chunks) y enlaces a los archivos de datos individuales.
+
+    \item \textbf{Interoperabilidad y Visualización (XDMF):}
+    Finalmente, se genera un archivo descriptor \textbf{XDMF} (eXtensible Data Model and Format).
+    Este archivo XML no contiene datos, sino que describe la topología de la nube de puntos y apunta a los datasets internos de los archivos HDF5. Esto permite que herramientas de visualización científica como \textit{ParaView} carguen los \(N\) archivos dispersos como un único objeto, simplificando drásticamente el post-procesado.
 \end{enumerate}
 
 \subsection{Construcción del árbol Barnes-Hut}\label{subsec:version-cpu}
@@ -403,7 +427,7 @@ Para cada estrella se realiza una inserción recursiva:
         \item Se reinserta tanto la estrella ya almacenada como la nueva.
     \end{itemize}
 \end{enumerate}
-\begin{lstlisting}[language=pseudo,caption={Inserción de una estrella en el árbol Barnes–Hut},label={lst:insert_compacto}]
+\begin{lstlisting}[language=pseudo,caption={Inserción de una estrella en el árbol Barnes–Hut},label={lst:lstlisting3}]
 OCTREE_INSERT(tree, stars, n, s, min_node_size):
     # Datos del nodo y la estrella
     (cx, cy, cz, hs) <- centro y half-size del nodo n
@@ -470,7 +494,7 @@ Cada nodo almacena un puntero al siguiente nodo que debe visitarse cuando se ha 
 De este modo, la navegación del árbol se convierte en un recorrido iterativo eficiente, particularmente adecuado para GPU, donde la recursión está limitada o directamente prohibida.
 
 La construcción de los \textit{ropes} se realiza mediante un recorrido estructural sobre el árbol ya construido.
-\begin{lstlisting}[language=pseudo,caption={Construcción de \textit{ropes} en el octree},label={lst:ropes_pseudo}]
+\begin{lstlisting}[language=pseudo,caption={Construcción de \textit{ropes} en el octree},label={lst:ropes}]
 BUILD_ROPES(node, next):
     si node = NULL: retornar
 
@@ -590,7 +614,8 @@ Para un total de $8$ octantes, el número de iteraciones de cálculo es:
 \]
 
 \subsubsection{Estructura del árbol en GPU y recorrido sin pila}
-El árbol Barnes--Hut no se recorre recursivamente en GPU. La recursión implicaría un uso intensivo de memoria local y divergencia de hilos. En su lugar se usa:
+El árbol Barnes--Hut no se recorre recursivamente en GPU. La recursión implicaría un uso intensivo de memoria local y divergencia de hilos.
+En su lugar se usa:
 \begin{itemize}
     \item un \textbf{árbol lineal} almacenado en memoria global,
     \item nodos con punteros a hijos directos,

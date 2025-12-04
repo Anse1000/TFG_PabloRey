@@ -15,6 +15,7 @@ project(TFG_PRA C CXX)
 option(ENABLE_CUDA "Enable CUDA support" OFF)
 
 find_package(OpenMP REQUIRED)
+find_package(HDF5 REQUIRED COMPONENTS C HL)
 
 # Archivos fuente base
 set(SRC
@@ -60,6 +61,10 @@ find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
     target_link_libraries(TFG_PRA PRIVATE ${MATH_LIBRARY})
 endif()
+
+#Añadir flags de HDF5
+target_include_directories(TFG_PRA PRIVATE ${HDF5_INCLUDE_DIRS})
+target_link_libraries(TFG_PRA PRIVATE HDF5::HDF5 ${HDF5_HL_LIBRARIES})
 
 # Añadir flags de OpenMP
 target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)

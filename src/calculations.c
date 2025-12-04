@@ -8,31 +8,29 @@ const double R[3][3] = {
     {-0.86766615, -0.19807637, +0.45598380}
 };
 
-void calculate_mass(float *mass, float gravity, float radius, float mean_g, float color, double d) {
-    if (gravity != 0 && radius != 0) {
-        // log10(M / M_sun) = logg - logg_sun + 2 * log10(R / R_sun)
-        float log_mass = gravity - LOGG_SOL + 2.0F * log10f(radius);
-        *mass = powf(10.0F, log_mass);
-        if (*mass < 0.06) { //Si la forma1 falla probamos con la segunda usando otros datos más estables pero menos precisos
-            float M_G = mean_g - 5.0F * log10f(d) + 5.0F;
-            const float a = -0.15F;
-            const float b = -0.10F;
-            const float c = 1.2F;
-
-            float log_mass2 = a * color + b * M_G + c;
-            *mass = powf(10.0F, log_mass2);
-        }
-    } else {
-        float M_G = mean_g - 5.0F * log10f(d) + 5.0F; //magnitud absoluta a 10 parsecs
-        // 2. Relación empírica: log(M) ≈ a * (BP-RP) + b * M_G + c
-        // Ajustada para secuencia principal solar-metalicidad (aproximado)
-        const float a = -0.15F;
-        const float b = -0.10F;
-        const float c = 1.2F;
-
-        float log_mass = a * color + b * M_G + c;
-        *mass = powf(10.0F, log_mass);
+// Esta es la opción GANADORA para procesamiento masivo
+void calculate_mass(float *mass, float bp_rp) {
+    // 1. Filtro estricto de Secuencia Principal
+    // Fuera de este rango, la relación polinómica empieza a fallar
+    if (bp_rp < 0.3F || bp_rp > 2.0F) {
+        *mass = 0.0F; // O un valor centinela como -1.0
+        return;
     }
+
+    // 2. Polinomio de 4º grado
+    // Ajuste empírico Log10(Masa) vs Color (BP-RP)
+    // Coeficientes optimizados para reducir residuos en la banda G
+    float x = bp_rp;
+    const float c0 = 0.5293F;
+    const float c1 = -0.7963F;
+    const float c2 = 0.2741F;
+    const float c3 = -0.0617F;
+    const float c4 = 0.0039F;
+
+    float log_mass = c0 + (c1 * x) + (c2 * x * x) + (c3 * x * x * x) + (c4 * x * x * x * x);
+
+    // 3. Conversión
+    *mass = powf(10.0F, log_mass);
 
 }
 
@@ -101,8 +99,7 @@ void complete_data(Star *stars) {
                                      stars->Cx[i], stars->Cy[i], stars->Cz[i], stars->pmra[i], stars->pmdec[i]);
         }
         if (stars->mass[i] == 0) {
-            calculate_mass(&stars->mass[i], stars->gravity[i], stars->radius[i], stars->mean_g[i], stars->color[i],
-                           stars->distance[i]);
+            calculate_mass(&stars->mass[i], stars->color[i]);
         }
         calculate_vectors(&stars->Vx[i], &stars->Vy[i], &stars->Vz[i], X_E, Y_E, Z_E, stars->pmra[i], stars->pmdec[i],
                           stars->radial_velocity[i], stars->distance[i], sin_ra, sin_dec, cos_ra, cos_dec);
