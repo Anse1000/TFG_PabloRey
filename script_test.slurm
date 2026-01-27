@@ -1,28 +1,28 @@
 #!/bin/bash
-#SBATCH -J test_ncu
-#SBATCH -t 1:00:00
-#SBATCH -o test_ncu_%j.out
-#SBATCH --mem=50GB
+#SBATCH -J test_theta
+#SBATCH -t 02:00:00
+#SBATCH -o test_theta_%j.out
+#SBATCH --mem=247GB
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 32
-#SBATCH --gres=gpu:a100:1
+#SBATCH -c 64
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
+#SBATCH --mail-type=fail
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
+set -e
 ulimit -s unlimited
-# Cargar módulos
-module load cesga/2025 nvhpc/25.3-CUDA-system
-# Compilar el programa
+# Limpiar y cargar módulos
+module purge
+module load cesga/2025 intel/2024.2.1
+# Añadir librerias
+export HDF5_ROOT=$HOME/hdf5-icc
+#Limpiar configuraciones previas
+rm -rf build
 mkdir -p build
-cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_CUDA=ON -S . -B ./build
+# Compilar el programa
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF -S . -B ./build
 cmake --build ./build
 # Ejecutar
-ncu --target-processes all \
-    --set detailed \
-    --launch-skip 5 \
-    --launch-count 1 \
-    --force-overwrite \
-    --export ncu_summary \
-    ./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/pruebas /mnt/lustre/scratch/nlsas/home/ulc/es/pra/resultados_pruebas/galactic_positions_cuda 1
+./build/TFG_PRA /mnt/lustre/scratch/nlsas/home/ulc/es/pra/optimizados /mnt/lustre/scratch/nlsas/home/ulc/es/pra/resultados/galactic_positions_cpu 1

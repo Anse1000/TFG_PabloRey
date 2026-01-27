@@ -1,4 +1,4 @@
-Iniciando lectura de 3386 archivos usando 64 threads
+   Iniciando lectura de 3386 archivos usando 64 threads
 Leídas y trasladadas 1061986807 estrellas a memoria ocupando 129637.06 MB en 152.34 segundos
 Liberados 64818 MB de recursos auxiliares
 El DT estimado máximo es 1.000000

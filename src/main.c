@@ -89,9 +89,9 @@ int main(int argc, char *argv[]) {
     //mem_test_gpu(estrellas);
 #else
     simulate(estrellas,steps,estrellas->size,argv[2],DT);
+    //run_full_cpu_validation(estrellas);
+    //test_theta(estrellas,10000);
 #endif
-    //test_simulation(estrellas);
-    //test_tree(estrellas);
     free_stars(estrellas);
     return 0;
 }

@@ -1,20 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=stars_render
+#SBATCH --job-name=render_server
 #SBATCH --output=render_%j.out
-#SBATCH -N 2
 #SBATCH -n 16
-#SBATCH -c 4
-#SBATCH --time=48:00:00
-#SBATCH --mem-per-cpu=3500MB
+#SBATCH --time=8:00:00
+#SBATCH --mem-per-cpu=15GB
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
+#SBATCH --mail-type=fail
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
-module load cesga/2020 gcc/system openmpi/4.0.5_ft3 paraview/5.10.1
-# paths
-INIT_DIR=
-FINAL_DIR=/path/to/chunks_final
-OUT_DIR=/path/to/output_frames
-NFRAMES=200
+set -e
+module load cesga/2022 gcc/system openmpi/4.1.4 paraview/5.10.1
 
-srun pvbatch render.py $INIT_DIR $FINAL_DIR $OUT_DIR $NFRAMES
+srun
+

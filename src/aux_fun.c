@@ -111,7 +111,7 @@ void resize_stars(Star *stars) {
     stars->Vx = safe_realloc(stars->Vx, sizeof(double) * stars->capacity);
     stars->Vy = safe_realloc(stars->Vy, sizeof(double) * stars->capacity);
     stars->Vz = safe_realloc(stars->Vz, sizeof(double) * stars->capacity);
-    stars->mass = safe_realloc(stars->mass, sizeof(double) * stars->capacity);
+    stars->mass = safe_realloc(stars->mass, sizeof(float) * stars->capacity);
 }
 
 void free_aux(Star *estrellas) {

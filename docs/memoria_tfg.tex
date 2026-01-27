@@ -28,20 +28,25 @@
 % Lista de paquetes potencialmente interesantes (uso baixo demanda)
 
 % \usepackage{alltt}       % proporciona o entorno alltt, semellante a verbatim pero que respecta comandos
-% \usepackage{enumitem}    % permite personalizar os entornos de lista
-% \usepackage{eurofont}    % proporciona o comando \euro
-% \usepackage{float}       % permite máis opcións para controlar obxectos flotantes (táboas, figuras)
+  \usepackage{enumitem}    % permite personalizar os entornos de lista
+  \usepackage{float}       % permite máis opcións para controlar obxectos flotantes (táboas, figuras)
 % \usepackage{hhline}      % permite personalizar as liñas horizontais en arrays e táboas
   \usepackage{longtable}   % permite construir táboas que ocupan máis dunha páxina
 % \usepackage{lscape}      % permite colocar partes do documento en orientación apaisada
 % \usepackage{moreverb}    % permite personalizar o entorno verbatim
   \usepackage{multirow}
+  \usepackage{pgfgantt}
   \usepackage{tikz}
+  \usetikzlibrary{shadows}
+  \usepackage{pgfplots}
+  \usepackage{eurosym}
+  \pgfplotsset{compat=1.18}
+
 % \usepackage{pdfpages}    % permite insertar ficheiros en PDF no documento
-% \usepackage{rotating}    % permite diferentes tipos de rotacións para figuras e táboas
+  \usepackage{rotating}    % permite diferentes tipos de rotacións para figuras e táboas
 % \usepackage{subcaption}  % permite a inclusión de varias subfiguras nunha figura
 % \usepackage{tabu}        % permite táboas flexibles
-% \usepackage{tabularx}    % permite táboas con columnas de anchura determinada
+  \usepackage{tabularx}    % permite táboas con columnas de anchura determinada
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Corpo                                                                        %
@@ -54,7 +59,7 @@
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
  \include{portada/portada}
- \dedicatoria{Dedicatoria} % escribe neste comando o teu texto de dedicatoria
+ \dedicatoria{A mis padres, por hacerlo posible} % escribe neste comando o teu texto de dedicatoria
  \paxinaenbranco
  \begin{agradecementos}
  \blindtext                % substitúe este comando polo teu texto de agradecementos
@@ -68,6 +73,7 @@
  \tableofcontents
  \listoffigures
  \listoftables
+ \lstlistoflistings
  \clearpage
  
  \pagenumbering{arabic}
@@ -91,7 +97,7 @@
 
  \appendix
  \appendixpage
-\include{anexos/scripts}
+ \include{anexos/scripts}
 
  \printglossary[type=\acronymtype,title=\nomeglosarioacronimos]
  \printglossary[title=\nomeglosariotermos]

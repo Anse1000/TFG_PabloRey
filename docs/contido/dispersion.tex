@@ -7,17 +7,17 @@ Finalmente, se presenta el marco físico y computacional utilizado para calcular
 
 \section{Base de datos GAIA}\label{sec:GAIA}
 
-La misión \textbf{GAIA} de la Agencia Espacial Europea (ESA) es uno de los proyectos más ambiciosos de la astronomía moderna~\cite{gaia_mission_esa}.
+La misión \textbf{GAIA}~\cite{gaia_mission_esa} de la Agencia Espacial Europea (ESA) es uno de los proyectos más ambiciosos de la astronomía moderna.
 Su objetivo principal es realizar un censo y un mapa tridimensional cosmológico lo más preciso y completo de las estrellas de la Vía Láctea.
 Además de estrellas, también recolecta información acerca de: cúmulos estelares, cúmulos globulares, galaxias externas y cuásares.
-Toda esta información proviene del satélite del mismo nombre que se muestra en la figura~\ref{fig:sonda}.
+Toda esta información proviene del satélite del mismo nombre que se muestra en la Figura~\ref{fig:sonda}.
 
 Lanzado el 19 de diciembre de 2013 desde la Guyana Francesa, el satélite Gaia se posicionó en una órbita alrededor del Sol a 1,5 millones de km de la Tierra en un espacio conocido como punto de Lagrange L2.
 Este es un espacio privilegiado para realizar observaciones, ya que las fuerzas gravitacionales del Sol y la Tierra se equilibran con la fuerza centrífuga del satélite, por lo que sería la posición final de la sonda durante toda la duración de la misión.
 La duración prevista de la misión era de 5 años, pero debido al excelente rendimiento y estabilidad que presenta, ha sido extendida en varias ocasiones y continúa activa en la actualidad.
 
 La sonda envía datos brutos periódicamente a la Tierra que son procesados y, cada cierto tiempo, transformados en catálogos públicos conocidos como \textbf{Data Releases (DR)}.
-Estos Data Release se publican de forma progresiva a través del \textbf{Gaia Archive}~\cite{gaia_archive}.
+Estos Data Releases se publican de forma progresiva a través del \textbf{Gaia Archive}~\cite{gaia_archive}.
 Hasta la fecha, se han publicado varios lanzamientos importantes (DR1 en 2016, DR2 en 2018 y EDR3/DR3 en 2020–2022), cada uno de ellos con mejoras sustanciales en precisión y volumen de datos.
 El próximo lanzamiento, \textbf{Gaia DR4}, se encuentra actualmente en fase de preparación y se espera su publicación en diciembre de 2026.
 
@@ -35,10 +35,10 @@ El \textbf{Data Release 3 (DR3)}~\cite{gaia_dr3_documentation} de la misión Gai
 Fue presentado oficialmente el 13 de junio de 2022 e incluye observaciones recopiladas durante los primeros 34 meses de operación científica del satélite, entre julio de 2014 y mayo de 2017.
 Este lanzamiento representa un avance sustancial respecto a los catálogos anteriores (DR1 y DR2), tanto en el número de estrellas registradas como en la calidad y variedad de los parámetros disponibles.
 
-El catálogo contiene información astrométrica, fotométrica y espectroscópica de más de \textbf{1.800 millones de objetos}, de los cuales aproximadamente 1.500 millones poseen soluciones astrométricas completas, es decir, posición, paralaje(desplazamiento con respecto a las demás estrellas) y movimiento propio.
+El catálogo contiene información astrométrica, fotométrica y espectroscópica de más de \textbf{1.800 millones de objetos}, de los cuales aproximadamente 1.500 millones poseen soluciones astrométricas completas, es decir, posición, paralaje (desplazamiento con respecto a las demás estrellas) y movimiento propio.
 Esta información se almacena en distintas tablas temáticas.
 A continuación se detallan las más relevantes y necesarias para este proyecto.
-Cada fila de estas tablas representa un único objeto observado al que se asocia a un identificador numérico \texttt{source\_id} que permite identificarlo y cruzarlo con distintas tablas y catálogos.
+Cada fila de estas tablas representa un único objeto observado al que se asocia un identificador numérico \texttt{source\_id} que permite identificarlo y cruzarlo con distintas tablas y catálogos.
 \subsubsection{Tabla \texttt{gaia\_source}}
 La tabla \texttt{gaia\_source} contiene los parámetros fundamentales de cada objeto observado.
 Esta tabla contiene más de cien columnas y constituye la base de las demás tablas, pero para la realización de este proyecto solo son necesarias 9 de sus columnas:
@@ -47,9 +47,9 @@ Esta tabla contiene más de cien columnas y constituye la base de las demás tab
     Está construido mediante el sistema de indexación jerárquico HEALPix\footnote{HEALPix. Disponible en: \url{https://healpix.sourceforge.io/}{HEALPix - Features}}, lo que permite conocer la localización aproximada de la estrella en el cielo.
     Este identificador es único para cada fuente y se utiliza para realizar referencias cruzadas entre las distintas tablas del archivo Gaia y otras bases de datos astronómicas.
 
-    \item \texttt{ra}($\alpha$): Ascensión Recta, expresada en grados y referida al sistema de coordenadas ecuatoriales (epoch J2016.0).
+    \item \texttt{ra}($\alpha$): Ascensión Recta, expresada en grados y referida al sistema de coordenadas ecuatoriales (epoch J2016.0)
     \footnote{El término \textit{epoch 2016} indica la fecha de referencia para las coordenadas y los movimientos propios utilizados en el catálogo. En astronomía, las posiciones de las estrellas cambian lentamente con el tiempo debido a su movimiento real en el espacio y a efectos como la precesión. Por ello, los catálogos fijan una \textit{época} (en este caso el año 2016) como punto de referencia a partir del cual se definen y extrapolan las posiciones estelares.}
-    Indica la posición de la fuente en el eje Este–Oeste del cielo y, junto con la declinación, determina su ubicación precisa en la bóveda celeste.
+    Indica la posición de la fuente en el eje Este–Oeste del cielo y, junto con la declinación, determina su ubicación precisa en la bóveda celeste..
 
     \item \texttt{dec}($\delta$): Declinación, también en grados, medida en el sistema ecuatorial.
     Representa la posición angular de la fuente respecto al ecuador celeste, análoga a la latitud terrestre.
@@ -86,7 +86,7 @@ A continuación se describen las columnas empleadas en este trabajo:
 Además de las columnas anteriores, se incluye también el parámetro \texttt{rgeo}, obtenido a través del servicio \textit{TAP VizieR}\footnote{TAP VizieR. Disponible en: \url{https://tapvizier.u-strasbg.fr/adql/}}, que proporciona datos complementarios derivados de catálogos externos al archivo principal de Gaia:
 
 \begin{itemize}
-    \item \texttt{rgeo}: Distancia geométrica estimada en parsecs (pc)\footnote{1 parsec equivale a 3.26 años luz o 3,0857 \times 10^{13} km} basada en el método bayesiano desarrollado por Bailer-Jones~\cite{Bailer-Jones2021}.
+    \item \texttt{rgeo}: Distancia geométrica estimada en parsecs (pc)\footnote{1 parsec equivale a 3.26 años luz o $3,0857 \times 10^{13}$ km} basada en el método bayesiano desarrollado por Bailer-Jones~\cite{Bailer-Jones2021}.
     Este parámetro corrige las incertidumbres y sesgos asociados al cálculo directo de la distancia mediante la inversa del paralaje, especialmente relevantes en regiones con errores elevados o valores negativos de paralaje.
     El valor de \texttt{rgeo} representa la mejor estimación estadística de la distancia a la fuente, teniendo en cuenta tanto la medida observacional como un modelo de distribución espacial de estrellas en la galaxia.
     Resulta fundamental para convertir magnitudes aparentes en magnitudes absolutas y para estimar luminosidades físicas de las estrellas con mayor precisión.
@@ -99,7 +99,7 @@ Sin embargo, para los objetivos de este trabajo no todas las fuentes son adecuad
 Por esta razón, se selecciona únicamente la población de \textbf{estrellas de la secuencia principal}, definida en el diagrama color–magnitud por el intervalo fotométrico:
 
 \[
-    0.3 < (BP - RP) < 2.0.
+    0.3 < (BP - RP) < 2.0
 \]
 
 Esta restricción garantiza que las estrellas analizadas se encuentren en una fase estable de evolución estelar, dominada por la fusión de hidrógeno en el núcleo.
@@ -108,7 +108,7 @@ Adicionalmente, se descartan todas las fuentes con información incompleta, es d
 \texttt{bp\_rp} o \texttt{rgeo}.
 Este filtrado no solo garantiza la coherencia de las magnitudes físicas calculadas, sino que también reduce el tamaño efectivo del conjunto de datos, lo cual es crucial desde el punto de vista computacional.
 
-Tras aplicar ambos criterios, la restricción fotométrica de secuencia principal y la eliminación de registros incompletos, la muestra final empleada en este trabajo queda compuesta por \textbf{1.174.075.109 estrellas}.
+Tras aplicar ambos criterios, la restricción fotométrica de secuencia principal y la eliminación de registros incompletos, la muestra final empleada en este trabajo queda compuesta por \textbf{1.061.986.822 estrellas}.
 
 \section{Transformación de los datos}\label{sec:calculos_previos}
 
@@ -129,7 +129,7 @@ En este sistema:
 \end{itemize}
 
 La conversión entre coordenadas ecuatoriales y galácticas puede expresarse como una rotación en el espacio tridimensional.
-La orientación del plano galáctico fue definida por la IAU, y la matriz de rotación asociada es:
+La orientación del plano galáctico fue definida por la International Astronomical Union (IAU), y la matriz de rotación asociada es:
 
 \[
     \mathbf{R} =
@@ -140,7 +140,7 @@ La orientación del plano galáctico fue definida por la IAU, y la matriz de rot
     \end{bmatrix},
 \]
 
-cuyas constantes fueron establecidas por Murray (1989) y continúan siendo el estándar actual en herramientas astrométricas modernas como \texttt{Astropy}~\cite{murray1989_coordinates}.
+cuyas constantes fueron establecidas por Murray en 1989~\cite{murray1989_coordinates} y continúan siendo el estándar actual en herramientas astrométricas modernas como \texttt{Astropy}~\cite{astropy:2022}.
 Dado que el sistema de referencia de Gaia DR3 está alineado con el ICRS (Sistema de Referencia Celeste Internacional), esta matriz es directamente aplicable a los datos utilizados en este trabajo.
 
 Para una estrella situada a una distancia heliocéntrica $d$ (en parsecs), se construye primero el vector de posición unitario en el sistema ecuatorial:
@@ -229,7 +229,7 @@ Finalmente, la velocidad radial estimada se obtiene como:
 \[
     v_r = V_{\text{radial\_sin}} + V_{\text{rot}} - V_{\text{sol}}
 \]
-En este trabajo se adoptan los valores propuestos por Schönrich et al\cite{schonrich2010,blandhawthorn2016} para el movimiento solar:
+En este trabajo se adoptan los valores propuestos por Schönrich et al y Bland-Hawthorn et al~\cite{schonrich2010,blandhawthorn2016} para el movimiento solar:
 \( V_{\text{GAL}} = 220~\text{km s}^{-1} \),  \( U_{\text{SOL}} = 11.1~\text{km s}^{-1}\),  \( V_{\text{SOL}} = 12.24~\text{km s}^{-1}\),  \( W_{\text{SOL}} = 7.25~\text{km s}^{-1}\).
 
 De este modo, el procedimiento permite aproximar la velocidad radial de una estrella a partir de parámetros astrométricos disponibles (posición, movimientos propios y distancia), incluyendo los efectos de la rotación galáctica y del movimiento solar.
@@ -245,7 +245,7 @@ Primero se obtiene la velocidad tangencial en las direcciones de ascensión rect
     V_{t,\delta} = \kappa \, d \, \mu_{\delta},
 \]
 
-donde \(\kappa = 4.74047\) es el factor de conversión que relaciona movimientos propios (mas\,año\(^{-1}\)) y distancias (pc) con velocidades en km\,s\(^{-1}\).
+donde \(\kappa = 4.74047\) es el factor de conversión que relaciona los movimientos propios (mas\,año\(^{-1}\)) y distancias (pc) con velocidades en km\,s\(^{-1}\).
 
 A partir de la velocidad radial \(V_r\) y de las velocidades tangenciales \(V_{t,\alpha}\) y \(V_{t,\delta}\),
 se calcula el vector velocidad en el sistema ecuatorial:
@@ -285,10 +285,10 @@ expresadas en unidades de kiloparsecs por millón de años (kpc\,Myr\(^{-1}\)).
 
 La metodología para la estimación de masas se fundamenta en la estrecha correlación física existente entre la masa, la luminosidad y la temperatura efectiva para las estrellas que se encuentran en la fase de combustión de hidrógeno.
 Tal y como se observa en el diagrama Color-Magnitud de la Figura~\ref{fig:hr_diagram}, la Secuencia Principal (SP) no es una dispersión aleatoria, sino una banda diagonal bien definida donde la posición de una estrella está determinada casi unívocamente por su masa.
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{imaxes/R}
-    \caption{Diagrama Color-Magnitud observacional del catálogo Gaia.}
+    \caption{Diagrama Color-Magnitud observacional del catálogo Gaia}
     \label{fig:hr_diagram}
 \end{figure}
 
@@ -336,8 +336,7 @@ Este esquema es \(\mathcal{O}(\Delta t^2)\) en precisión y conserva bien las ca
 
 
 Para garantizar la estabilidad numérica y evitar que una estrella se desplace una distancia significativa en un solo paso de integración, el valor del paso temporal se fija de acuerdo con la velocidad máxima del sistema~\cite{dehnen2011,hockney1988}.
-Sea \(v_{\max}\) la mayor velocidad galactocéntrica entre todas las estrellas y \(l_{\min}\) la escala espacial mínima resoluble.
-El paso temporal máximo adoptado se calcula como
+Sea \(v_{\max}\) la mayor velocidad galactocéntrica entre todas las estrellas y \(l_{\min}\) la escala espacial mínima resoluble, el paso temporal máximo adoptado se calcula como:
 \[
     \Delta t_{\max} \;=\; \eta \, \frac{l_{\min}}{v_{\max}},
 \]
@@ -357,14 +356,14 @@ donde \(\mathbf{a}_{\mathrm{gal}}\) es la aceleración analítica producida por 
     \item \textbf{Aceleración del halo} (\(\mathbf{a}_{\mathrm{halo}}\)): representa la contribución del \emph{halo de materia oscura}, el cual domina la masa en la región externa de la galaxia.
     Se modela con un perfil NFW (Navarro–Frenk–White)~\cite{navarro1996}, cuya simetría esférica permite expresar su aceleración como función únicamente del radio galactocéntrico \(r\).
     \[
-        \mathbf{a}_{\mathrm{halo}}(\mathbf{r}) = -\,\frac{G\,M_{\mathrm{enc}}(r)}{r^3}\,\mathbf{r}.
+        \mathbf{a}_{\mathrm{halo}}(\mathbf{r}) = -\,\frac{G\,M_{\mathrm{enc}}(r)}{r^3}\,\mathbf{r}
     \]
     Este término impone el campo gravitacional de gran escala, responsable de mantener la rotación galáctica aproximadamente plana.
 
     \item \textbf{Aceleración del bulbo} (\(\mathbf{a}_{\mathrm{bulge}}\)): describe la atracción generada por la masa concentrada en el centro galáctico.
     Se adopta el potencial de Hernquist, que reproduce la distribución de densidad de los bulbos~\cite{hernquist1990}:
     \[
-        \mathbf{a}_{\mathrm{bulge}}(\mathbf{r}) = -\,\frac{G\,M_b}{r(r+a)^2}\,\mathbf{r}.
+        \mathbf{a}_{\mathrm{bulge}}(\mathbf{r}) = -\,\frac{G\,M_b}{r(r+a)^2}\,\mathbf{r}
     \]
     Su efecto domina en las regiones centrales, proporcionando el confinamiento gravitatorio más intenso.
 \end{itemize}

@@ -12,7 +12,7 @@ En particular, se ha utilizado el supercomputador \textbf{Finisterrae III}, ubic
 El Finisterrae III constituye una plataforma HPC moderna, con una elevada capacidad de cómputo, memoria y almacenamiento.
 Dispone de un total de 22.848 núcleos de CPU y 171 GPU, distribuidas en 357 nodos interconectados mediante una red \textit{InfiniBand HDR}.
 Su potencia bruta asciende a \textbf{4,36 PetaFLOPS}.
-\begin{figure}[hp!]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{imaxes/FT3_schema}
     \caption{Esquema general de la arquitectura del supercomputador Finisterrae III}
@@ -21,12 +21,12 @@ Su potencia bruta asciende a \textbf{4,36 PetaFLOPS}.
 
 \subsection{Especificaciones técnicas de los nodos}\label{subsec:especificaciones-tecnicas-de-los-nodos}
 
-La arquitectura del sistema se organiza en distintos tipos de nodos según el tipo de tarea a realizar tal y como se muestra en la figura~\ref{fig:ft3-scheme}.
+La arquitectura del sistema se organiza en distintos tipos de nodos según el tipo de tarea a realizar tal y como se muestra en la Figura~\ref{fig:ft3-scheme}.
 Para este proyecto se han empleado cuatro clases de nodos:
 
 \begin{itemize}
     \item \textbf{Nodos \texttt{ilk} (CPU)}: Diseñados para tareas de cómputo intensivo que no requieren aceleración por GPU. El Finisterrae III cuenta con 256 de estos nodos.
-    Necesario para la versión cpu del proyecto.
+    Necesario para la versión CPU del proyecto.
     \item \textbf{Nodos \texttt{a100} (GPU)}: Equipados con unidades de procesamiento gráfico NVIDIA A100, orientados a cargas de trabajo en inteligencia artificial y procesamiento masivo de datos.
     Existen 64 nodos de este tipo.
     Necesario para simulaciones con hasta 2 GPUs.
@@ -85,16 +85,16 @@ Los principales módulos empleados fueron:
 
     \item \textbf{OpenMP}:
     Es una API que permite la programación paralela en sistemas de memoria compartida.
-    Para una descripción detallada, véase la sección~\ref{subsec:openmp}.
+    Para una descripción detallada, véase la Sección~\ref{subsec:openmp}.
     \item \textbf{CUDA}:
     Es una plataforma de computación paralela y un modelo de programación desarrollado por NVIDIA diseñado para aprovechar la potencia de sus GPUs con todo tipo de cálculos.
-    Para una descripción detallada, véase la sección~\ref{subsec:cuda}.
+    Para una descripción detallada, véase la Sección~\ref{subsec:cuda}.
 
     \item \textbf{Intel Compiler}:
     Es un conjunto de compiladores diseñados para obtener el máximo rendimiento en procesadores fabricados por Intel.
     Proporciona optimizaciones automáticas a nivel de vectorización, paralelización y uso eficiente de la memoria caché.
 
-    \item \textbf{Intel VTune Profiler}\footnote{Intel VTune Profiler. Disponible en:\url{https://www.intel.com/content/www/us/en/developer/tools/vtune-profiler.html}}:
+    \item \textbf{Intel VTune Profiler}\footnote{Intel VTune Profiler. Disponible en: \url{https://www.intel.com/content/www/us/en/developer/tools/vtune-profiler.html}}:
     Es una herramienta de análisis y perfilado de rendimiento desarrollada por Intel.
     Permite detectar cuellos de botella en el uso de CPU, memoria o E/S, ofreciendo métricas detalladas sobre la ejecución de los programas.
     Su integración con los compiladores Intel facilita la optimización iterativa del código y la evaluación del impacto de las mejoras implementadas.
@@ -104,7 +104,7 @@ Los principales módulos empleados fueron:
     Especialmente diseñado para la compilación de aplicaciones CUDA de alto rendimiento.
     Además, proporcionan optimizaciones automáticas para GPU NVIDIA A100, como las presentes en el supercomputador Finisterrae III.
 
-    \item \textbf{NVIDIA Nsight Compute}\footnote{Nvidia Nsight Compute. Disponible en:\url{https://developer.nvidia.com/nsight-compute}}:
+    \item \textbf{NVIDIA Nsight Compute}\footnote{Nvidia Nsight Compute. Disponible en: \url{https://developer.nvidia.com/nsight-compute}}:
     Es un analizador de rendimiento (\textit{profiler}) especializado para aplicaciones CUDA.
     Permite inspeccionar la ejecución de kernels en GPU, analizando métricas como la utilización de memoria global, el rendimiento de cada multiprocesador o el grado de ocupación de los núcleos CUDA.
     Es una herramienta fundamental para optimizar aplicaciones paralelas que utilizan GPU NVIDIA.

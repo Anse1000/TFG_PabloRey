@@ -35,4 +35,3 @@ THREADS    | TIEMPO (s)    | TIEMPO (m) | EFICIENCIA (%) |
 32         |207            |3:27        |30.70%          |
 64         |134            |2:14        |23.63%          |
 La eficiencia sigue siendo bajísima vtune dice que la carga esta en strtod y strtok no en IO, no podemos hacer mucho mas.
-Se considera correcto el resultado.

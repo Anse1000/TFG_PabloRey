@@ -48,7 +48,6 @@ Subarbol 7: 368530 nodos -> 29 MB
 Iniciando construccion del Arbol
 Árbol de 537806448 nodos creado en 354.7107 segundos usando 43082 MB (MIN_SUBDIVISIONS: 1e+04 )
 Subarbol 0: 79384866 nodos -> 6359 MB
-Subarbol 0: 79384866 nodos -> 6359 MB
 Subarbol 1: 77332794 nodos -> 6195 MB
 Subarbol 2: 63485536 nodos -> 5085 MB
 Subarbol 3: 86751443 nodos -> 6949 MB
@@ -59,7 +58,6 @@ Subarbol 7: 55485049 nodos -> 4444 MB
 Iniciando construccion del Arbol
 Árbol de 1581223071 nodos creado en 446.6157 segundos usando 126669 MB (MIN_SUBDIVISIONS: 1e+05 )
 Subarbol 0: 213165482 nodos -> 17076 MB
-Subarbol 0: 213165482 nodos -> 17076 MB
 Subarbol 1: 239088570 nodos -> 19153 MB
 Subarbol 2: 188223111 nodos -> 15078 MB
 Subarbol 3: 269743005 nodos -> 21608 MB
@@ -69,7 +67,6 @@ Subarbol 6: 197079966 nodos -> 15787 MB
 Subarbol 7: 167783837 nodos -> 13440 MB
 Iniciando construccion del Arbol
 Árbol de 1694778621 nodos creado en 491.6941 segundos usando 135766 MB (MIN_SUBDIVISIONS: 1e+06 )
-Subarbol 0: 214272579 nodos -> 17165 MB
 Subarbol 0: 214272579 nodos -> 17165 MB
 Subarbol 1: 240475233 nodos -> 19264 MB
 Subarbol 2: 189162315 nodos -> 15153 MB

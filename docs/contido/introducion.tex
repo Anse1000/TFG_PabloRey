@@ -1,3 +1,38 @@
-\chapter{Introdución}
+\chapter{Introducción}
 \label{chap:introducion}
+Este primer capítulo ofrecerá una breve descripción de la motivación del Trabajo de Fin de Grado (TFG) y sus posibles aplicaciones, además de la introducción a los objetivos del mismo y la estructura que presentará el resto de la memoria.
+
+\section{Motivación}\label{sec:motivacion}
+
+La misión Gaia de la Agencia Espacial Europea (ESA) ha proporcionado el mapa multidimensional más preciso y completo de nuestra galaxia hasta la fecha, catalogando más de 1.800 millones de fuentes en su tercer lanzamiento de datos (DR3).
+Si bien estos catálogos ofrecen una fotografía estática de altísima precisión sobre la posición y velocidad actual de las estrellas, comprender la evolución futura y la dispersión de estas estructuras requiere modelos dinámicos complejos.
+
+La simulación de la dinámica galáctica se rige principalmente por la interacción gravitatoria de N-cuerpos.
+Un enfoque directo de fuerza bruta implica una complejidad computacional de $O(N^2)$, lo cual resulta inviable para simular miles de millones de estrellas, incluso con el hardware más moderno.
+Por ejemplo, calcular un solo paso de tiempo para el conjunto de datos de Gaia mediante métodos directos llevaría siglos en un procesador convencional.
+
+Esta barrera computacional motiva la necesidad de emplear algoritmos de aproximación jerárquica, como Barnes-Hut, que reducen la complejidad a $O(N \log N)$.
+No obstante, la implementación eficiente de estos algoritmos en arquitecturas modernas requiere un dominio profundo de técnicas de paralelización y el uso de aceleradores hardware (GPUs).
+La motivación principal de este proyecto es, por tanto, cerrar la brecha entre la ingente cantidad de datos astrofísicos disponibles y la capacidad de cómputo necesaria para procesarlos, aprovechando la infraestructura del supercomputador Finisterrae III del CESGA.
+
+\section{Objetivos}\label{sec:objetivos}
+
+El objetivo principal de este trabajo es diseñar y desarrollar un sistema de simulación de dinámica estelar capaz de procesar la mayor cantidad de cuerpos posible —superando la barrera de los mil millones de estrellas del catálogo Gaia DR3— manteniendo un riguroso equilibrio entre la precisión física y la eficiencia computacional.
+La prioridad absoluta reside en la optimización extrema de los algoritmos para reducir drásticamente los tiempos de cálculo, transformando un problema que sería inabordable o requeriría años de cómputo en una tarea ejecutable en tiempos viables.
+Para ello, es indispensable trascender los enfoques clásicos mediante la implementación de métodos jerárquicos como Barnes-Hut y estructuras de datos espaciales avanzadas que permitan gestionar este volumen masivo de información de forma ágil.
+
+De forma indisoluble a este reto técnico, el proyecto persigue el objetivo fundamental de adquirir un dominio profundo sobre el uso y explotación de infraestructuras complejas de Computación de Altas Prestaciones (HPC).
+Se busca no solo desarrollar software paralelo, sino comprender y aprovechar las capacidades arquitectónicas del supercomputador Finisterrae III para llevar el hardware al límite.
+Esto implica un proceso de aprendizaje integral que abarca desde la gestión de trabajos en sistemas de colas hasta la programación híbrida, explotando tanto el paralelismo en CPUs multinúcleo mediante OpenMP como, muy especialmente, la aceleración masiva en GPUs NVIDIA A100 a través de CUDA.
+En definitiva, se pretende demostrar cómo la ingeniería de computadores avanzada es la llave para hacer viables los retos científicos de escala exa-escalar.
+
+\section{Estructura de la memoria}\label{sec:estructura-de-la-memoria}
+Este documento se organiza en siete capítulos que narran el desarrollo del proyecto desde su planificación inicial hasta los resultados finales.
+Tras esta introducción, el Capítulo~\ref{chap:planificacion} detalla la gestión del proyecto, incluyendo la planificación temporal, la metodología de desarrollo y el análisis de costes.
+Posteriormente, el Capítulo~\ref{chap:dispersion} establece el marco teórico necesario, describiendo la base de datos Gaia DR3, las transformaciones de coordenadas y los fundamentos físico-matemáticos de la simulación, como los integradores y los potenciales galácticos.
+El aspecto tecnológico se aborda en el Capítulo~\ref{ch:fundamentos}, donde se describe la arquitectura del supercomputador Finisterrae III, sus modos de acceso y ejecución y las tecnologías de paralelización OpenMP y CUDA empleadas.
+El Capítulo~\ref{chap:diseno} profundiza en el diseño e implementación del sistema, explicando las estructuras de datos (Octree, Star) y los algoritmos de construcción del árbol y de simulación tanto en CPU como en GPU.
+Los resultados experimentales se presentan en el Capítulo~\ref{chap:resultados}, donde se analiza el consumo de memoria, la precisión numérica y se realiza una comparativa evaluación exhaustiva de rendimiento y escalabilidad.
+Finalmente, el Capítulo~\ref{chap:conclusions} expone las conclusiones alcanzadas, la relación del proyecto con la titulación y las posibles líneas de trabajo futuro.
+
 

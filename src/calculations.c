@@ -10,13 +10,6 @@ const double R[3][3] = {
 
 // Esta es la opción GANADORA para procesamiento masivo
 void calculate_mass(float *mass, float bp_rp) {
-    // 1. Filtro estricto de Secuencia Principal
-    // Fuera de este rango, la relación polinómica empieza a fallar
-    if (bp_rp < 0.3F || bp_rp > 2.0F) {
-        *mass = 0.0F; // O un valor centinela como -1.0
-        return;
-    }
-
     // 2. Polinomio de 4º grado
     // Ajuste empírico Log10(Masa) vs Color (BP-RP)
     // Coeficientes optimizados para reducir residuos en la banda G

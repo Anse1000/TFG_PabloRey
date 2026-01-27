@@ -2,6 +2,7 @@
 #include "../aux_fun.h"
 #include <sys/time.h>
 #include "octree_gpu.h"
+#include "../aux_fun.h"
 #include "../file_handler.h"
 
 #define BLOCK_SIZE 256
@@ -453,6 +454,73 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
 }
 
 #ifdef DEBUG_BUILD
+#include <algorithm>
+
+// Estructura auxiliar para no mover todos los datos pesados durante el sort
+struct SortPair {
+    unsigned long id;
+    long original_idx;
+};
+
+extern "C" void sort_stars_by_id(Star *estrellas) {
+    const long N = (long)estrellas->size;
+
+    // 1. Crear array de pares (ID, índice actual)
+    auto *pairs = (SortPair*)malloc(N * sizeof(SortPair));
+
+    #pragma omp parallel for
+    for (long i = 0; i < N; i++) {
+        pairs[i].id = estrellas->id[i];
+        pairs[i].original_idx = i;
+    }
+
+    // 2. Ordenar los pares por ID
+    // Usamos std::sort (que es muy rápido) con una lambda.
+    // Nota: Aunque std::sort no es paralelo de serie, es preferible a un quicksort manual.
+    // Si tu compilador soporta C++17 y tienes TBB, podrías usar std::sort(std::execution::par, ...)
+    std::sort(pairs, pairs + N, [](const SortPair& a, const SortPair& b) {
+        return a.id < b.id;
+    });
+
+    // 3. Reubicar los datos usando un buffer temporal por array para evitar colisiones
+    // Solo necesitamos un buffer temporal por cada tipo de dato (double/unsigned long)
+    auto *tmp_double = (double*)malloc(N * sizeof(double));
+    auto *tmp_id = (unsigned long*)malloc(N * sizeof(unsigned long));
+
+    auto apply_permutation_double = [&](double* target_array) {
+        #pragma omp parallel for
+        for (long i = 0; i < N; i++) {
+            tmp_double[i] = target_array[pairs[i].original_idx];
+        }
+        #pragma omp parallel for
+        for (long i = 0; i < N; i++) {
+            target_array[i] = tmp_double[i];
+        }
+    };
+
+    // Aplicar a todos los arrays de posición y velocidad
+    apply_permutation_double(estrellas->Cx);
+    apply_permutation_double(estrellas->Cy);
+    apply_permutation_double(estrellas->Cz);
+    apply_permutation_double(estrellas->Vx);
+    apply_permutation_double(estrellas->Vy);
+    apply_permutation_double(estrellas->Vz);
+
+    // Aplicar al array de IDs
+    #pragma omp parallel for
+    for (long i = 0; i < N; i++) {
+        tmp_id[i] = estrellas->id[pairs[i].original_idx];
+    }
+    #pragma omp parallel for
+    for (long i = 0; i < N; i++) {
+        estrellas->id[i] = tmp_id[i];
+    }
+    printf("Estrellas ordenadas por ID\n"); fflush(stdout);
+    // Limpiar
+    free(pairs);
+    free(tmp_double);
+    free(tmp_id);
+}
 extern "C" void mem_test_gpu(Star *estrellas) {
     float cx, cy, cz;
     float hs, min_node_size;
@@ -480,5 +548,100 @@ extern "C" void mem_test_gpu(Star *estrellas) {
             i, count, memory_tree, memory_stars, memory_frontier, memory_tree + memory_stars + memory_frontier);
         fflush(stdout);
     }
+}
+
+extern "C" void reversibility_test(Star *estrellas) {
+    printf("\n========== INICIANDO TEST DE REVERSIBILIDAD TEMPORAL (LEAPFROG KDK) ==========\n");
+    const int steps = 10;  // 50 adelante, 50 atrás
+    const float DT = 1.0F;
+    const long N = (long)estrellas->size;
+    int device_count=0;
+    cudaGetDeviceCount(&device_count);
+
+    // 1. Backup del estado inicial (t = 0)
+    auto *orig_x = (double*)malloc(N * sizeof(double));
+    auto *orig_y = (double*)malloc(N * sizeof(double));
+    auto *orig_z = (double*)malloc(N * sizeof(double));
+    double v_sum = 0;
+    sort_stars_by_id(estrellas);
+    #pragma omp parallel for reduction(+:v_sum)
+    for(long i=0; i<N; i++) {
+        orig_x[i] = estrellas->Cx[i];
+        orig_y[i] = estrellas->Cy[i];
+        orig_z[i] = estrellas->Cz[i];
+        v_sum += sqrt(estrellas->Vx[i]*estrellas->Vx[i] + estrellas->Vy[i]*estrellas->Vy[i] + estrellas->Vz[i]*estrellas->Vz[i]);
+    }
+    double v_avg = v_sum / N;
+
+    if (device_count == 0) {
+        printf("No hay dispositivos disponibles\n");
+        exit(1);
+    }
+
+    auto *streams = (cudaStream_t *)malloc(device_count * sizeof(cudaStream_t));
+    for (int i = 0; i < device_count; i++) { cudaSetDevice(i); cudaStreamCreate(&streams[i]); }
+    const int iterations = (8 + device_count - 1) / device_count;
+
+    printf("Parámetros: %d pasos | DT = %.2f | Velocidad media: %.4f kpc/Myr\n", steps, DT, v_avg);
+    printf("Desplazamiento total esperado por estrella: ~%.4f kpc\n", v_avg * steps * DT);
+
+    // 2. CICLO ADELANTE
+    printf("Evolucionando hacia adelante...\n");
+    for (int step = 0; step < steps; step++) {
+        float cx, cy, cz, hs, min_node_size; unsigned int offsets[8];
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, DT, 1); // Kick+Drift
+        free_tree_gpu(tree);
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, DT, 0); // Kick
+        free_tree_gpu(tree);
+    }
+
+    // 3. CICLO ATRÁS (DT negativo)
+    printf("Evolucionando hacia atrás (DT = %.2f)...\n", -DT);
+    for (int step = 0; step < steps; step++) {
+        float cx, cy, cz, hs, min_node_size; unsigned int offsets[8];
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, -DT, 1);
+        free_tree_gpu(tree);
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, -DT, 0);
+        free_tree_gpu(tree);
+    }
+    sort_stars_by_id(estrellas);
+    // 4. Análisis de resultados
+    double max_err = 0, avg_err = 0;
+    #pragma omp parallel for reduction(+:avg_err) reduction(max:max_err)
+    for (long i = 0; i < N; i++) {
+        double dx = estrellas->Cx[i] - orig_x[i];
+        double dy = estrellas->Cy[i] - orig_y[i];
+        double dz = estrellas->Cz[i] - orig_z[i];
+        double err = sqrt(dx*dx + dy*dy + dz*dz);
+        if (err > max_err) max_err = err;
+        avg_err += err;
+    }
+    avg_err /= N;
+
+    printf("\n--- RESULTADOS DEL TEST DE REVERSIBILIDAD ---\n");
+    printf("Error máximo de posición:  %.12le kpc\n", max_err);
+    printf("Error promedio de posición: %.12le kpc\n", avg_err);
+    printf("Deriva por paso (promedio): %.12le kpc/step\n", avg_err / (steps * 2));
+
+    // Comparación con el movimiento real para contexto
+    double precision_relativa = avg_err / (v_avg * steps * DT);
+    printf("Error relativo al movimiento total: %.4e (Ideal < 1e-10)\n", precision_relativa);
+    printf("---------------------------------------------\n\n");
+
+    free(orig_x); free(orig_y); free(orig_z);
+    for (int i = 0; i < device_count; i++) { cudaSetDevice(i); cudaStreamDestroy(streams[i]); }
+    free(streams);
 }
 #endif

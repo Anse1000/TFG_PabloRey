@@ -9,14 +9,18 @@
 #SBATCH --gres=gpu:a100:8
 #SBATCH --mail-type=begin
 #SBATCH --mail-type=end
+#SBATCH --mail-type=fail
 #SBATCH --mail-user=pablo.rey.ansemil@udc.es
 
+set -e
 ulimit -s unlimited
 
 # Cargar módulos
+module purge
 module load cesga/2025 nvhpc/25.3-CUDA-system
 
 # Compilar el programa
+rm -rf build
 mkdir -p build
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=ON -S . -B ./build
 cmake --build ./build

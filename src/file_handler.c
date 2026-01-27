@@ -2,7 +2,6 @@
 #include <dirent.h>
 #include <omp.h>
 #include <hdf5.h>
-#include <hdf5_hl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -22,8 +21,7 @@ void process_line(const char *line, Star *stars) {
     }
 
     // Validar que la línea tenga 12 columnas correctamente y que ciertos valores no sean "null"
-    if (i == 12 && strcmp(tokens[11], "null") != 0 &&
-        strcmp(tokens[7], "null") != 0 ){
+    if (i == 12 && strcmp(tokens[11], "null") != 0 && strcmp(tokens[7], "null") != 0 ){
         // Expandir arreglo si es necesario
         if (stars->size >= stars->capacity) {
             stars->capacity += 10000;
@@ -236,28 +234,17 @@ void write_hdf5_chunks(const Star *estrellas,
         hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist);
         H5Pclose(plist);
 
-        // --- 1. PREPARACIÓN E INTERLEAVING (ENTRELAZADO) ---
-        // Buffer temporal de 3D (X, Y, Z intercalados)
-        double *xyz_buffer = (double *)malloc(count * 3 * sizeof(double));
-
-        for (size_t j = 0; j < count; j++) {
-            size_t idx = start + j;
-            // Almacenar X, Y, Z de forma contigua
-            xyz_buffer[j * 3 + 0] = estrellas->Cx[idx];
-            xyz_buffer[j * 3 + 1] = estrellas->Cy[idx];
-            xyz_buffer[j * 3 + 2] = estrellas->Cz[idx];
-        }
-
-        // --- 2. ESCRITURA DE DATASETS HDF5 ---
-
+        // --- 1. PREPARACIÓN DE DATASETS ---
         // Dataset 1D (ID, MASS)
         hsize_t dims_1d[1] = { count };
         hid_t space_1d = H5Screate_simple(1, dims_1d, NULL);
 
-        // Dataset 2D (XYZ_POS)
+        // Dataset 2D (XYZ_POS) - Creamos el dataset completo primero
         hsize_t dims_2d[2] = { count, 3 }; // N rows, 3 columns
         hid_t space_2d = H5Screate_simple(2, dims_2d, NULL);
-
+        
+        // --- 2. ESCRITURA DE DATASETS HDF5 (Directa para 1D) ---
+        
         // Macro adaptado para escritura explícita
         #define WRITE_1D_DATASET(name, type, ptr, space) \
             do { \
@@ -266,22 +253,51 @@ void write_hdf5_chunks(const Star *estrellas,
                 H5Dclose(dset); \
             } while(0)
 
-        // Escritura 1D (MASS, ID)
+        // Escritura 1D (MASS, ID) - No consume memoria extra
         WRITE_1D_DATASET("ID",   H5T_NATIVE_UINT64, estrellas->id, space_1d);
         WRITE_1D_DATASET("MASS", H5T_NATIVE_FLOAT, estrellas->mass, space_1d);
 
         H5Sclose(space_1d);
 
-        // Escritura 2D (XYZ_POS)
+        // --- 3. ESCRITURA DE XYZ_POS POR LOTES (Para ahorrar RAM) ---
         hid_t dset_xyz = H5Dcreate(file_id, "XYZ_POS", H5T_NATIVE_DOUBLE, space_2d, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        // Escribimos el buffer entrelazado directamente
-        H5Dwrite(dset_xyz, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, xyz_buffer);
-        H5Dclose(dset_xyz);
 
+        size_t batch_size = 2000000;
+        double *xyz_buffer = malloc(batch_size * 3 * sizeof(double));
+        
+        size_t written = 0;
+        while(written < count) {
+            // Calcular tamaño del lote actual
+            size_t current_batch = (count - written > batch_size) ? batch_size : (count - written);
+            
+            // 1. Interleaving (Entrelazado) solo del lote actual
+            for (size_t j = 0; j < current_batch; j++) {
+                size_t idx = start + written + j;
+                xyz_buffer[j * 3 + 0] = estrellas->Cx[idx];
+                xyz_buffer[j * 3 + 1] = estrellas->Cy[idx];
+                xyz_buffer[j * 3 + 2] = estrellas->Cz[idx];
+            }
+
+            // 2. Seleccionar Hyperslab en el archivo (dónde escribir)
+            hsize_t start_hs[2] = {written, 0};
+            hsize_t count_hs[2] = {current_batch, 3};
+            H5Sselect_hyperslab(space_2d, H5S_SELECT_SET, start_hs, NULL, count_hs, NULL);
+
+            // 3. Crear Dataspace en memoria para el buffer (qué escribir)
+            hsize_t mem_dims[2] = {current_batch, 3};
+            hid_t mem_space = H5Screate_simple(2, mem_dims, NULL);
+
+            // 4. Escribir lote
+            H5Dwrite(dset_xyz, H5T_NATIVE_DOUBLE, mem_space, space_2d, H5P_DEFAULT, xyz_buffer);
+
+            H5Sclose(mem_space);
+            written += current_batch;
+        }
+        free(xyz_buffer);
+        H5Dclose(dset_xyz);
         H5Sclose(space_2d);
 
-        // --- 3. LIMPIEZA ---
-        free(xyz_buffer);
+        // --- 4. LIMPIEZA ---
         free(filename);
         H5Fclose(file_id);
     }
@@ -362,7 +378,7 @@ void write_results_hdf5(Star *estrellas,
     sprintf(stepdir, "%s/step_%04d", output_dir, step+1);
     mkdir(stepdir, 0755);
 
-    const unsigned int num_chunks = 50;
+    const unsigned int num_chunks = omp_get_max_threads();
     size_t *chunk_sizes   = malloc(num_chunks * sizeof(size_t));
     size_t *chunk_offsets = malloc(num_chunks * sizeof(size_t));
     size_t *id_min        = malloc(num_chunks * sizeof(size_t));

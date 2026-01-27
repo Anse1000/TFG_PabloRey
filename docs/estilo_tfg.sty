@@ -51,6 +51,7 @@
   \renewcommand{\appendixpagename}{Apéndices}
   \ifdefined\renomearcadros
     \message{Estilo TFG: renomeando cadros en español}
+    \gappto\captionsspanish{\renewcommand{\lstlistlistingname}{Índice de listings}}
     \gappto\captionsspanish{\renewcommand{\tablename}{Tabla}}
     \gappto\captionsspanish{\renewcommand{\listtablename}{Índice de tablas}}
   \fi
@@ -221,6 +222,18 @@
   tabsize=2,	                     % os tabuladores equivalen a dous espazos
   xleftmargin=0.05\textwidth         % identación extra desde a marxe esquerda
 }
+
+\lstdefinelanguage{pseudocode}{
+  % Lista de palabras clave
+  morekeywords={MIENTRAS, HACER, SI, ENTONCES, SINO, FIN, INVALID, para, cada, retornar, si, no},
+  % Definición de comentarios (doble barra)
+  morecomment=[l]{//},
+  % Definición de cadenas de texto (por si usas "texto")
+  morestring=[b]",
+  % Soporte para acentos en español dentro del código
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1 {<-}{{$\leftarrow$}}1
+}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % opcións relación de acrónimos e glosario %

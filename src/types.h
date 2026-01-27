@@ -13,7 +13,7 @@
 #define W_SOL 7.25   // Perpendicular a plano galáctico
 
 #define EPSILON 0.00001 //Valor para evitar divisiones por cero o muy cercanas a cero
-#define MIN_SUBDIVISIONS 1e6 //Numero maximo de subdivisiones del arbol
+#define MIN_SUBDIVISIONS 1e7 //Numero maximo de subdivisiones del arbol
 #define THETA 0.2 //Apertura del arbol BH
 
 // parámetros de halo

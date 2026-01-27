@@ -5,4 +5,6 @@
 
 void simulate(Star *estrellas,int steps, long N, const char* outputfile, float DT);
 void test_simulation(Star *estrellas);
+void run_full_cpu_validation(Star *estrellas);
+void test_theta(Star *stars, int num_samples);
 #endif //SIMULATION_H

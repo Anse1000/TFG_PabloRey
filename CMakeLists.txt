@@ -15,7 +15,7 @@ project(TFG_PRA C CXX)
 option(ENABLE_CUDA "Enable CUDA support" OFF)
 
 find_package(OpenMP REQUIRED)
-find_package(HDF5 REQUIRED COMPONENTS C HL)
+find_package(HDF5 REQUIRED COMPONENTS C)
 
 # Archivos fuente base
 set(SRC
@@ -64,7 +64,7 @@ endif()
 
 #Añadir flags de HDF5
 target_include_directories(TFG_PRA PRIVATE ${HDF5_INCLUDE_DIRS})
-target_link_libraries(TFG_PRA PRIVATE HDF5::HDF5 ${HDF5_HL_LIBRARIES})
+target_link_libraries(TFG_PRA PRIVATE HDF5::HDF5)
 
 # Añadir flags de OpenMP
 target_link_libraries(TFG_PRA PRIVATE OpenMP::OpenMP_C)
@@ -97,7 +97,7 @@ if(ENABLE_CUDA)
             $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fopenmp>
             $<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=40>
             # Solo en Debug: info de líneas y verbose de ptxas para profiling
-            $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo -Xptxas=-v>
+            #$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo -Xptxas=-v>
     )
 endif()
 

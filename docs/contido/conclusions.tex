@@ -1,9 +1,68 @@
-\chapter{Conclusións}
+\chapter{Conclusión}
 \label{chap:conclusions}
 
-\lettrine{D}{erradeiro} capítulo da memoria, onde se presentará a
-situación final do traballo, as leccións aprendidas, a relación coas
-competencias da titulación en xeral e a mención en particular,
-posibles liñas futuras,\dots
+El desarrollo de este Trabajo de Fin de Grado ha permitido abordar con éxito el desafío de simular la dinámica de una galaxia completa, combinando conocimientos de astrofísica, ingeniería del software y computación de altas prestaciones.
+Tras finalizar las fases de implementación y experimentación en el supercomputador Finisterrae III, se exponen a continuación las conclusiones principales, la vinculación con la titulación y las posibles líneas de futuro.
 
-\Blindtext
+\section{Conclusiones}\label{sec:conclusiones}
+
+El objetivo principal que me planteé al inicio de este proyecto era diseñar y desarrollar un sistema de simulación de dinámica estelar capaz de superar la barrera de los mil millones de cuerpos del catálogo Gaia DR3, manteniendo un equilibrio riguroso entre la precisión física y la eficiencia computacional.
+Tras el análisis de los resultados obtenidos, puedo afirmar que he cumplido satisfactoriamente este propósito, logrando procesar la totalidad de la muestra filtrada de la secuencia principal, compuesta por más de 1.061 millones de estrellas.
+La implementación del algoritmo jerárquico de Barnes-Hut y su paralelización masiva han sido determinantes para transformar una simulación que teóricamente requeriría siglos mediante fuerza bruta en una tarea que he conseguido ejecutar en tan solo 28 minutos.
+
+Más allá de la consecución de las metas numéricas, el desarrollo de este trabajo me ha permitido cumplir con el objetivo fundamental de adquirir un dominio profundo sobre el uso y explotación de infraestructuras de Computación de Altas Prestaciones (HPC).
+Este proceso de aprendizaje ha trascendido la programación convencional, exigiéndome una inmersión completa en el desarrollo con CUDA para lograr la aceleración masiva en las GPUs NVIDIA A100.
+El dominio de esta tecnología ha sido clave para que pudiera llevar el hardware al límite, alcanzando un \textit{speedup} de 126.7x respecto a la ejecución en CPU y permitiéndome constatar de primera mano que la ingeniería avanzada es indispensable para abordar retos científicos de escala exa-escalar.
+
+De igual forma, el proyecto me ha requerido una capacitación intensiva en la gestión de entornos de supercomputación complejos.
+Aprender a utilizar el gestor de cargas de trabajo Slurm en el Finisterrae III ha sido una pieza central de mi desarrollo, permitiéndome orquestar cientos de trabajos, gestionar colas de prioridad y optimizar la asignación de recursos en un entorno compartido.
+Esta experiencia práctica ha consolidado mis competencias para operar en centros de datos de alto rendimiento, cerrando la brecha entre la teoría algorítmica que estudié y su despliegue real en grandes infraestructuras.
+
+Finalmente, he garantizado el equilibrio entre la optimización extrema y el rigor científico.
+Las pruebas de validación que he realizado confirman que las optimizaciones implementadas no han comprometido la fidelidad física, manteniendo el error máximo acotado y verificando la estabilidad orbital del sistema.
+En definitiva, considero que el simulador desarrollado no solo es una herramienta eficiente, sino una plataforma robusta y validada para el estudio de la dinámica galáctica.
+
+\section{Relación con los estudios}\label{sec:relacion-con-los-estudios}
+
+La realización de este Trabajo de Fin de Grado ha supuesto la culminación práctica de la formación adquirida durante la titulación, permitiendo integrar y aplicar de forma transversal conocimientos de múltiples disciplinas.
+De manera específica, el proyecto se alinea con las competencias fundamentales de la \textbf{Mención en Ingeniería de Computadores}, poniendo el foco en el diseño eficiente de sistemas, la optimización del hardware y la computación de altas prestaciones.
+
+A continuación, se detalla la relación del proyecto con las distintas áreas de conocimiento abordadas en la titulación:
+\begin{itemize}
+    \item \textbf{Concurrencia y Paralelismo:} Este es el pilar central del proyecto. Se han aplicado directamente conceptos avanzados de paralelismo y supercomputación. El uso de \textbf{OpenMP} para explotar el paralelismo a nivel de hilo en CPUs multinúcleo y, sobre todo, la implementación de kernels en \textbf{CUDA} para la aceleración masiva en GPUs, son una aplicación directa de las asignaturas relacionadas con la programación paralela.
+
+    \item \textbf{Arquitectura de Computadores:} El proyecto ha exigido un conocimiento profundo del hardware subyacente para maximizar el rendimiento. Decisiones de diseño como el uso de estructuras de datos \textit{Structure of Arrays} (SoA) frente a \textit{Array of Structures} (AoS) para favorecer la vectorización y el acceso coalescente a memoria en la GPU demuestran la aplicación de conceptos sobre jerarquía de memoria y organización de computadores.
+
+    \item \textbf{Algoritmos:} La implementación del algoritmo de \textbf{Barnes-Hut} ha requerido trascender la teoría básica de la complejidad algorítmica para llevar a la práctica una reducción de $O(N^2)$ a $O(N \log N)$. La construcción y recorrido eficiente de estructuras jerárquicas espaciales (Octree), así como la transformación de algoritmos recursivos en iterativos (\textit{stackless}) mediante el uso de \textit{ropes} para evitar el desbordamiento de pila en la GPU, son ejemplos claros de ingeniería algorítmica avanzada.
+
+    \item \textbf{Sistemas Operativos:} El desarrollo se ha llevado a cabo íntegramente en un entorno Linux, haciendo uso intensivo de la terminal y de lenguajes de \textit{scripting} (Bash) para la automatización de tareas de preprocesado y gestión de archivos. La gestión eficiente de la entrada/salida (I/O) sobre el sistema de archivos paralelo \textbf{Lustre} y el uso de formatos binarios jerárquicos como \textbf{HDF5} para evitar cuellos de botella en el almacenamiento demuestran la aplicación de conocimientos sobre sistemas de archivos y gestión de recursos del sistema operativo.
+
+    \item \textbf{Diseño Software:} Más allá del código puramente algorítmico, el proyecto ha seguido principios de diseño modular y buenas prácticas de ingeniería. La separación clara entre el núcleo de cálculo (CPU/GPU), la gestión de datos, junto con el uso de herramientas de construcción como \textbf{CMake} y el control de versiones, evidencian la capacidad para desarrollar software científico mantenible, robusto y escalable.
+\end{itemize}
+
+En definitiva, este TFG no solo ha servido para demostrar la adquisición de las competencias técnicas del grado, sino que ha permitido profundizar en ellas enfrentándose a un problema real de escala exa-escalar, donde la eficiencia y el conocimiento del hardware son requisitos indispensables para la viabilidad de la solución.
+
+\section{Trabajo futuro}\label{sec:trabajo-futuro}
+El desarrollo de este proyecto ha sido un proceso de aprendizaje continuo en el que, a medida que se profundizaba en la optimización del código, se identificaron nuevas vías para mejorar la escalabilidad y el rendimiento del simulador.
+Aunque el sistema actual aprovecha al máximo un nodo de computación denso (como el a100-m8 con 8 GPUs), la escala del universo observable invita a expandir el horizonte de simulación más allá de un único nodo.
+
+A continuación se presentan dichas vías:
+\begin{itemize}
+    \item \textbf{Optimización con Morton Codes (Z-order curve):}
+    En la implementación actual, la construcción y recorrido del árbol se basa en punteros y estructuras dinámicas.
+    Una línea de mejora identificada es la linealización del árbol utilizando \textbf{Morton Codes} o curvas de orden Z.
+    Esta técnica permitiría representar el árbol como un array contiguo ordenado espacialmente, mejorando significativamente la localidad de caché y facilitando la construcción del árbol en paralelo directamente en la GPU, eliminando la necesidad de construirlo en CPU y transferirlo posteriormente.
+    \item \textbf{Escalabilidad Multi-nodo con MPI:}
+    Para simular sistemas aún mayores o incrementar la resolución temporal, el siguiente paso lógico es la implementación del estándar \textbf{MPI (Message Passing Interface)}.
+    Esto permitiría distribuir la carga de trabajo entre múltiples nodos del Finisterrae III, superando las limitaciones de memoria y cómputo de una sola máquina.
+    \item \textbf{Tecnologías GPUDirect y MPI CUDA-Aware:}
+    La integración de tecnologías de almacenamiento directo, como \textbf{GPUDirect Storage}, permitiría trasladar los archivos de datos desde el disco directamente a la memoria de la GPU. Esto, combinado con el uso de \textit{parsers} optimizados ejecutados en el propio dispositivo, eliminaría el cuello de botella que supone el paso intermedio por la memoria de la CPU durante la carga inicial.
+
+    Asimismo, el uso de implementaciones \textbf{MPI CUDA-Aware} habilitaría la transferencia directa de datos entre las memorias de las GPUs situadas en distintos nodos.
+    Al aprovechar la capacidad de la red InfiniBand para realizar accesos remotos a memoria (RDMA), se evitan las copias redundantes a la memoria principal (CPU RAM), lo que reduciría drásticamente la latencia de las comunicaciones y liberaría a la CPU de las costosas tareas de gestión del movimiento de datos.
+\end{itemize}
+
+Estas líneas de trabajo futuro permitirían evolucionar el proyecto actual hacia una herramienta de clase mundial, capaz de abordar simulaciones cosmológicas completas con una eficiencia sin precedentes.
+
+
+

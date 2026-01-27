@@ -2,13 +2,24 @@
 
 \pagestyle{empty}
 \begin{abstract}
-  \blindtext % substitúe este comando polo resumo do teu TFG
-             % na lingua principal do documento (tipicamente: galego)
+
+  El presente Trabajo de Fin de Grado aborda el desafío computacional de simular la evolución dinámica de la Vía Láctea procesando la masiva cantidad de datos proporcionada por la misión Gaia (DR3).
+  Dado que la simulación de interacciones gravitatorias mediante fuerza bruta conlleva una complejidad inabordable de $O(N^2)$, este proyecto implementa el algoritmo jerárquico de Barnes-Hut, reduciendo la complejidad a $O(N \log N)$.
+  El sistema desarrollado procesa más de 1.061 millones de estrellas de la secuencia principal, integrando datos astrométricos y estimaciones de masa y distancia.
+  Para lograr tiempos de ejecución viables, se ha diseñado una arquitectura paralela híbrida desplegada en el supercomputador Finisterrae III del CESGA.
+  Se han desarrollado dos versiones del simulador: una basada en CPU (OpenMP) y otra altamente optimizada para GPU (CUDA) que emplea un recorrido de árbol iterativo (\textit{stackless}) y gestión eficiente de memoria.
+  Los resultados experimentales demuestran un \textit{speedup} de 126.7x utilizando un nodo con 8 GPUs NVIDIA A100 frente a una ejecución en CPU de 64 núcleos, reduciendo el tiempo de cálculo de días a minutos sin comprometer la precisión física ni la estabilidad orbital del sistema.
 
   \vspace*{25pt}
   \begin{segundoresumo}
-    \blindtext % substitúe este comando polo resumo do teu TFG
-               % na lingua secundaria do documento (tipicamente: inglés)
+
+  This Bachelor's Thesis addresses the computational challenge of simulating the dynamic evolution of the Milky Way using the massive dataset provided by the Gaia mission (DR3).
+  Since simulating gravitational interactions via brute force entails an intractable $O(N^2)$ complexity, this project implements the hierarchical Barnes-Hut algorithm, reducing the complexity to $O(N \log N)$.
+  The developed system processes over 1.061 billion main-sequence stars, integrating astrometric data with mass and distance estimations.
+  To achieve viable execution times, a hybrid parallel architecture was designed and deployed on the Finisterrae III supercomputer at CESGA.
+  Two versions of the simulator were developed: a CPU-based version (OpenMP) and a highly optimized GPU version (CUDA) employing stackless tree traversal and efficient memory management.
+  Experimental results demonstrate a speedup of 126.7x using a node with 8 NVIDIA A100 GPUs compared to a 64-core CPU execution, reducing computation time from days to minutes without compromising physical precision or the orbital stability of the system.
+
   \end{segundoresumo}
 \vspace*{25pt}
 \input{portada/palabras_chave}

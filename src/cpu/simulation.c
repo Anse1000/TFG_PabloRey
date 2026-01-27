@@ -3,6 +3,7 @@
 #include <omp.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/time.h>
 #include "../aux_fun.h"
 #include "octree_cpu.h"
@@ -246,4 +247,278 @@ void test_simulation(Star *estrellas) {
         }
     }
     free_tree(octree);
+}
+// --- FUNCIONES DE APOYO PARA TESTS ---
+
+// Crea una copia reducida de las estrellas para tests rápidos
+Star* clone_subsample(const Star *original, int factor) {
+    long N_sub = original->size / factor;
+    Star *sub = (Star*)malloc(sizeof(Star));
+    sub->size = N_sub;
+    sub->id = (unsigned long*)malloc(N_sub * sizeof(long));
+    sub->Cx = (double*)malloc(N_sub * sizeof(double)); sub->Cy = (double*)malloc(N_sub * sizeof(double)); sub->Cz = (double*)malloc(N_sub * sizeof(double));
+    sub->Vx = (double*)malloc(N_sub * sizeof(double)); sub->Vy = (double*)malloc(N_sub * sizeof(double)); sub->Vz = (double*)malloc(N_sub * sizeof(double));
+    sub->mass = (float*)malloc(N_sub * sizeof(float));
+
+    for(long i=0; i < N_sub; i++) {
+        long idx = i * factor;
+        sub->id[i] = original->id[idx];
+        sub->Cx[i] = original->Cx[idx]; sub->Cy[i] = original->Cy[idx]; sub->Cz[i] = original->Cz[idx];
+        sub->Vx[i] = original->Vx[idx]; sub->Vy[i] = original->Vy[idx]; sub->Vz[i] = original->Vz[idx];
+        sub->mass[i] = original->mass[idx] * (float)factor; // Escalado de masa
+    }
+    printf("Muestra reducida\n");
+    return sub;
+}
+
+void free_temp_stars(Star *s) {
+    free(s->id); free(s->Cx); free(s->Cy); free(s->Cz);
+    free(s->Vx); free(s->Vy); free(s->Vz); free(s->mass);
+    free(s);
+}
+
+// --- LOS 3 TESTS DE CPU ---
+
+// 1. TEST UNITARIO: Órbita Circular (Validación física de constantes y aceleración analítica)
+void run_cpu_unit_orbit_test() {
+    printf("\n[TEST 1] Órbita Circular Unitaria (Física y Constantes)\n");
+    Star *s = (Star*)malloc(sizeof(Star));
+    memset(s, 0, sizeof(Star));
+    s->size = 1;
+    s->Cx = (double*)malloc(sizeof(double)); s->Cy = (double*)malloc(sizeof(double)); s->Cz = (double*)malloc(sizeof(double));
+    s->Vx = (double*)malloc(sizeof(double)); s->Vy = (double*)malloc(sizeof(double)); s->Vz = (double*)malloc(sizeof(double));
+    s->mass = (float*)malloc(sizeof(float));
+
+    // 1. Posición inicial
+    s->Cx[0] = 8.2; s->Cy[0] = 0.0; s->Cz[0] = 0.0;
+    s->mass[0] = 1.0f;
+
+    // 2. Calcular aceleración en el punto inicial para obtener la v_circular exacta
+    double ax0=0, ay0=0, az0=0;
+    analytic_accel(s->Cx[0], s->Cy[0], s->Cz[0], &ax0, &ay0, &az0);
+    double a_mag = sqrt(ax0*ax0 + ay0*ay0 + az0*az0);
+
+    // v = sqrt(r * a) para órbita circular
+    double v_mag = sqrt(8.2 * a_mag);
+    s->Vx[0] = 0.0; s->Vy[0] = v_mag; s->Vz[0] = 0.0;
+
+    printf("  Aceleración inicial: %.6le kpc/Myr^2\n", a_mag);
+    printf("  Velocidad circular calculada: %.6f kpc/Myr (aprox %.2f km/s)\n", v_mag, v_mag / 0.0010227);
+
+    double r_init = s->Cx[0];
+    const float dt = 0.1f;
+    const float dt2 = dt * 0.5f;
+
+    for(int i=0; i<1000; i++) {
+        double ax=0, ay=0, az=0;
+        analytic_accel(s->Cx[0], s->Cy[0], s->Cz[0], &ax, &ay, &az);
+        s->Vx[0] = fma(dt2, ax, s->Vx[0]); s->Vy[0] = fma(dt2, ay, s->Vy[0]); s->Vz[0] = fma(dt2, az, s->Vz[0]);
+        s->Cx[0] = fma(dt, s->Vx[0], s->Cx[0]); s->Cy[0] = fma(dt, s->Vy[0], s->Cy[0]); s->Cz[0] = fma(dt, s->Vz[0], s->Cz[0]);
+        ax=ay=az=0;
+        analytic_accel(s->Cx[0], s->Cy[0], s->Cz[0], &ax, &ay, &az);
+        s->Vx[0] = fma(dt2, ax, s->Vx[0]); s->Vy[0] = fma(dt2, ay, s->Vy[0]); s->Vz[0] = fma(dt2, az, s->Vz[0]);
+    }
+
+    double r_final = sqrt(s->Cx[0]*s->Cx[0] + s->Cy[0]*s->Cy[0] + s->Cz[0]*s->Cz[0]);
+    printf("  Radio tras 100 Myr: Inicial=%.4f kpc, Final=%.4f kpc\n", r_init, r_final);
+    printf("  Estabilidad: %s\n", (fabs(r_init-r_final) < 0.1) ? "PASADO" : "FALLADO (revisar G o unidades)");
+    free_temp_stars(s);
+}
+
+// 2. TEST ESCALABILIDAD: Analítico Masivo (Stress-test de OpenMP y RAM con 1.100M)
+void run_cpu_massive_analytical_test(const Star *original) {
+    printf("\n[TEST 2] Analítico Masivo (N=%lu - Stress-test OpenMP)\n", original->size);
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+
+    // Creamos vectores de aceleración temporales para no tocar los del main
+    double *tax = (double*)malloc(original->size * sizeof(double));
+    double *tay = (double*)malloc(original->size * sizeof(double));
+    double *taz = (double*)malloc(original->size * sizeof(double));
+
+    printf("  Calculando aceleraciones analíticas para todo el dataset...\n");
+    #pragma omp parallel for
+    for (size_t i = 0; i < original->size; i++) {
+        tax[i] = tay[i] = taz[i] = 0.0;
+        analytic_accel(original->Cx[i], original->Cy[i], original->Cz[i], &tax[i], &tay[i], &taz[i]);
+    }
+
+    gettimeofday(&end, NULL);
+    printf("  Completado en %.2f segundos (%.2f millones estrellas/seg)\n",
+            get_seconds(start, end), (original->size/1e6)/get_seconds(start, end));
+    free(tax); free(tay); free(taz);
+}
+// Calcula el momento angular total en el eje Z: Lz = sum( m * (x*vy - y*vx) )
+double calculate_total_Lz(const Star *s) {
+    double total_Lz = 0.0;
+#pragma omp parallel for reduction(+:total_Lz)
+    for (size_t i = 0; i < s->size; i++) {
+        total_Lz += (double)s->mass[i] *
+                    (s->Cx[i] * s->Vy[i] - s->Cy[i] * s->Vx[i]);
+    }
+    return total_Lz;
+}
+
+// Helper: Ejecuta un paso completo de integración KDK (idéntico al de la simulación real)
+void perform_kdk_step(Star *s, Octree **tree, float DT) {
+    float DT2 = DT * 0.5f;
+    long N = s->size;
+    float cx, cy, cz, hs, min_node_size;
+
+    // 1. Primer Half-Kick + Drift
+    #pragma omp parallel for
+    for(long i=0; i<N; i++) {
+        double ax=0, ay=0, az=0;
+        compute_acceleration_bh(s, *tree, 0, i, THETA, &ax, &ay, &az);
+        analytic_accel(s->Cx[i], s->Cy[i], s->Cz[i], &ax, &ay, &az);
+
+        s->Vx[i] += ax * DT2; s->Vy[i] += ay * DT2; s->Vz[i] += az * DT2;
+        s->Cx[i] += s->Vx[i] * DT; s->Cy[i] += s->Vy[i] * DT; s->Cz[i] += s->Vz[i] * DT;
+    }
+
+    // 2. Reconstrucción del árbol
+    free_tree(*tree);
+    compute_root_bounds(s, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+    *tree = build_tree(s, cx, cy, cz, hs, min_node_size);
+
+    // 3. Segundo Half-Kick con las nuevas aceleraciones
+    #pragma omp parallel for
+    for(long i=0; i<N; i++) {
+        double ax=0, ay=0, az=0;
+        compute_acceleration_bh(s, *tree, 0, i, THETA, &ax, &ay, &az);
+        analytic_accel(s->Cx[i], s->Cy[i], s->Cz[i], &ax, &ay, &az);
+        s->Vx[i] += ax * DT2; s->Vy[i] += ay * DT2; s->Vz[i] += az * DT2;
+    }
+}
+
+// 3. TEST ALGORÍTMICO: Reversibilidad con esquema real
+void run_cpu_reversibility_subsample(const Star *original, float DT_sim) {
+    int factor = 100;
+    printf("\n[TEST 3] Reversibilidad Barnes-Hut (Full KDK, DT=%.2f, Muestra 1/%d)\n", DT_sim, factor);
+
+    Star *sub = clone_subsample(original, factor);
+    long N = sub->size;
+    double *orig_x = (double*)malloc(N * sizeof(double));
+    double *orig_y = (double*)malloc(N * sizeof(double));
+    double *orig_z = (double*)malloc(N * sizeof(double));
+    for(long i=0; i<N; i++) { orig_x[i] = sub->Cx[i]; orig_y[i] = sub->Cy[i]; orig_z[i] = sub->Cz[i]; }
+
+    float cx, cy, cz, hs, min_node_size;
+    compute_root_bounds(sub, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+    Octree *tree = build_tree(sub, cx, cy, cz, hs, min_node_size);
+
+    printf("  Evolucionando 2 pasos ADELANTE...\n");
+    for(int s=0; s<2; s++) perform_kdk_step(sub, &tree, DT_sim);
+
+    printf("  Evolucionando 2 pasos ATRÁS (DT = %.2f)...\n", -DT_sim);
+    for(int s=0; s<2; s++) perform_kdk_step(sub, &tree, -DT_sim);
+
+    double err = 0;
+    #pragma omp parallel for reduction(+:err)
+    for(long i=0; i<N; i++) {
+        err += sqrt(pow(sub->Cx[i]-orig_x[i],2) + pow(sub->Cy[i]-orig_y[i],2) + pow(sub->Cz[i]-orig_z[i],2));
+    }
+
+    printf("  Error final MAE: %.6le kpc\n", err/N);
+    printf("  Resultado: %s\n", (err/N < 1e-4) ? "PASADO" : "REVISAR PRECISIÓN");
+
+    free_tree(tree);
+    free(orig_x); free(orig_y); free(orig_z);
+    free_temp_stars(sub);
+}
+
+// 4. TEST DE SISTEMAS: Conservación del Momento Angular (Lz)
+void run_cpu_angular_momentum_test(const Star *original, float DT_sim) {
+    int factor = 100;
+    printf("\n[TEST 4] Conservación del Momento Angular Lz (DT=%.2f, Muestra 1/%d)\n", DT_sim, factor);
+
+    Star *sub = clone_subsample(original, factor);
+    double Lz_init = calculate_total_Lz(sub);
+
+    float cx, cy, cz, hs, min_node_size;
+    compute_root_bounds(sub, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+    Octree *tree = build_tree(sub, cx, cy, cz, hs, min_node_size);
+
+    printf("  Evolucionando 5 pasos para medir deriva...\n");
+    for(int s=0; s<5; s++) perform_kdk_step(sub, &tree, DT_sim);
+
+    double Lz_final = calculate_total_Lz(sub);
+    double rel_err = fabs(Lz_final - Lz_init) / (fabs(Lz_init) + 1e-20);
+
+    printf("  Variación relativa Lz: %.4le\n", rel_err);
+    free_tree(tree);
+    free_temp_stars(sub);
+}
+
+void run_full_cpu_validation(Star *estrellas) {
+    float DT = 1.0f;
+    printf("\n#######################################################\n");
+    printf("      INICIANDO SUITE DE VALIDACIÓN COMPLETA (CPU)\n");
+    printf("#######################################################\n");
+
+    run_cpu_unit_orbit_test();
+    run_cpu_reversibility_subsample(estrellas, DT);
+    run_cpu_massive_analytical_test(estrellas);
+    run_cpu_angular_momentum_test(estrellas, DT);
+
+    printf("\n#######################################################\n");
+}
+void test_theta(Star *stars, int num_samples) {
+    double thetas[] = {0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5,
+                       0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0};
+    int num_thetas = 20;
+
+    // Arrays de resultados
+    double sum_errors[20] = {0}, sum_sq_errors[20] = {0};
+    double max_errors[20] = {0}, sum_bh_times[20] = {0};
+    double total_ref_time = 0;
+
+    float cx, cy, cz, hs, min_node_size;
+    compute_root_bounds(stars, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+    Octree *tree = build_tree(stars, cx, cy, cz, hs, min_node_size);
+    printf("Iniciando %d muestras con %d hilos...\n", num_samples, omp_get_max_threads()); fflush(stdout);
+
+    #pragma omp parallel
+    {
+        // Semilla local por hilo para evitar contención en rand()
+        unsigned int seed = time(NULL) ^ omp_get_thread_num();
+
+        #pragma omp for reduction(+:total_ref_time, sum_errors[:20], sum_sq_errors[:20], sum_bh_times[:20]) \
+                       reduction(max:max_errors[:20])
+        for (int k = 0; k < num_samples; k++) {
+            unsigned long idx = rand_r(&seed) % stars->size;
+
+            // 1. Referencia (Lento: ~8s)
+            double ref_ax = 0, ref_ay = 0, ref_az = 0, ref_time = 0;
+            compute_aceleration_single(stars, &ref_ax, &ref_ay, &ref_az, idx, &ref_time);
+            double ref_mag = sqrt(ref_ax*ref_ax + ref_ay*ref_ay + ref_az*ref_az);
+            total_ref_time += ref_time;
+
+            // 2. Test de Barnes-Hut (Rápido: <0.04s)
+            for (int t = 0; t < num_thetas; t++) {
+                double bh_ax = 0, bh_ay = 0, bh_az = 0, bh_time = 0;
+                aux_time_bh(stars, tree, 0, idx, thetas[t], &bh_ax, &bh_ay, &bh_az, &bh_time);
+
+                double dx = bh_ax - ref_ax, dy = bh_ay - ref_ay, dz = bh_az - ref_az;
+                double rel_error = (ref_mag > 0.0) ? (sqrt(dx*dx + dy*dy + dz*dz) / ref_mag) : 0.0;
+
+                sum_errors[t] += rel_error;
+                sum_sq_errors[t] += (rel_error * rel_error);
+                sum_bh_times[t] += bh_time;
+                if (rel_error > max_errors[t]) max_errors[t] = rel_error;
+            }
+        }
+    }
+
+    // Informe final (promediado sobre num_samples)
+    printf("\n--- RESULTADOS FINALES (%d muestras) ---\n", num_samples);
+    double reference_time = total_ref_time / num_samples;
+    printf("Tiempo medio Fuerza bruta: %.6f\n",reference_time);
+    for (int t = 0; t < num_thetas; t++) {
+        double m_err = sum_errors[t] / num_samples;
+        double std_dev = sqrt(fmax(0, (sum_sq_errors[t] / num_samples) - (m_err * m_err)));
+        printf("Theta: %.2f | Err Med: %.2e | Err Max: %.2e | StdDev: %.2e | T_medio: %.6f\n",
+                thetas[t], m_err, max_errors[t], std_dev, sum_bh_times[t] / num_samples);
+    }
+    free_tree(tree);
 }

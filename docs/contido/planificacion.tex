@@ -1,2 +1,264 @@
 \chapter{Planificación y costes}
 \label{chap:planificacion}
+
+En este capítulo se detalla la gestión del proyecto llevada a cabo durante la realización del Trabajo de Fin de Grado.
+Se desglosa la planificación temporal de las tareas, la metodología de desarrollo empleada y se presenta un análisis económico de los costes derivados de la ejecución del mismo, tanto en recursos humanos como materiales.
+
+\section{Metodología y planificación del proyecto}\label{sec:planificacion-del-proyecto}
+
+Para el desarrollo de este trabajo se ha seguido una metodología iterativa e incremental.
+Dada la naturaleza de investigación y desarrollo del proyecto, que combina el procesamiento de grandes volúmenes de datos (Big Data) con computación de altas prestaciones (HPC), fue necesario realizar ciclos de diseño, implementación y validación continuos.
+
+El proyecto se ha dividido en cinco fases principales que abarcan desde el estudio inicial del estado del arte hasta la redacción final de la memoria.
+La duración total de proyecto se estimó inicialmente en 300 horas, las correspondientes a una carga de trabajo de 12 créditos ECTS.
+
+\subsection{Descripción de las fases}\label{subsec:descripcion-de-las-fases}
+
+\begin{itemize}
+    \item \textbf{Fase 1: Investigación y estado del arte.} Esta fase inicial se centra en la adquisición de los conocimientos teóricos y técnicos necesarios. Se objetivo es estudiar la estructura de la base de datos Gaia DR3, los fundamentos de astrofísica galáctica (transformación de coordenadas, estimación de masas) y los algoritmos de simulación N-Body (Barnes-Hut, integradores Leapfrog). Asimismo, en esta fase se profundizará en las tecnologías de paralelización a emplear: OpenMP para CPU y CUDA para GPU. Tiempo estimado: 50 horas.
+
+    \item \textbf{Fase 2: Obtención y preprocesado de datos.} Se dedicará esta fase a la descarga, filtrado y transformación de los datos del catálogo Gaia. Las tareas incluyen la implementación de scripts para combinar, limpiar, formatear y generar los ficheros de entrada depurados para el simulador. Tiempo estimado: 40 horas.
+
+    \item \textbf{Fase 3: Diseño e implementación del simulador.} El núcleo del trabajo. Se divide en dos sub-etapas: primero, el desarrollo de una versión secuencial y paralela en CPU utilizando OpenMP para validar la lógica física (construcción del Octree, cálculo de fuerzas). Segundo, la implementación optimizada en GPU utilizando CUDA, abordando retos como la gestión de memoria en la GPU y la minimización de la divergencia de hilos. Tiempo estimado: 100 horas.
+
+    \item \textbf{Fase 4: Experimentación, validación y análisis de resultados.} Una vez implementado el software, se realizarán pruebas exhaustivas en el supercomputador Finisterrae III. Esta fase incluye la validación de la precisión numérica y física de los resultados frente a modelos conocidos y entre las versiones del proyecto, así como el análisis de rendimiento y eficiencia comparando las implementaciones de CPU y GPU. Tiempo estimado: 50 horas.
+
+    \item \textbf{Fase 5: Documentación y preparación de la defensa.} Esta fase transversal cobra mayor peso al final del proyecto. Consistirá en la recopilación de resultados, redacción de la memoria del TFG y preparación del material para la defensa pública. Tiempo estimado: 60 horas.
+\end{itemize}
+
+\section{Desarrollo del proyecto}
+\label{sec:estimacion-temporal}
+
+La duración real del proyecto se ha estimado en unas 370 horas, correspondientes a la carga de trabajo de 12 créditos ECTS.
+En esta sección se muestra el desglose del trabajo en tareas específicas agrupadas por fases, detallando tanto la carga de trabajo de cada tarea como las dependencias temporales entre ellas (ver el diagrama de Gantt del proyecto en la figura~\ref{fig:gantt}).
+
+\subsection{Descripción detallada de tareas}
+\label{subsec:descripcion-tareas}
+
+A continuación, se describe el contenido técnico y los objetivos de cada una de las tareas identificadas:
+
+\paragraph{Fase 1: Investigación y estado del arte}
+\begin{itemize}
+    \item \textbf{T1.1 Estudio de la base de datos Gaia DR3:} Análisis de la documentación de la ESA para comprender los parámetros astrométricos (paralaje, movimiento propio) y fotométricos necesarios para filtrar estrellas de la secuencia principal.
+    \item \textbf{T1.2 Investigación sobre transformaciones y estimaciones:} Estudio sobre la conversión matemática de coordenadas y fundamentos físico-matemáticos para la estimación de parámetros necesarios para la simulación.
+    \item \textbf{T1.3 Investigación sobre algoritmos N-Body:} Estudio comparativo entre la fuerza bruta $O(N^2)$ y aproximaciones jerárquicas como Barnes-Hut $O(N \log N)$, centrándose en el criterio de aceptación multipolar (MAC).
+    \item \textbf{T1.4 Formación en computación heterogénea:} Aprendizaje de patrones de paralelismo en OpenMP y programación en CUDA, con énfasis en la gestión de memoria.
+\end{itemize}
+
+\paragraph{Fase 2: Obtención y preprocesado de datos}
+\begin{itemize}
+    \item \textbf{T2.1 Descarga de las Bases de Datos:} Implementación de consultas al \textit{Gaia Archive} y derivados para la descarga masiva de los datos a la infraestructura HPC.
+    \item \textbf{T2.2 Creación de scripts:} Creación de scripts para la combinación de archivos y filtrado de columnas de los datos originales para dejarlos listos para el simulador.
+\end{itemize}
+
+\paragraph{Fase 3: Diseño e implementación del simulador}
+\begin{itemize}
+    \item \textbf{T3.1 Diseño de estructuras (Octree)(Star):} Definición de las estructuras de datos espaciales para la partición recursiva del volumen galáctico y representación de partículas.
+    \item \textbf{T3.2 Implementación CPU (OpenMP):} Desarrollo del algoritmo Barnes-Hut en CPU, paralelizando la construcción del árbol y el cálculo de fuerzas.
+    \item \textbf{T3.3 Integración temporal:} Implementación de integradores simplécticos (Leapfrog) para la actualización de posiciones garantizando la conservación de la energía.
+    \item \textbf{T3.4 Portabilidad a GPU (CUDA):} Migración del código a la GPU, implementando kernels específicos para la construcción y recorrido del árbol octal asi como el integrador.
+    \item \textbf{T3.5 Optimización de kernels:} Refinamiento del código CUDA (uso de memoria compartida, \textit{coalesced access} y uso de registros) para reducir el tiempo de cómputo.
+\end{itemize}
+
+\paragraph{Fase 4: Experimentación, validación y análisis de resultados}
+\begin{itemize}
+    \item \textbf{T4.1 Despliegue y gestión de trabajos en infraestructuras HPC:} Configuración del entorno de ejecución en el supercomputador \textit{Finisterrae III} (CESGA). Desarrollo de scripts de planificación mediante \textit{Slurm} para la gestión de colas y optimización del I/O paralelo para el manejo de grandes volúmenes de datos.
+    \item \textbf{T4.2 Validación de fidelidad numérica y estabilidad física:} Realización de pruebas comparativas entre las arquitecturas CPU y GPU. Pruebas de validacion del integrador y de la precisión física.
+    \item \textbf{T4.3 Análisis de rendimiento y escalabilidad:} Ejecución de \textit{benchmarking} sistemático para cuantificar la aceleración (\textit{speedup}) obtenida. Análisis de la escalabilidad en nodos multi-GPU, identificando posibles cuellos de botella en la comunicación del bus y la distribución de carga.
+    \item \textbf{T4.4 Estudio de sensibilidad de parámetros:} Evaluación del impacto de los parámetros algorítmicos ($\theta$ y \texttt{min\_subdivisions}) en el compromiso entre el tiempo de cómputo y la precisión de la aproximación de Barnes-Hut.
+\end{itemize}
+
+\paragraph{Fase 5: Documentación y preparación de la defensa}
+\begin{itemize}
+    \item \textbf{T5.1 Redacción de la memoria técnica:} Elaboración del documento final, detallando la fundamentación teórica, el diseño de la arquitectura del simulador y la interpretación científica de los resultados obtenidos.
+    \item \textbf{T5.2 Preparación de la defensa pública:} Síntesis de las contribuciones principales del proyecto, diseño de la presentación de diapositivas y ensayo de la exposición ante el tribunal evaluador.
+\end{itemize}
+
+\subsection{Desglose de esfuerzo}
+\label{subsec:desglose-de-tareas}
+
+En la Tabla~\ref{tab:tareas} se cuantifica el esfuerzo en horas dedicado a cada una de las tareas descritas anteriormente.
+
+\begin{table}[ht!]
+    \centering
+    \setlength{\tabcolsep}{5pt}
+    \small % Fuente un poco más pequeña para ganar espacio
+    \begin{tabularx}{\textwidth}{|l|c|X|c|} % X hace que la columna de Tarea use el espacio justo
+        \hline
+        \textbf{Fase} & \textbf{Código} & \textbf{Tarea} & \textbf{Horas} \\ \hline
+        \textbf{Fase 1} & T1.1 & Estudio de Gaia DR3 y fundamentos astrométricos & 15 \\
+        & T1.2 & Investigación sobre algoritmos N-Body y Barnes-Hut & 20 \\
+        & T1.3 & Formación en computación heterogénea (CUDA/OpenMP) & 25 \\ \hline
+        \textbf{Fase 2} & T2.1 & Descarga y filtrado de datos mediante scripts ADQL & 10 \\
+        & T2.2 & Implementación de transformaciones de coordenadas & 20 \\
+        & T2.3 & Verificación y generación de datasets binarios & 10 \\ \hline
+        \textbf{Fase 3} & T3.1 & Diseño de estructuras de datos (Estrella, Octree) & 15 \\
+        & T3.2 & Implementación del algoritmo Barnes-Hut en CPU & 40 \\
+        & T3.3 & Implementación del integrador temporal y gestión de E/S & 15 \\
+        & T3.4 & Portabilidad y optimización del algoritmo en GPU & 50 \\
+        & T3.5 & Refinamiento de kernels y accesos a memoria & 20 \\ \hline
+        \textbf{Fase 4} & T4.1 & Despliegue y configuración en Finisterrae III & 10 \\
+        & T4.2 & Validación física y estabilidad numérica (MAE/CoM) & 20 \\
+        & T4.3 & Benchmarking y análisis de escalabilidad multi-GPU & 30 \\ \hline
+        \textbf{Fase 5} & T5.1 & Redacción de la memoria técnica & 60 \\
+        & T5.2 & Preparación de la defensa pública & 10 \\ \hline
+        \multicolumn{2}{|l|}{\textbf{Total}} & & \textbf{370} \\ \hline
+    \end{tabularx}
+    \caption{Desglose de tareas y horas invertidas}
+    \label{tab:tareas}
+\end{table}
+
+Como se puede observar, la Fase 3 representa el bloque de mayor carga de trabajo y con mayor desviación en tiempo con respecto a la planificación original debido a la complejidad inherente a la programación de GPUs y la optimización del algoritmo Barnes-Hut.
+También hubo que dedicar algo más de tiempo a la fase de experimentación debido a los elevados requerimientos computacionales del simulador y la elevada carga de las colas de ejecución del Finisterrae III.
+
+\begin{sidewaysfigure}[p]
+    \centering
+    \begin{ganttchart}[
+    % --- ESCALA Y REJILLA ---
+    % Usamos llaves dobles para asegurar que LaTeX no se pierda con las comas
+        vgrid={{*{19}{black!5, dotted}, *{1}{black!20, dashed}}},
+        hgrid={*1{black!15, dashed}},
+        x unit=0.05cm,
+        y unit chart=0.5cm,
+        time slot format=simple,
+    % --- ESTILOS DE TEXTO ---
+        title label font=\bfseries\large,
+        bar label font=\footnotesize,
+        group label font=\bfseries\small,
+    % --- ETIQUETAS A LA IZQUIERDA ---
+        bar label node/.append style={align=right, text width=1.5cm, xshift=-0.1cm, anchor=east},
+        group label node/.append style={align=right, text width=1.5cm, xshift=-0.1cm, anchor=east},
+    % --- ESTILO DE BARRAS ---
+        bar/.append style={fill=blue!40, draw=blue!70, line width=0.5pt},
+        bar height=0.4,
+        group/.append style={fill=gray!60, draw=black},
+        group height=0.15,
+    % --- FLECHAS SIN TEXTO ---
+        link/.style={->, draw=black!50, line width=0.6pt}
+    ]{1}{360}
+
+        % Títulos
+        \gantttitle{Planificación Temporal por Bloques (1 Bloque = 20 Horas)}{360} \\
+        \gantttitlelist{1,...,18}{20} \\
+
+        % FASE 1
+        \ganttgroup{Fase 1}{1}{60} \\
+        \ganttbar[name=T11]{T1.1}{1}{15} \\
+        \ganttbar[name=T12]{T1.2}{16}{35} \\
+        \ganttbar[name=T13]{T1.3}{36}{60} \\
+
+        % FASE 2
+        \ganttgroup{Fase 2}{61}{100} \\
+        \ganttbar[name=T21]{T2.1}{61}{70} \\
+        \ganttbar[name=T22]{T2.2}{71}{90} \\
+        \ganttbar[name=T23]{T2.3}{91}{100} \\
+
+        % FASE 3
+        \ganttgroup{Fase 3}{101}{225} \\
+        \ganttbar[name=T31]{T3.1}{101}{115} \\
+        \ganttbar[name=T32]{T3.2}{116}{155} \\
+        \ganttbar[name=T33]{T3.3}{156}{170} \\
+        \ganttbar[name=T34]{T3.4}{156}{205} \\
+        \ganttbar[name=T35]{T3.5}{206}{225} \\
+
+        % FASE 4
+        \ganttgroup{Fase 4}{226}{285} \\
+        \ganttbar[name=T41]{T4.1}{226}{235} \\
+        \ganttbar[name=T42]{T4.2}{236}{255} \\
+        \ganttbar[name=T43]{T4.3}{256}{285} \\
+
+        % FASE 5
+        \ganttgroup{Fase 5}{286}{355} \\
+        \ganttbar[name=T51]{T5.1}{286}{345} \\
+        \ganttbar[name=T52]{T5.2}{346}{355} \\
+
+        % Enlaces
+        \ganttlink{T11}{T12} \ganttlink{T12}{T13} \ganttlink{T13}{T21}
+        \ganttlink{T21}{T22} \ganttlink{T22}{T23} \ganttlink{T23}{T31}
+        \ganttlink{T31}{T32} \ganttlink{T32}{T33} \ganttlink{T32}{T34}
+        \ganttlink{T34}{T35} \ganttlink{T35}{T41} \ganttlink{T41}{T42}
+        \ganttlink{T42}{T43} \ganttlink{T43}{T52}
+    \end{ganttchart}
+    \caption{Diagrama de Gantt}
+    \label{fig:gantt}
+\end{sidewaysfigure}
+
+\section{Presupuesto}\label{sec:presupuesto}
+
+Para el cálculo de los costes del proyecto se han tenido en cuenta tanto los recursos humanos como los recursos materiales (hardware y software) utilizados.
+
+\subsection{Recursos Humanos}\label{subsec:recursos-humanos}
+
+El equipo de desarrollo está formado por el alumno, que asume el rol de Ingeniero Junior, y los tutores, que realizan labores de supervisión y gestión del proyecto.
+
+\begin{itemize}
+    \item \textbf{Ingeniero Junior:} Se estima un coste de 17,00 \euro/hora.
+    \item \textbf{Tutores:} Se estima una dedicación del 10\% respecto a las horas del alumno (36 horas), con un coste de 45,00 \euro/hora (coste medio de profesorado universitario/investigador senior).
+\end{itemize}
+
+\begin{table}[h!]
+    \centering
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|}
+        \hline
+        \textbf{Rol} & \textbf{Horas} & \textbf{Precio/Hora (\euro)} & \textbf{Coste Total (\euro)} \\ \hline
+        Ingeniero Junior (Estudiante) & 370 & 17,00 & 6.290,00 \\
+        Tutores (Dirección de proyecto) & 36 & 45,00 & 1.620,00 \\ \hline
+        \textbf{Subtotal Recursos Humanos} & & & \textbf{7.910,00} \\ \hline
+    \end{tabularx}
+    \caption{Costes de recursos humanos}
+    \label{tab:costes_rrhh}
+\end{table}
+
+
+\subsection{Recursos Hardware}\label{subsec:recursos-hardware}
+
+Para el desarrollo se ha utilizado un ordenador portátil personal para las fases de implementación inicial y redacción, y el supercomputador Finisterrae III del CESGA para las ejecuciones intensivas y pruebas de rendimiento.
+
+\begin{itemize}
+    \item \textbf{Ordenador portátil:} Se estima un coste de amortización de 6 meses sobre un equipo valorado en 1.200 \euro{} con una vida útil de 4 años.
+    \[ \text{Amortización} = \frac{1.200 \text{\euro}}{48 \text{ meses}} \times 6 \text{ meses} = 150,00 \text{\euro} \]
+
+    \item \textbf{Supercomputador Finisterrae III:} Se ha realizado un uso intensivo de la infraestructura ejecutando un total de 530 trabajos (115 de ellos utilizando GPUs A100 con reserva de 64 núcleos).
+     El consumo total acumulado ha sido de 48.020 horas-núcleo. El coste se estima basándonos en las tarifas públicas promedio para investigación (aprox. 0,045 \euro/hora-núcleo, ponderando el uso de CPU y GPU)\footnote{Si estos recursos se hubieran contratado en un proveedor de nube pública comercial (AWS/Azure) a precios de mercado, el coste estimado ascendería a aprox. 3.000 \euro.}:
+    \[ \text{Coste HPC} = 48.020 \text{ h-núcleo} \times 0,045 \text{ \euro} \approx 2.160,90 \text{ \euro} \]
+\end{itemize}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|l|l|r|}
+        \hline
+        \textbf{Recurso} & \textbf{Descripción} & \textbf{Coste (\euro)} \\ \hline
+        Ordenador personal & Amortización equipo desarrollo & 150,00 \\
+        Finisterrae III (CESGA) & 48.020 horas-núcleo (CPU/GPU) & 2.160,90 \\ \hline
+        \textbf{Subtotal Hardware} & & \textbf{2.310,90} \\ \hline
+    \end{tabular}
+    \caption{Costes de recursos hardware}
+    \label{tab:costes_hw}
+\end{table}
+
+\subsection{Recursos Software}\label{subsec:recursos-software}
+
+Se ha priorizado el uso de software de código abierto (Open Source).
+El sistema operativo utilizado ha sido Linux (distribuciones Ubuntu en su versión WSL y Rocky Linux en el clúster).
+Los lenguajes (C, C++, Python), compiladores (GCC, NVCC) y librerías son de uso libre, por lo que no imputan coste directo al proyecto.
+
+\subsection{Coste Total}\label{subsec:coste-total}
+
+Finalmente, el coste total del proyecto asciende a la suma de los costes de recursos humanos y materiales (Tabla~\ref{tab:presupuesto_total}).
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Concepto} & \textbf{Coste (\euro)} \\ \hline
+        Recursos Humanos & 7.910,00 \\
+        Recursos Hardware & 2.310,90 \\
+        Recursos Software & 0,00 \\ \hline
+        \textbf{Total Proyecto} & \textbf{10.220,90} \\ \hline
+    \end{tabular}
+    \caption{Presupuesto total del proyecto}
+    \label{tab:presupuesto_total}
+\end{table}
+
+Este presupuesto refleja el coste teórico que tendría la realización de este proyecto en un entorno profesional, considerando las tarifas de mercado para perfiles de ingeniería y el uso de infraestructuras de supercomputación avanzadas.
