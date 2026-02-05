@@ -42,7 +42,7 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
-    OctreeGPU *build_tree(Star *stars, float cx, float cy, float cz, float hs, float min_node_size,const unsigned int *offsets);
+    OctreeGPU *build_tree_GPU(Star *stars, float cx, float cy, float cz, float hs, float min_node_size,const unsigned int *offsets);
     void free_tree_gpu(OctreeGPU *tree);
 #ifdef __cplusplus
 }

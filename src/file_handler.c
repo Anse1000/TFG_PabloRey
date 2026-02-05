@@ -8,22 +8,27 @@
 #include <sys/stat.h>
 #include "calculations.h"
 #include "aux_fun.h"
+#include <math.h>
 
-void process_line(const char *line, Star *stars) {
-    char *tokens[12];
+void process_line(const char* line, Star* stars)
+{
+    char* tokens[12];
     int i = 0;
 
-    char *saveptr;
-    char *token = strtok_r((char *)line, DELIMITER, &saveptr);
-    while (token && i < 12) {
+    char* saveptr;
+    char* token = strtok_r((char*)line, DELIMITER, &saveptr);
+    while (token && i < 12)
+    {
         tokens[i++] = token;
         token = strtok_r(NULL, DELIMITER, &saveptr);
     }
 
     // Validar que la línea tenga 12 columnas correctamente y que ciertos valores no sean "null"
-    if (i == 12 && strcmp(tokens[11], "null") != 0 && strcmp(tokens[7], "null") != 0 ){
+    if (i == 12 && strcmp(tokens[11], "null") != 0 && strcmp(tokens[7], "null") != 0)
+    {
         // Expandir arreglo si es necesario
-        if (stars->size >= stars->capacity) {
+        if (stars->size >= stars->capacity)
+        {
             stars->capacity += 10000;
             resize_stars(stars);
         }
@@ -39,26 +44,30 @@ void process_line(const char *line, Star *stars) {
         stars->color[idx] = strtof(tokens[7], NULL);
 
         // Validar rango de color
-        if (stars->color[idx] < 0.3 || stars->color[idx] > 2) {
+        if (stars->color[idx] < 0.3 || stars->color[idx] > 2)
+        {
             stars->size--;
             return;
         }
 
         stars->mass[idx] = strcmp(tokens[8], "null") == 0 ? 0.0F : strtof(tokens[8], NULL);
         stars->distance[idx] = strtod(tokens[11], NULL);
-        }
+    }
 }
 
-int read_file(const char *filename, Star *stars) {
-    FILE *file = fopen(filename, "r");
-    if (!file) {
+int read_file(const char* filename, Star* stars)
+{
+    FILE* file = fopen(filename, "r");
+    if (!file)
+    {
         perror("Error abriendo el archivo");
         return -1;
     }
 
     // Asignamos un búfer con suficiente tamaño para manejar fragmentos
-    char *buffer = malloc(READ_BLOCK_SIZE + 1); // +1 para la terminación nula
-    if (!buffer) {
+    char* buffer = malloc(READ_BLOCK_SIZE + 1); // +1 para la terminación nula
+    if (!buffer)
+    {
         perror("Error asignando memoria al búfer");
         fclose(file);
         return -1;
@@ -66,21 +75,24 @@ int read_file(const char *filename, Star *stars) {
 
     size_t leftover = 0; // Bytes restantes (línea incompleta)
     size_t bytes_read; // Bytes leídos en cada iteración
-    char *line_start;
-    char *newline;
+    char* line_start;
+    char* newline;
 
-    while ((bytes_read = fread(buffer + leftover, 1, READ_BLOCK_SIZE - leftover, file)) > 0) {
+    while ((bytes_read = fread(buffer + leftover, 1, READ_BLOCK_SIZE - leftover, file)) > 0)
+    {
         bytes_read += leftover; // Considerar el sobrante de la iteración anterior
         buffer[bytes_read] = '\0'; // Asegurarnos de que el búfer esté finalizado en cada lectura
 
         line_start = buffer; // Inicio de la línea actual
 
         // Buscar las líneas completas dentro del bloque leído
-        while ((newline = strchr(line_start, '\n')) != NULL) {
+        while ((newline = strchr(line_start, '\n')) != NULL)
+        {
             *newline = '\0'; // Finalizar línea actual
 
             // Procesar la línea si no es encabezado u hoja vacía
-            if (line_start[0] != 's' && line_start[0] != '\0') {
+            if (line_start[0] != 's' && line_start[0] != '\0')
+            {
                 process_line(line_start, stars);
             }
 
@@ -90,8 +102,10 @@ int read_file(const char *filename, Star *stars) {
 
         // Manejo del sobrante (línea cortada) al comienzo del búfer
         leftover = strlen(line_start);
-        if (leftover > 0) {
-            if (leftover > READ_BLOCK_SIZE) {
+        if (leftover > 0)
+        {
+            if (leftover > READ_BLOCK_SIZE)
+            {
                 fprintf(stderr, "Error: línea demasiado grande para el búfer\n");
                 free(buffer);
                 fclose(file);
@@ -102,9 +116,11 @@ int read_file(const char *filename, Star *stars) {
     }
 
     // Procesar última línea si no termina en '\n'
-    if (leftover > 0) {
+    if (leftover > 0)
+    {
         buffer[leftover] = '\0';
-        if (buffer[0] != 's' && buffer[0] != '\0') {
+        if (buffer[0] != 's' && buffer[0] != '\0')
+        {
             process_line(buffer, stars);
         }
     }
@@ -114,13 +130,15 @@ int read_file(const char *filename, Star *stars) {
     return 0;
 }
 
-unsigned long getstarsfromfile(char *dirname, Star *stars) {
+unsigned long getstarsfromfile(char* dirname, Star* stars)
+{
     struct timeval start, end;
-    struct dirent **filelist;
+    struct dirent** filelist;
 
     // Obtener la lista de archivos
     int num_files = scandir(dirname, &filelist, NULL, alphasort);
-    if (num_files < 0) {
+    if (num_files < 0)
+    {
         perror("No se pudo abrir el directorio");
         return -1;
     }
@@ -128,11 +146,13 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
     gettimeofday(&start, NULL);
 
     // Lista de archivos válidos para procesar
-    char **valid_files = malloc(num_files * sizeof(char *));
+    char** valid_files = malloc(num_files * sizeof(char*));
     int valid_count = 0;
 
-    for (int i = 0; i < num_files; i++) {
-        if (filelist[i]->d_name[0] == '.') {
+    for (int i = 0; i < num_files; i++)
+    {
+        if (filelist[i]->d_name[0] == '.')
+        {
             free(filelist[i]);
             continue;
         }
@@ -150,22 +170,25 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
     fflush(stdout);
 #pragma omp parallel
     {
-        Star *temp = malloc(sizeof(Star));
+        Star* temp = malloc(sizeof(Star));
         memset(temp, 0, sizeof(Star));
         temp->capacity = 700000;
         resize_stars(temp);
         temp->size = 0;
 
 #pragma omp for schedule(dynamic)
-        for (int i = 0; i < valid_count; i++) {
+        for (int i = 0; i < valid_count; i++)
+        {
             read_file(valid_files[i], temp);
             complete_data(temp);
             unsigned long start_idx;
             // Reservamos espacio exacto solo si hay algo para copiar
-            if (temp->size > 0) {
+            if (temp->size > 0)
+            {
 #pragma omp critical
                 {
-                    if (stars->size + temp->size > stars->capacity) {
+                    if (stars->size + temp->size > stars->capacity)
+                    {
                         stars->capacity = stars->size + temp->size + 1000000;
                         resize_stars(stars);
                     }
@@ -174,7 +197,8 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
                 }
 
                 // Copiamos fuera del critical
-                for (size_t j = 0; j < temp->size; j++) {
+                for (size_t j = 0; j < temp->size; j++)
+                {
                     size_t idx = start_idx + j;
                     stars->id[idx] = temp->id[j];
                     stars->ra[idx] = temp->ra[j];
@@ -206,27 +230,28 @@ unsigned long getstarsfromfile(char *dirname, Star *stars) {
     printf("Leídas y trasladadas %lu estrellas a memoria ocupando %.2f MB en %.2f segundos\n",
            stars->size,
            (stars->capacity * sizeof(double) * 13 + stars->capacity * sizeof(float) * 1 + stars->capacity * sizeof(
-                unsigned long)) / (1024.0 * 1024.0), seconds);
+               unsigned long)) / (1024.0 * 1024.0), seconds);
     fflush(stdout);
     return stars->size;
 }
-void write_hdf5_chunks(const Star *estrellas,
-                       const char *directory,
-                       const char *base_filename,
+
+void write_hdf5_chunks(const Star* estrellas,
+                       const char* directory,
+                       const char* base_filename,
                        unsigned int num_chunks,
-                       const size_t *chunk_sizes,
-                       const size_t *chunk_offsets)
+                       const size_t* chunk_sizes,
+                       const size_t* chunk_offsets)
 {
     struct stat st = {0};
     if (stat(directory, &st) == -1) mkdir(directory, 0755);
 
-    #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
     for (unsigned int i = 0; i < num_chunks; i++)
     {
         size_t start = chunk_offsets[i];
         size_t count = chunk_sizes[i];
 
-        char *filename = malloc(strlen(directory) + strlen(base_filename) + 20);
+        char* filename = malloc(strlen(directory) + strlen(base_filename) + 20);
         sprintf(filename, "%s/%s_%02u.h5", directory, base_filename, i);
 
         hid_t plist = H5Pcreate(H5P_FILE_ACCESS);
@@ -236,17 +261,17 @@ void write_hdf5_chunks(const Star *estrellas,
 
         // --- 1. PREPARACIÓN DE DATASETS ---
         // Dataset 1D (ID, MASS)
-        hsize_t dims_1d[1] = { count };
+        hsize_t dims_1d[1] = {count};
         hid_t space_1d = H5Screate_simple(1, dims_1d, NULL);
 
         // Dataset 2D (XYZ_POS) - Creamos el dataset completo primero
-        hsize_t dims_2d[2] = { count, 3 }; // N rows, 3 columns
+        hsize_t dims_2d[2] = {count, 3}; // N rows, 3 columns
         hid_t space_2d = H5Screate_simple(2, dims_2d, NULL);
-        
+
         // --- 2. ESCRITURA DE DATASETS HDF5 (Directa para 1D) ---
-        
+
         // Macro adaptado para escritura explícita
-        #define WRITE_1D_DATASET(name, type, ptr, space) \
+#define WRITE_1D_DATASET(name, type, ptr, space) \
             do { \
                 hid_t dset = H5Dcreate(file_id, name, type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); \
                 H5Dwrite(dset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, (ptr)+start); \
@@ -254,24 +279,27 @@ void write_hdf5_chunks(const Star *estrellas,
             } while(0)
 
         // Escritura 1D (MASS, ID) - No consume memoria extra
-        WRITE_1D_DATASET("ID",   H5T_NATIVE_UINT64, estrellas->id, space_1d);
+        WRITE_1D_DATASET("ID", H5T_NATIVE_UINT64, estrellas->id, space_1d);
         WRITE_1D_DATASET("MASS", H5T_NATIVE_FLOAT, estrellas->mass, space_1d);
 
         H5Sclose(space_1d);
 
         // --- 3. ESCRITURA DE XYZ_POS POR LOTES (Para ahorrar RAM) ---
-        hid_t dset_xyz = H5Dcreate(file_id, "XYZ_POS", H5T_NATIVE_DOUBLE, space_2d, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        hid_t dset_xyz = H5Dcreate(file_id, "XYZ_POS", H5T_NATIVE_DOUBLE, space_2d, H5P_DEFAULT, H5P_DEFAULT,
+                                   H5P_DEFAULT);
 
         size_t batch_size = 2000000;
-        double *xyz_buffer = malloc(batch_size * 3 * sizeof(double));
-        
+        double* xyz_buffer = malloc(batch_size * 3 * sizeof(double));
+
         size_t written = 0;
-        while(written < count) {
+        while (written < count)
+        {
             // Calcular tamaño del lote actual
             size_t current_batch = (count - written > batch_size) ? batch_size : (count - written);
-            
+
             // 1. Interleaving (Entrelazado) solo del lote actual
-            for (size_t j = 0; j < current_batch; j++) {
+            for (size_t j = 0; j < current_batch; j++)
+            {
                 size_t idx = start + written + j;
                 xyz_buffer[j * 3 + 0] = estrellas->Cx[idx];
                 xyz_buffer[j * 3 + 1] = estrellas->Cy[idx];
@@ -306,57 +334,60 @@ void write_hdf5_chunks(const Star *estrellas,
 // ----------------------------
 // Write master XDMF
 // ----------------------------
-void write_master_xdmf(const char *directory,
-                       const char *base_filename,
+void write_master_xdmf(const char* directory,
+                       const char* base_filename,
                        int step,
                        unsigned int num_chunks,
-                       const size_t *chunk_sizes)
+                       const size_t* chunk_sizes)
 {
-    char *filename = malloc(strlen(directory) + strlen(base_filename) + 20);
+    char* filename = malloc(strlen(directory) + strlen(base_filename) + 20);
     sprintf(filename,
-             "%s/step_%04d.xmf",
-             directory, step+1);
+            "%s/step_%04d.xmf",
+            directory, step + 1);
 
-    FILE *f = fopen(filename, "w");
-    if (!f) {
+    FILE* f = fopen(filename, "w");
+    if (!f)
+    {
         perror("Error abriendo XDMF maestro");
         free(filename);
         return;
     }
 
     fprintf(f,
-    "<?xml version=\"1.0\" ?>\n"
-    "<Xdmf Version=\"3.0\">\n"
-    "  <Domain>\n"
-    "    <Grid Name=\"Stars\" GridType=\"Collection\" CollectionType=\"Spatial\">\n");
+            "<?xml version=\"1.0\" ?>\n"
+            "<Xdmf Version=\"3.0\">\n"
+            "  <Domain>\n"
+            "    <Grid Name=\"Stars\" GridType=\"Collection\" CollectionType=\"Spatial\">\n");
 
     for (unsigned int i = 0; i < num_chunks; i++)
     {
         fprintf(f,
-"      <Grid Name=\"chunk_%02u\" GridType=\"Uniform\">\n" // Volvemos a Uniform, que era el que intentaba el usuario
-"        <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%zu\"/>\n"
-"        <Geometry GeometryType=\"XYZ\">\n" // <-- CAMBIO: Geometría Interleaved
-"          <DataItem Dimensions=\"%zu 3\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:XYZ_POS</DataItem>\n" // <-- CAMBIO: Solo un DataItem N x 3
-"        </Geometry>\n"
-"        <Attribute Name=\"MASS\" AttributeType=\"Scalar\" Center=\"Node\">\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">%s_%02u.h5:MASS</DataItem>\n"
-"        </Attribute>\n"
-"        <Attribute Name=\"ID\" AttributeType=\"Scalar\" Center=\"Node\">\n"
-"          <DataItem Dimensions=\"%zu\" NumberType=\"UInt\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:ID</DataItem>\n"
-"        </Attribute>\n"
-"      </Grid>\n",
-            i,
-            chunk_sizes[i],
-            chunk_sizes[i], base_filename, i, // XYZ_POS (Dimensions N 3)
-            chunk_sizes[i], base_filename, i, // MASS
-            chunk_sizes[i], base_filename, i  // ID
+                "      <Grid Name=\"chunk_%02u\" GridType=\"Uniform\">\n"
+                // Volvemos a Uniform, que era el que intentaba el usuario
+                "        <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%zu\"/>\n"
+                "        <Geometry GeometryType=\"XYZ\">\n" // <-- CAMBIO: Geometría Interleaved
+                "          <DataItem Dimensions=\"%zu 3\" NumberType=\"Float\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:XYZ_POS</DataItem>\n"
+                // <-- CAMBIO: Solo un DataItem N x 3
+                "        </Geometry>\n"
+                "        <Attribute Name=\"MASS\" AttributeType=\"Scalar\" Center=\"Node\">\n"
+                "          <DataItem Dimensions=\"%zu\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">%s_%02u.h5:MASS</DataItem>\n"
+                "        </Attribute>\n"
+                "        <Attribute Name=\"ID\" AttributeType=\"Scalar\" Center=\"Node\">\n"
+                "          <DataItem Dimensions=\"%zu\" NumberType=\"UInt\" Precision=\"8\" Format=\"HDF\">%s_%02u.h5:ID</DataItem>\n"
+                "        </Attribute>\n"
+                "      </Grid>\n",
+                i,
+                chunk_sizes[i],
+                chunk_sizes[i], base_filename, i, // XYZ_POS (Dimensions N 3)
+                chunk_sizes[i], base_filename, i, // MASS
+                chunk_sizes[i], base_filename, i // ID
         );
     }
 
     fprintf(f,
-"    </Grid>\n"
-"  </Domain>\n"
-"</Xdmf>\n");
+            "    </Grid>\n"
+            "  </Domain>\n"
+            "</Xdmf>\n");
 
     fclose(f);
     free(filename);
@@ -366,32 +397,32 @@ void write_master_xdmf(const char *directory,
 // ----------------------------
 // Main write_results
 // ----------------------------
-void write_results_hdf5(Star *estrellas,
-                        const char *output_dir,
-                        const char *name,
+void write_results_hdf5(Star* estrellas,
+                        const char* output_dir,
+                        const char* name,
                         int step)
 {
     struct stat st = {0};
     if (stat(output_dir, &st) == -1) mkdir(output_dir, 0755);
 
-    char *stepdir = malloc(strlen(output_dir) + strlen(name) + 10);
-    sprintf(stepdir, "%s/step_%04d", output_dir, step+1);
+    char* stepdir = malloc(strlen(output_dir) + strlen(name) + 10);
+    sprintf(stepdir, "%s/step_%04d", output_dir, step + 1);
     mkdir(stepdir, 0755);
 
     const unsigned int num_chunks = omp_get_max_threads();
-    size_t *chunk_sizes   = malloc(num_chunks * sizeof(size_t));
-    size_t *chunk_offsets = malloc(num_chunks * sizeof(size_t));
-    size_t *id_min        = malloc(num_chunks * sizeof(size_t));
-    size_t *id_max        = malloc(num_chunks * sizeof(size_t));
+    size_t* chunk_sizes = malloc(num_chunks * sizeof(size_t));
+    size_t* chunk_offsets = malloc(num_chunks * sizeof(size_t));
+    size_t* id_min = malloc(num_chunks * sizeof(size_t));
+    size_t* id_max = malloc(num_chunks * sizeof(size_t));
 
     size_t N = estrellas->size;
     size_t base = N / num_chunks;
-    size_t rem  = N % num_chunks;
+    size_t rem = N % num_chunks;
     size_t offset = 0;
 
     for (unsigned int i = 0; i < num_chunks; i++)
     {
-        chunk_sizes[i]   = base + (i < rem ? 1 : 0);
+        chunk_sizes[i] = base + (i < rem ? 1 : 0);
         chunk_offsets[i] = offset;
         id_min[i] = estrellas->id[offset];
         id_max[i] = estrellas->id[offset + chunk_sizes[i] - 1];
@@ -408,4 +439,108 @@ void write_results_hdf5(Star *estrellas,
     free(id_min);
     free(id_max);
     free(stepdir);
+}
+void clean_step_dir(const char *output_dir, int step) {
+    char command[512];
+    // Construye el comando: rm -rf output_dir/step_XXXX
+    sprintf(command, "rm -rf %s/step_%04d", output_dir, step + 1);
+    int ret = system(command);
+    if (ret != 0) {
+        // Ignoramos errores
+    }
+}
+void benchmark_io(char *input_dir, char *output_dir, int iterations) {
+    Star *stars = malloc(sizeof (Star));
+    // Inicialización segura de la estructura
+    memset(stars, 0, sizeof(Star));
+
+    double *read_times = malloc(iterations * sizeof(double));
+    double *write_times = malloc(iterations * sizeof(double));
+
+    printf("============================================================\n");
+    printf("INICIANDO BENCHMARK DE E/S (Iteraciones: %d)\n", iterations);
+    printf("Input: %s | Output: %s\n", input_dir, output_dir);
+    printf("============================================================\n");
+
+    for (int i = 0; i < iterations; i++) {
+        printf("\n--- Iteración %d/%d ---\n", i + 1, iterations);
+
+        // 1. MEDIR LECTURA
+        // Reiniciamos el tamaño para sobreescribir los datos anteriores
+        // (Nota: getstarsfromfile redimensionará si hace falta)
+        stars->size = 0;
+
+        double start_read = omp_get_wtime();
+
+        // Llamada a tu función de lectura
+        unsigned long n_stars = getstarsfromfile(input_dir, stars);
+
+        double end_read = omp_get_wtime();
+        read_times[i] = end_read - start_read;
+
+        if (n_stars == (unsigned long)-1) {
+            fprintf(stderr, "Error crítico en lectura. Abortando.\n");
+            break;
+        }
+
+        // 2. MEDIR ESCRITURA
+        double start_write = omp_get_wtime();
+
+        // Llamada a tu función de escritura
+        write_results_hdf5(stars, output_dir, "benchmark_test", i);
+
+        double end_write = omp_get_wtime();
+        write_times[i] = end_write - start_write;
+
+        clean_step_dir(output_dir, i);
+
+        printf("   [Tiempos] Lectura: %.4f s | Escritura: %.4f s | Estrellas: %lu\n",
+               read_times[i], write_times[i], stars->size);
+    }
+
+    // 3. CALCULAR ESTADÍSTICAS
+    double sum_read = 0, sum_write = 0;
+    // Descartamos la primera iteración (Warm-up) si hay más de 1 iteración
+    int start_idx = (iterations > 1) ? 1 : 0;
+    int count = iterations - start_idx;
+
+    for (int i = start_idx; i < iterations; i++) {
+        sum_read += read_times[i];
+        sum_write += write_times[i];
+    }
+
+    double avg_read = sum_read / count;
+    double avg_write = sum_write / count;
+
+    // Calcular Desviación Estándar
+    double sq_sum_read = 0, sq_sum_write = 0;
+    for (int i = start_idx; i < iterations; i++) {
+        sq_sum_read += pow(read_times[i] - avg_read, 2);
+        sq_sum_write += pow(write_times[i] - avg_write, 2);
+    }
+    double std_read = sqrt(sq_sum_read / count);
+    double std_write = sqrt(sq_sum_write / count);
+
+    printf("\n============================================================\n");
+    printf("RESULTADOS FINALES (Warm-up: %s)\n", (iterations > 1) ? "Iteración 0 descartada" : "No");
+    printf("============================================================\n");
+    printf("LECTURA PROM:   %.4f s (+/- %.4f)\n", avg_read, std_read);
+    printf("ESCRITURA PROM: %.4f s (+/- %.4f)\n", avg_write, std_write);
+
+    // Calcular throughput estimado (asumiendo size de Star aproximado)
+    // Star struct size aprox: 8 doubles (64) + 1 float (4) + 1 ulong (8) + overhead ~ 80 bytes/star
+    // OJO: Ajusta este cálculo al tamaño real de tus datos en disco (CSV vs Binario)
+    double mb_read = (stars->size * 150.0) / (1024*1024); // Estima 150 bytes por línea CSV
+    printf("Velocidad Lectura Aprox:  %.2f MB/s\n", mb_read / avg_read);
+
+    // HDF5 suele ser más compacto, pero depende de tus datasets
+    // ID(8) + MASS(4) + POS(24) = 36 bytes por estrella mínimo
+    double mb_write = (stars->size * 36.0) / (1024*1024);
+    printf("Velocidad Escritura Aprox: %.2f MB/s\n", mb_write / avg_write);
+    printf("============================================================\n");
+
+    // Limpieza
+    free_stars(stars);
+    free(read_times);
+    free(write_times);
 }

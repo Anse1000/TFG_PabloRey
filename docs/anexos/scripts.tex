@@ -26,7 +26,8 @@ for ((k = 0; k < N_PARTS; k++)); do
 
   QUERY="SELECT ${FIELDS} FROM \"${TABLE}\" WHERE Source BETWEEN ${START} AND ${END}"
   ENCODED_QUERY=$(echo "$QUERY" | sed 's/ /+/g' | sed 's/"/%22/g')
-  URL="${BASE_URL}?REQUEST=doQuery&LANG=ADQL&FORMAT=csv&QUERY=${ENCODED_QUERY}"
+  URL="${BASE_URL}?REQUEST=doQuery& \
+      LANG=ADQL&FORMAT=csv&QUERY=${ENCODED_QUERY}"
 
   for attempt in {1..3}; do
     echo "Intento $attempt..."

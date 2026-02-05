@@ -11,7 +11,7 @@ Esta sección explora el espacio de parámetros críticos del algoritmo, determi
 
 \subsection{Configuración de la granularidad del árbol}\label{subsec:eleccion-de-la-granularidad-del-arbol}
 La construcción del \textit{Octree} constituye el pilar fundamental del algoritmo Barnes-Hut.
-La eficiencia y precisión del cálculo de fuerzas dependen de una representación jerárquica óptima, donde el parámetro \texttt{min\_subdivisions} (Ver Sección~\ref{subsec:version-cpu}) desempeña un papel crítico.
+La eficiencia y precisión del cálculo de fuerzas dependen de una representación jerárquica óptima, donde el parámetro \texttt{min\_subdivisions} (ver Sección~\ref{subsec:version-cpu}) desempeña un papel crítico.
 Este parámetro define la granularidad del árbol: una mayor subdivisión permite una fragmentación más fina del espacio, pero incrementa exponencialmente el número de nodos y, por ende, la ocupación de memoria en el sistema.
 
 Para determinar la viabilidad técnica en el hardware objetivo, se analizó el impacto de los niveles de subdivisión sobre la VRAM de una unidad NVIDIA A100, la cual cuenta con 40GB.
@@ -73,7 +73,7 @@ Los resultados del consumo, desglosados por cada uno de los ocho octantes princi
 
         \end{axis}
     \end{tikzpicture}
-    \caption{Desglose de consumo de VRAM por octante según el número máximo de subdivisiones}
+    \caption{Desglose de consumo de VRAM por octante según el número máximo de subdivisiones (ex se refiere a un número de subdivisiones $10^X$)}
     \label{fig:vram_octantes}
 \end{figure}
 
@@ -82,7 +82,7 @@ Debido a que el catálogo de Gaia DR3 se distribuye de forma asimétrica, este v
 Sobre esta base se apilan las capas correspondientes a los incrementos en \texttt{min\_subdivisions}.
 
 Un fenómeno clave observado en el análisis es la convergencia o saturación del consumo de memoria en la mayoría de los octantes (especialmente del 0 al 2 y del 4 al 6).
-Se aprecia que, a partir de $10^6$ o $10^7$ subdivisiones, el incremento de VRAM es nulo.
+Se aprecia que, a partir de $10^6$ (e6) o $10^7$ (e7) subdivisiones, el incremento de VRAM es nulo.
 Este comportamiento indica que el subárbol ha alcanzado un \textbf{estado de subárbol perfecto}: la resolución espacial es tan elevada que cada estrella ha quedado aislada en su propio nodo hoja.
 Una vez alcanzado este límite físico, aumentar el parámetro de subdivisión no genera nuevos nodos, ya que no existen partículas adicionales que fragmentar en dichos volúmenes de espacio.
 
@@ -107,15 +107,16 @@ Si se elige un valor de $\theta$ demasiado alto, el algoritmo agruparía grandes
 Esto provocaría una pérdida de resolución en el cálculo de fuerzas, suavizando artificialmente la gravedad real en el núcleo.
 Como consecuencia, las estructuras finas, como cúmulos estelares, podrían desintegrarse erróneamente, y las estrellas ganarían velocidad de forma artificial (calentamiento dinámico) debido a errores numéricos, alterando la evolución real de la galaxia.
 
-Para determinar el valor óptimo, se realizó un análisis de convergencia (Figura~\ref{fig:theta}) empleando una submuestra aleatoria de 10.000 estrellas.
+Para determinar el valor óptimo, se realizó un análisis de convergencia empleando una submuestra aleatoria de 10.000 estrellas.
 La metodología experimental consiste en calcular el vector de aceleración gravitatoria que experimenta cada estrella de esta muestra debido a la influencia de la galaxia completa (1.100 millones de cuerpos).
 Para ello, se genera una solución de referencia exacta mediante fuerza bruta (sumatorio directo de todas las interacciones par a par) y se confronta con la aproximación obtenida por el algoritmo Barnes-Hut para distintos valores de $\theta$.
 Esta comparativa permite cuantificar simultáneamente la discrepancia vectorial (error relativo en la aceleración) y la ganancia en velocidad de procesamiento (\textit{speedup}).
 
-Este conjunto de prueba es estadísticamente representativo de la población total, ya que el muestreo cubre uniformemente tanto las regiones de altísima densidad del bulbo como la periferia dispersa.
+La razón de usar un subconjunto de prueba es poder usar la aproximación de fuerza bruta como --ground truth--.
+El conjunto de prueba escogido es estadísticamente representativo de la población total, ya que el muestreo cubre uniformemente tanto las regiones de altísima densidad del bulbo como la periferia dispersa.
 La baja desviación estándar observada en los resultados confirma que esta muestra captura fielmente la varianza del error del algoritmo, permitiendo extrapolar el comportamiento del sistema completo sin incurrir en el coste computacional prohibitivo de evaluar la totalidad del catálogo para cada punto de prueba.
 
-Los resultados dictan la elección de \textbf{$\theta = 0,2$} basándose en tres criterios fundamentales:
+Los resultados, mostrados en la Figura~\ref{fig:theta}, dictan la elección de \textbf{$\theta = 0,2$} basándose en tres criterios fundamentales:
 
 \begin{enumerate}
     \item \textbf{Acotación del Error Máximo:} Mientras que el error medio tiende a diluir los casos extremos, el error máximo ($L_\infty$) revela la estabilidad en las peores configuraciones geométricas. Para $\theta = 0,2$, el error máximo se mantiene en un 0,13\%. Al incrementar $\theta$ a 0,5, este error se dispara al 2,5\%, un nivel inaceptable que podría expulsar estrellas de sus órbitas en el denso bulbo galáctico.
@@ -131,7 +132,7 @@ Los resultados dictan la elección de \textbf{$\theta = 0,2$} basándose en tres
 \end{enumerate}
 
 En conclusión, se ha seleccionado $\theta = 0,2$ como un parámetro de Alta Fidelidad.
-Aunque esta configuración es computacionalmente más exigente que los estándares habituales (reduciendo el \textit{speedup} potencial de $\sim 2000$x a $\sim 470$x), es la única que garantiza que la evolución morfológica de la galaxia simulada responda a leyes físicas reales y no a artefactos de la aproximación algorítmica.
+Aunque esta configuración es computacionalmente más exigente que los estándares habituales reduciendo el \textit{speedup} potencial de $\sim 2000$x a $\sim 470$x, es la única que garantiza que la evolución morfológica de la galaxia simulada responda a leyes físicas reales y no a artefactos de la aproximación algorítmica.
 
 \begin{figure}[h!]
     \begin{tikzpicture}
@@ -241,7 +242,7 @@ Este valor, situado en el límite de la precisión de doble punto flotante de la
 \subsection{Conservación del Momento Angular}
 
 Finalmente, se analizó la estabilidad del momento angular total en el eje de rotación galáctico ($L_z$). En un sistema aislado, esta magnitud debe permanecer constante por simetría rotacional.
-Utilizando la muestra reducida, se observó una variación relativa de $L_z$ de tan solo \textbf{$1,96 \times 10^{-8}$} tras 5 pasos de simulación.
+Utilizando la muestra reducida, se observó una variación relativa de $L_z$ de tan solo \textbf{$1,96 \times 10^{-8}$} tras cinco pasos de simulación.
 
 Esta mínima deriva confirma que las aproximaciones introducidas por el criterio de apertura de Barnes-Hut no introducen torques ficticios significativos.
 La galaxia simulada conserva su estructura rotacional, validando la fidelidad del algoritmo para estudios de dispersión estelar a escalas de tiempo galácticas.
@@ -249,7 +250,7 @@ La galaxia simulada conserva su estructura rotacional, validando la fidelidad de
 \section{Evaluación del simulador paralelo}\label{sec:evaluacion-de-rendimiento-y-precision-cpu-vs-gpu}
 
 En esta sección se presenta un análisis exhaustivo del rendimiento computacional y la fidelidad física del sistema paralelo propuesto.
-El objetivo es cuantificar la aceleración obtenida mediante infraestructuras de computación de alto rendimiento (HPC) y validar que la paralelización masiva en GPU preserva la integridad científica frente a la ejecución de referencia en CPU.
+El objetivo es cuantificar la aceleración obtenida mediante infraestructuras HPC y validar que la paralelización masiva en GPU preserva la integridad científica frente a la ejecución de referencia en CPU.
 
 \subsection{Análisis del rendimiento}\label{subsec:analisis-de-escalabilidad-y-computo-multi-gpu}
 
@@ -257,41 +258,73 @@ El cálculo de interacciones gravitatorias en un sistema de $N \approx 10^9$ est
 Para establecer una línea base de eficiencia, se han realizado pruebas de perfilado unitario en el supercomputador \textbf{Finisterrae III}:
 
 \begin{itemize}
-    \item \textbf{Referencia (Fuerza Bruta $O(N^2)$):} La evaluación secuencial directa de la Ley de Gravitación Universal arroja un tiempo medio de \textbf{6.987946 segundos por estrella}. Completar un solo paso para la muestra total requeriría aproximadamente \textbf{235 años}, lo que ilustra la inviabilidad absoluta de este enfoque.
-    \item \textbf{Barnes-Hut Secuencial ($O(N \log N)$):} La aplicación del algoritmo de árbol optimiza el tiempo a \textbf{0.0148 segundos por estrella}. En un solo hilo de CPU, el tiempo estimado se reduce a \textbf{183 días}, una mejora crítica pero insuficiente para simulaciones evolutivas multitemporales.
+    \item \textbf{Referencia (Fuerza Bruta $O(N^2)$):} La evaluación secuencial directa de la Ley de Gravitación Universal arroja un tiempo medio de \textbf{6.987946 segundos por estrella}, por lo que completar la simulación de un solo paso temporal para la muestra requeriría aproximadamente \textbf{235 años}, lo que ilustra la inviabilidad absoluta de este enfoque.
+    \item \textbf{Barnes-Hut Secuencial ($O(N \log N)$):} La aplicación del algoritmo de árbol optimiza el tiempo a \textbf{0.0148 segundos por estrella}. En un solo hilo de CPU, el tiempo estimado para la simulación de un único paso temporal se reduce a \textbf{183 días}, una mejora crítica pero insuficiente para simulaciones evolutivas con un número elevado de pasos temporales.
 \end{itemize}
-La versión paralela con OpenMP ejecutada en un nodo del Finisterrae III utilizando 64 cores reduce el tiempo de ejecución a unas 60 horas, lo que supone una aceleración de 73.49x.
-Aunque la verdadera capacidad del sistema se manifiesta al aplicar paralelismo masivo mediante CUDA. Se ha evaluado el tiempo de ejecución de un paso completo de simulación en el nodo \texttt{a100-m8}(nodo del Finisterrae III que dispone de 8 GPUs A100), comparando la ejecución multihilo en CPU (64 núcleos con OpenMP) frente a una configuración de hasta 8 GPUs NVIDIA A100.
-Los resultados se detallan en la Tabla~\ref{tab:rendimiento_gpu}.
+La versión paralela con OpenMP ejecutada en un nodo del Finisterrae III utilizando 64 núcleos reduce el tiempo de ejecución a unas 60 horas, lo que supone una aceleración de aproximadamente 70x.
+Este fenómeno, conocido como \textbf{aceleración superlineal} (rendimiento superior al número de núcleos empleados), se atribuye principalmente a dos factores arquitectónicos:
+\begin{enumerate}
+    \item \textbf{Efecto de agregación de caché:} En la ejecución secuencial, el volumen masivo de datos de los 1.100 millones de estrellas desborda la capacidad de la memoria caché del procesador, forzando accesos continuos a la memoria RAM principal.
+    Al distribuir la carga entre 64 núcleos, el subconjunto de datos que maneja cada hilo es considerablemente menor, permitiendo que una mayor proporción de estos datos resida en las memorias caché locales de cada núcleo, reduciendo drásticamente la latencia de acceso.
+    \item \textbf{Ancho de banda de memoria agregado (Dual-Socket):} Los nodos de computación del Finisterrae III emplean una arquitectura dual-socket, integrando dos CPUs físicas independientes en la misma placa base.
+    En una ejecución secuencial, el proceso queda confinado a un único zócalo, limitado por los canales de memoria de ese procesador específico.
+    Sin embargo, al utilizar los 64 núcleos simultáneamente, se activan los controladores de memoria de ambas CPUs.
+    Esto permite explotar el ancho de banda agregado de todo el nodo, duplicando la capacidad efectiva de transferencia de datos desde la RAM y eliminando cuellos de botella que saturaban al hilo único.
+\end{enumerate}
+
+Aunque la verdadera capacidad del sistema se manifiesta al aplicar paralelismo masivo mediante CUDA. Se ha evaluado el tiempo de ejecución de un paso completo de simulación en el nodo \texttt{a100-m8} (nodo del Finisterrae III que dispone de ocho GPUs A100), comparando la ejecución multihilo en CPU (64 núcleos con OpenMP) frente a una configuración de hasta ocho GPUs NVIDIA A100.
+Es importante señalar que las métricas presentadas no corresponden a una ejecución aislada.
+Dado que el sistema de archivos paralelo Lustre es un recurso compartido con carga de trabajo variable, los tiempos de entrada/salida pueden sufrir fluctuaciones.
+Por ello, los valores corresponden a la media aritmética de múltiples iteraciones, procedimiento adoptado para mitigar el ruido introducido por la latencia del sistema de archivos y ofrecer una estimación robusta.
+
+Los resultados de este análisis se presentan a continuación: la Tabla~\ref{tab:rendimiento_gpu} detalla la escalabilidad y aceleración global del sistema, mientras que la Tabla~\ref{tab:comparativa_cpu_gpu} ofrece un desglose de los tiempos invertidos en cada etapa del algoritmo.
+
+\begin{table}[htbp]
+    \centering
+    % X: columna auto-ajustable, c: columna centrada
+    \begin{tabularx}{\textwidth}{|X|c|c|}
+        \hline
+        \textbf{Etapa del Algoritmo} & \textbf{CPU} & \textbf{8 GPUs} \\ \hline
+
+        % \multicolumn{columnas}{alineacion}{texto}
+        Lectura de datos & \multicolumn{2}{c|}{59.12 s} \\ \hline
+
+        Construcción del árbol  & 442.32 s & 111.73 s \\ \hline
+        Cálculo de Aceleraciones y KDK  & 29 h 46 min & 12 min 24 s \\ \hline
+        Escritura de resultados & \multicolumn{2}{c|}{36.39 s} \\ \hline
+        \textbf{Tiempo Total} & \textbf{59:42:29} & \textbf{00:28:16} \\ \hline
+    \end{tabularx}
+    \caption{Comparativa de tiempos de ejecución desglosados por etapas}
+    \label{tab:comparativa_cpu_gpu}
+\end{table}
 
 \begin{table}[H]
     \centering
     \begin{tabular}{|c|c|c|}
         \hline
         \textbf{Hardware} & \textbf{Tiempo (HH:MM:SS)} & \textbf{Aceleración (\textit{Speedup})} \\ \hline
-        CPU (64 núcleos)  & 59:42:29                   & 1.0x (Referencia)                       \\ \hline
-        1 GPU             & 02:20:23                   & 25.5x                                   \\ \hline
-        2 GPUs            & 01:24:49                   & 42.2x                                   \\ \hline
-        3 GPUs            & 01:06:12                   & 54.1x                                   \\ \hline
-        4 GPUs            & 00:46:32                   & 76.9x                                   \\ \hline
-        5 GPUs            & 00:47:56                   & 74.7x                                   \\ \hline
-        6 GPUs            & 00:48:13                   & 74.3x                                   \\ \hline
-        7 GPUs            & 00:42:19                   & 84.6x                                   \\ \hline
-        \textbf{8 GPUs}   & \textbf{00:28:16}          & \textbf{126.7x}                         \\ \hline
+        CPU (64 núcleos)  & 59:42:29                   & 1,0x (Referencia)                       \\ \hline
+        1 GPU             & 02:20:23                   & 25,5x                                   \\ \hline
+        2 GPUs            & 01:24:49                   & 42,2x                                   \\ \hline
+        3 GPUs            & 01:06:12                   & 54,1x                                   \\ \hline
+        4 GPUs            & 00:46:32                   & 76,9x                                   \\ \hline
+        5 GPUs            & 00:47:56                   & 74,7x                                   \\ \hline
+        6 GPUs            & 00:48:13                   & 74,3x                                   \\ \hline
+        7 GPUs            & 00:42:19                   & 84,6x                                   \\ \hline
+        \textbf{8 GPUs}   & \textbf{00:28:16}          & \textbf{126,7x}                         \\ \hline
     \end{tabular}
     \caption{Tiempos de ejecución y escalabilidad en el nodo \texttt{a100-m8} frente a la solución en CPU}
     \label{tab:rendimiento_gpu}
 \end{table}
 
-El análisis revela un \textit{speedup} masivo de \textbf{126.7x} al utilizar la capacidad total del nodo.
-Siendo la aceleración conseguida con respecto al sistema secuencial de 9.314x, consiguiendo una reducción del tiempo de pared (\textit{wall-clock time}) de casi \textbf{183 días a tan solo 28 minutos}, lo que transforma un problema prohibitivo en un flujo de trabajo manejable.
+El análisis revela un \textit{speedup} de \textbf{126.7x} al utilizar la capacidad total del nodo.
+La aceleración conseguida con respecto al sistema secuencial es de más de 9000x, consiguiendo una reducción del tiempo de pared de casi \textbf{183 días a tan solo 28 minutos}, lo que transforma un problema prohibitivo en un flujo de trabajo manejable.
 
-En cuanto a la escalabilidad del sistema, se aprecia un comportamiento lineal altamente eficiente hasta el uso de 4 GPUs.
-No obstante, en el intervalo comprendido entre las 4 y 7 unidades de procesamiento, el rendimiento muestra una meseta técnica atribuible a la propia arquitectura del algoritmo de descomposición espacial.
-Dado que el nivel superior del árbol se divide en exactamente ocho octantes, las configuraciones que no son submúltiplos exactos de este número incurren en un desequilibrio de carga (\textit{load imbalance}).
-Específicamente, con 4 a 7 GPUs, el sistema se ve obligado a realizar al menos dos iteraciones de cálculo en algunas unidades para cubrir la totalidad de los octantes, provocando que ciertos núcleos permanezcan ociosos mientras otros completan su segundo ciclo de procesamiento.
-Este cuello de botella desaparece al alcanzar las 8 GPUs, donde la correspondencia uno a uno entre octantes y unidades de procesamiento permite una ocupación del hardware del 100\%.
-Este salto final en la eficiencia maximiza el \textit{throughput} y valida la robustez de la implementación para el procesado masivo de más de mil millones de estrellas.
+En cuanto a la escalabilidad del sistema, se aprecia un comportamiento lineal altamente eficiente hasta el uso de cuatro GPUs.
+No obstante, en el intervalo comprendido entre las cuatro y siete unidades de procesamiento el rendimiento muestra una meseta técnica atribuible a la propia arquitectura del algoritmo de descomposición espacial.
+Dado que el nivel superior del árbol se divide en exactamente ocho octantes, las configuraciones que no son submúltiplos exactos de este número incurren en un desequilibrio de carga.
+Específicamente, con cuatro a siete GPUs, el sistema se ve obligado a realizar al menos dos iteraciones de cálculo en algunas unidades para cubrir la totalidad de los octantes, provocando que ciertos núcleos permanezcan ociosos mientras otros completan su segundo ciclo de procesamiento.
+Este cuello de botella desaparece al alcanzar las ocho GPUs, donde la correspondencia uno a uno entre octantes y unidades de procesamiento permite una ocupación del hardware del 100\%.
 
 \subsection{Validación de la precisión numérica y estabilidad física}\label{subsec:validacion-de-la-precision-numerica-y-estabilidad-fisica}
 
@@ -299,11 +332,8 @@ La migración de algoritmos de simulación de N-cuerpos a arquitecturas GPU intr
 Debido a que la aritmética de coma flotante no es asociativa bajo el estándar \textit{IEEE 754}, el orden de las operaciones en los hilos de ejecución de CUDA altera los bits menos significativos del resultado.
 En un algoritmo de Barnes-Hut, estas pequeñas diferencias pueden provocar que la CPU y la GPU tomen decisiones ligeramente distintas sobre la apertura de nodos del \textit{octree}, magnificando la divergencia.
 
-Para validar la implementación, se ha comparado un paso de integración en CPU vs GPU.
-Los resultados se analizan a continuación:
-
 \subsubsection{Análisis del error y bits efectivos}
-El error medio absoluto (MAE) en posición tras el primer paso es de $6.4460 \times 10^{-05}$ kpc.
+El error medio absoluto (MAE) en posición tras el primer paso es de $6.4460 \times 10^{-5}$ kpc.
 Para cuantificar la fidelidad del cálculo frente a la escala global del sistema, se ha calculado la cantidad de \textbf{bits efectivos} de precisión mediante la relación logarítmica entre la mediana del error y el radio de giro del sistema ($R_g \approx 3.86$ kpc):
 
 \begin{equation}
@@ -313,7 +343,7 @@ Para cuantificar la fidelidad del cálculo frente a la escala global del sistema
 Este valor de \textbf{15.90 bits} indica que la CPU y la GPU mantienen una concordancia binaria en los 16 bits más significativos de la mantisa.
 Si bien la integración cinemática (posiciones y velocidades) se realiza en precisión doble (\texttt{double}), el cálculo de fuerzas depende de las masas y la geometría de los nodos del árbol, almacenados en precisión simple (\texttt{float}, mantisa de 23 bits) para optimizar el uso de memoria.
 Por tanto, una retención de casi 16 bits tras billones de interacciones paralelas representa un resultado robusto, ya que la precisión global del sistema está acotada superiormente por los datos en coma flotante de simple precisión.
-En términos decimales, esto equivale a una precisión de aproximadamente 5 dígitos significativos de concordancia absoluta.
+En términos decimales, esto equivale a una precisión de aproximadamente cinco dígitos significativos de concordancia absoluta.
 
 \subsubsection{Estabilidad y conservación del momento}
 La métrica más crítica para la validez física es la deriva del centro de masas (\textit{CoM Drift}). Se ha registrado un desplazamiento residual de $1.1656 \times 10^{-06}$ kpc.
@@ -326,4 +356,4 @@ Al ser este valor cuatro órdenes de magnitud inferior al error de posición ind
 El sistema preserva la conservación del momento lineal, garantizando que la evolución de la estructura galáctica a gran escala sea físicamente equivalente a la obtenida en CPU.
 
 
-En conclusión, el sistema desarrollado no solo ofrece una aceleración de órdenes de magnitud respecto al estado del arte secuencial, sino que mantiene una fidelidad numérica que garantiza la producción de resultados científicos robustos en el supercomputador Finisterrae III.
+En conclusión, el sistema desarrollado no solo ofrece una aceleración de órdenes de magnitud respecto a la versión secuencial, sino que mantiene una fidelidad numérica que garantiza la producción de resultados científicos robustos en el supercomputador Finisterrae III.

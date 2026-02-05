@@ -522,3 +522,61 @@ void test_theta(Star *stars, int num_samples) {
     }
     free_tree(tree);
 }
+void benchmark_tree_construction(Star *estrellas, int iteraciones) {
+    if (iteraciones < 2) iteraciones = 2; // Mínimo 2 para tener warm-up
+
+    double *tiempos = (double*) malloc(iteraciones * sizeof(double));
+
+    printf("\n============================================================\n");
+    printf(" BENCHMARK: Construcción del Árbol Barnes-Hut\n");
+    printf(" Estrellas: %lu | Hilos OpenMP: %d | Iteraciones: %d\n",
+           estrellas->size, omp_get_max_threads(), iteraciones);
+    printf("============================================================\n");
+    fflush(stdout);
+
+    // Variables para bounds (se recalculan en cada iteración para ser realistas)
+    float cx, cy, cz, hs, min_node_size;
+
+    for (int i = 0; i < iteraciones; i++) {
+
+        // Sincronización previa para que todos los hilos arranquen a la vez
+        #pragma omp barrier
+        double start = omp_get_wtime();
+
+        // --- INICIO FASE CRÍTICA ---
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        Octree *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size);
+        // ---------------------------
+
+        double end = omp_get_wtime();
+        tiempos[i] = end - start;
+
+        printf("   Iteración %02d: %.6f s %s\n",
+               i, tiempos[i], (i == 0) ? "(Warm-up - Descartada)" : "");
+
+        free_tree(tree);
+    }
+
+    // --- CÁLCULO ESTADÍSTICO ---
+    double suma = 0.0, suma_sq = 0.0;
+    int conteo_valido = iteraciones - 1;
+
+    // Empezamos desde i=1 para ignorar la primera pasada (cache fría)
+    for (int i = 1; i < iteraciones; i++) {
+        suma += tiempos[i];
+    }
+    double media = suma / conteo_valido;
+
+    for (int i = 1; i < iteraciones; i++) {
+        suma_sq += pow(tiempos[i] - media, 2);
+    }
+    double desviacion = sqrt(suma_sq / conteo_valido);
+
+    printf("------------------------------------------------------------\n");
+    printf(" RESULTADO FINAL (Media +/- Desviación):\n");
+    printf(" Tiempo: %.6f s +/- %.6f s\n", media, desviacion);
+    printf(" Rate:   %.2f Millones de estrellas/seg\n", (estrellas->size / 1e6) / media);
+    printf("============================================================\n");
+
+    free(tiempos);
+}

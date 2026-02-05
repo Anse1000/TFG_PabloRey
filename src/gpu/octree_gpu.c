@@ -208,7 +208,7 @@ void build_ropes(OctreeNode *nodes, unsigned int node_idx, unsigned int next) {
         build_ropes(nodes, child, child_next);
     }
 }
-OctreeGPU *build_tree(Star *stars, const float cx, const float cy, const float cz, const float hs, const float min_node_size,const unsigned int *offsets) {
+OctreeGPU *build_tree_GPU(Star *stars, const float cx, const float cy, const float cz, const float hs, const float min_node_size,const unsigned int *offsets) {
     struct timeval start, end;
     size_t initial_capacity = 10000;
     gettimeofday(&start, NULL);

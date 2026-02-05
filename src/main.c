@@ -79,16 +79,20 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     free_aux(estrellas);
-    steps = atoi(argv[3]);
-    if (steps <= 0) {
-        perror("Numero de pasos incorrecto");
-        return -1;
-    }
+    // steps = atoi(argv[3]);
+    // if (steps <= 0) {
+    //     perror("Numero de pasos incorrecto");
+    //     return -1;
+    // }
+    //benchmark_io(argv[1], argv[2], 11);
+    //benchmark_tree_construction(estrellas, 11);
+
 #ifdef CUDA
-    simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[2],DT);
+    //simulate_multi_gpu_unified(estrellas,steps,estrellas->size,argv[2],DT);
     //mem_test_gpu(estrellas);
+    benchmark_tree_construction_GPU(estrellas,11);
 #else
-    simulate(estrellas,steps,estrellas->size,argv[2],DT);
+    //simulate(estrellas,steps,estrellas->size,argv[2],DT);
     //run_full_cpu_validation(estrellas);
     //test_theta(estrellas,10000);
 #endif

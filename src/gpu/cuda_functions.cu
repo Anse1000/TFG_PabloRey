@@ -2,9 +2,8 @@
 #include "../aux_fun.h"
 #include <sys/time.h>
 #include "octree_gpu.h"
-#include "../aux_fun.h"
 #include "../file_handler.h"
-
+#include "omp.h"
 #define BLOCK_SIZE 256
 
 __constant__ double c_dt;
@@ -407,7 +406,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
     reorder_stars(estrellas, cx, cy, cz, offsets);
     write_results_hdf5(estrellas, outputfile, "cuda_results", -1);
     // Construir árbol
-    OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+    OctreeGPU *tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
     for (int step = 0; step < steps; step++) {
         struct timeval step_start, step_end;
         printf("****************** Iniciando paso %d ******************\n", step + 1);
@@ -423,7 +422,7 @@ extern "C" void simulate_multi_gpu_unified(Star *estrellas, const int steps, con
         free_tree_gpu(tree);
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size,MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         printf("\t  Iniciando fase 2: HalfKick\n");
         fflush(stdout);
         if (compute_halfstep(N, iterations, offsets, device_count, tree, estrellas,
@@ -528,7 +527,7 @@ extern "C" void mem_test_gpu(Star *estrellas) {
     unsigned int offsets[8];
     reorder_stars(estrellas, cx, cy, cz, offsets);
     // Construir árbol
-    OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+    OctreeGPU *tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
     for (int i = 0; i < 8; i++) {
         unsigned long start_idx = offsets[i];
         unsigned long end_idx = (i == 7) ? estrellas->size : offsets[i + 1];
@@ -591,12 +590,12 @@ extern "C" void reversibility_test(Star *estrellas) {
         float cx, cy, cz, hs, min_node_size; unsigned int offsets[8];
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        OctreeGPU *tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, DT, 1); // Kick+Drift
         free_tree_gpu(tree);
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, DT, 0); // Kick
         free_tree_gpu(tree);
     }
@@ -607,12 +606,12 @@ extern "C" void reversibility_test(Star *estrellas) {
         float cx, cy, cz, hs, min_node_size; unsigned int offsets[8];
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        OctreeGPU *tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        OctreeGPU *tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, -DT, 1);
         free_tree_gpu(tree);
         compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
         reorder_stars(estrellas, cx, cy, cz, offsets);
-        tree = build_tree(estrellas, cx, cy, cz, hs, min_node_size, offsets);
+        tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size, offsets);
         compute_halfstep(N, iterations, offsets, device_count, tree, estrellas, streams, -DT, 0);
         free_tree_gpu(tree);
     }
@@ -643,5 +642,64 @@ extern "C" void reversibility_test(Star *estrellas) {
     free(orig_x); free(orig_y); free(orig_z);
     for (int i = 0; i < device_count; i++) { cudaSetDevice(i); cudaStreamDestroy(streams[i]); }
     free(streams);
+}
+extern "C" void benchmark_tree_construction_GPU(Star *estrellas, int iteraciones) {
+    if (iteraciones < 2) iteraciones = 2; // Mínimo 2 para tener warm-up
+
+    double *tiempos = (double*) malloc(iteraciones * sizeof(double));
+
+    printf("\n============================================================\n");
+    printf(" BENCHMARK: Construcción del Árbol Barnes-Hut\n");
+    printf(" Estrellas: %lu |  Iteraciones: %d\n",
+           estrellas->size, iteraciones);
+    printf("============================================================\n");
+    fflush(stdout);
+
+    // Variables para bounds (se recalculan en cada iteración para ser realistas)
+    float cx, cy, cz, hs, min_node_size; unsigned int offsets[8];
+
+    for (int i = 0; i < iteraciones; i++) {
+
+        // Sincronización previa para que todos los hilos arranquen a la vez
+        #pragma omp barrier
+        double start = omp_get_wtime();
+
+        // --- INICIO FASE CRÍTICA ---
+        compute_root_bounds(estrellas, &cx, &cy, &cz, &hs, &min_node_size, MIN_SUBDIVISIONS);
+        reorder_stars(estrellas, cx, cy, cz, offsets);
+        OctreeGPU *tree = build_tree_GPU(estrellas, cx, cy, cz, hs, min_node_size,offsets);
+        // ---------------------------
+
+        double end = omp_get_wtime();
+        tiempos[i] = end - start;
+
+        printf("   Iteración %02d: %.6f s %s\n",
+               i, tiempos[i], (i == 0) ? "(Warm-up - Descartada)" : "");
+
+        free_tree_gpu(tree);
+    }
+
+    // --- CÁLCULO ESTADÍSTICO ---
+    double suma = 0.0, suma_sq = 0.0;
+    int conteo_valido = iteraciones - 1;
+
+    // Empezamos desde i=1 para ignorar la primera pasada (cache fría)
+    for (int i = 1; i < iteraciones; i++) {
+        suma += tiempos[i];
+    }
+    double media = suma / conteo_valido;
+
+    for (int i = 1; i < iteraciones; i++) {
+        suma_sq += pow(tiempos[i] - media, 2);
+    }
+    double desviacion = sqrt(suma_sq / conteo_valido);
+
+    printf("------------------------------------------------------------\n");
+    printf(" RESULTADO FINAL (Media +/- Desviación):\n");
+    printf(" Tiempo: %.6f s +/- %.6f s\n", media, desviacion);
+    printf(" Rate:   %.2f Millones de estrellas/seg\n", (estrellas->size / 1e6) / media);
+    printf("============================================================\n");
+
+    free(tiempos);
 }
 #endif

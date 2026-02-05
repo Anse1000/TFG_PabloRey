@@ -7,6 +7,7 @@
 
 unsigned long getstarsfromfile(char *dirname, Star *estrellas);
 void free_stars(Star *stars);
+void benchmark_io(char *input_dir, char *output_dir, int iterations);
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -3,6 +3,7 @@
 En este capítulo se describe el diseño e implementación del código para el cálculo de la dispersión estelar basada en el algoritmo de Barnes–Hut.
 Se presentan la arquitectura del sistema, las estructuras de datos empleadas y los algoritmos principales, así como las decisiones de implementación que permiten su ejecución eficiente en arquitecturas paralelas.
 En particular, se desarrollan y analizan dos versiones paralelas: una versión CPU basada en paralelización mediante OpenMP que tiene como objetivo los sistemas  multicore y una versión GPU que aprovecha la capacidad de cómputo masivo de aceleradores NVIDIA mediante CUDA\@.
+
 \section{Obtención y preparación de los datos}\label{sec:datos}
 
 Para realizar la simulación fue necesario disponer de varios subconjuntos de datos procedentes del catálogo \textit{Gaia DR3} y del catálogo complementario de distancias \texttt{GeDR3Dist}.
@@ -17,7 +18,7 @@ wget -r -np -nd -A "*.csv.gz" "URL_archivos"
 \end{verbatim}
 
 Cada archivo contiene un subconjunto del catálogo dividido por rangos de \texttt{source\_id}, lo que facilita la descarga y el procesamiento distribuido.
-El tamaño total de la descarga es de aproximadamente 757~GB para la tabla \texttt{gaia\_source} y 258~GB para \texttt{astrophysical\_}\allowbreak\texttt{parameters}, sumando un total de 3\,386 archivos en cada caso.
+El tamaño total de la descarga es de aproximadamente 757~GB para la tabla \texttt{gaia\_source} y 258~GB para \texttt{astrophysical\_}\allowbreak\texttt{parameters}, sumando un total de 3.386 archivos en cada caso.
 \subsection*{Descarga del catálogo de distancias}
 
 Las estimaciones de distancia derivadas del paralaje se obtuvieron a partir del catálogo \texttt{I/352/GeDR3Dist}, disponible a través del servicio \textit{TAPVizieR}.
@@ -33,7 +34,7 @@ El filtrado se realizó mediante un script en AWK y utilizando \texttt{parallel}
 El script se puede consultar en el Listing~\ref{lst:script_reducir_astro} del Anexo A.
 \subsection*{Combinación de catálogos}
 
-Finalmente, los catálogos reducidos se combinaron utilizando un script en \texttt{Python} con las librerías \texttt{pandas} y \texttt{duckdb} (Ver Listing ~\ref{lst:script_combinar} del Anexo A).
+Finalmente, los catálogos reducidos se combinaron utilizando un script en \texttt{Python} con las librerías \texttt{pandas} y \texttt{duckdb} (Ver Listing~\ref{lst:script_combinar} del Anexo A).
 Primero se creó una base de datos temporal con las distancias debido al diferente número de archivos por tabla y el orden de IDs, y posteriormente se fusionaron los catálogos mediante uniones internas sobre el campo \texttt{source\_id}, aprovechando el procesamiento en paralelo para reducir el tiempo de ejecución:
 
 \begin{verbatim}
@@ -41,9 +42,9 @@ merged = pd.merge(main_df, astro_df, on='source_id')
 merged = pd.merge(merged, distance_df, on='source_id')
 \end{verbatim}
 
-El resultado final fue un conjunto de 3386 archivos optimizados \texttt{merged\_XXXX.csv}, listos para el filtrado y el análisis posterior ocupando 223~GB sin comprimir.
+El resultado final fue un conjunto de 3.386 archivos optimizados \texttt{merged\_XXXX.csv}, listos para el filtrado y el análisis posterior ocupando 223~GB sin comprimir.
 
-Este procedimiento permitió manejar de forma eficiente el volumen total del catálogo (más de 1\,800 millones de fuentes en \textit{Gaia DR3}), garantizando coherencia y consistencia entre todos los parámetros empleados.
+Este procedimiento permitió manejar de forma eficiente el volumen total del catálogo (más de 1.800 millones de fuentes en \textit{Gaia DR3}), garantizando coherencia y consistencia entre todos los parámetros empleados.
 
 \section{Estructuras de datos principales}\label{sec:estructuras}
 El sistema utiliza varias estructuras de datos fundamentales que son compartidas entre la versión CPU y GPU, además de otras especializadas en cada versión.
@@ -77,11 +78,6 @@ La selección de tipos de datos en cada campo responde a criterios de precisión
 \end{itemize}
 
 Por tanto, la memoria por estrella será:
-\[
-    \text{Memoria} = 8 + 8 \times 6 + 8 \times 3 + 8 \times 3 + 4 \times 2 \text{ bytes} = 140 \text{ bytes}
-\]
-
-Esto es:
 \begin{itemize}
     \item \texttt{id}: 8 bytes $\times$ 1 = 8 bytes
     \item \texttt{ra}, \texttt{dec}, \texttt{distance}, \texttt{pmra}, \texttt{pmdec}, \texttt{radial\_velocity}: 8 bytes $\times$ 6 = 48 bytes
@@ -90,12 +86,12 @@ Esto es:
     \item \textbf{Total por estrella: 140 bytes}
 \end{itemize}
 
-Como lo comentado en la sección~\ref{sec:filtrado} en este proyecto simularemos 1.100 millones de estrellas, por lo que la memoria requerida sería:
+Tal y como se comentó en la Sección~\ref{sec:filtrado}, en este proyecto simularemos aproximadamente 1.100 millones de estrellas, por lo que la memoria requerida sería:
 
 \[
     1.1 \times 10^9 \times 140 \text{ bytes} = 143.42 \text{ GB}
 \]
-tamaño perfectamente abarcable en los nodos disponibles en el Finisterrae III de 256 GB de RAM(Ver Sección~\ref{subsec:especificaciones-tecnicas-de-los-nodos}).
+tamaño perfectamente abarcable en los nodos disponibles en el Finisterrae III de 256 GB de RAM (ver Sección~\ref{subsec:especificaciones-tecnicas-de-los-nodos}).
 
 Tras la carga completa de un bloque de estrellas y la realización de los cálculos preliminares (transformación de coordenadas y estimación de masas), ciertos campos astrométricos originales dejan de ser necesarios y son liberados para reducir el consumo de memoria:
 
@@ -106,7 +102,7 @@ Tras la carga completa de un bloque de estrellas y la realización de los cálcu
 
     \item \texttt{color}: Tras estimar \texttt{mass} mediante la relación masa-luminosidad que utiliza estos parámetros, pueden ser liberados si no se requieren en resultados finales.
 \end{itemize}
-Liberando los 7 campos astrométricos originales reduce el consumo en 52 bytes por objeto, correspondiendo a una reducción del 37.1\% respecto al consumo total por estrella.
+Liberando los siete campos astrométricos originales se reduce el consumo en 52 bytes por objeto, correspondiendo a una reducción del 37.1\% respecto al consumo total por estrella.
 Para 1.100 millones de estrellas, esto libera aproximadamente 53.27 GB de memoria.
 
 Este diseño permite un balance entre precisión numérica, eficiencia de memoria y adaptabilidad a diferentes infraestructuras y volúmenes de datos, siendo crucial para gestionar simulaciones de escala galáctica en entornos de computación de altas prestaciones.
@@ -114,19 +110,19 @@ Este diseño permite un balance entre precisión numérica, eficiencia de memori
 \subsection{Estructura de arbol CPU (\texttt{Octree})}\label{subsec:estructura-de-arbol-cpu(texttt{octree})}
 La construcción del árbol octal (Octree) es un paso fundamental en el método de Barnes–Hut, ya que permite organizar las estrellas espacialmente de forma jerárquica para aproximar interacciones gravitatorias lejanas.
 Cada nodo del árbol representa un cubo en el espacio, caracterizado por una masa total contenida, el centro de la masa acumulada y el tamaño del nodo.
-El nodo puede contener una o varias estrellas (nodo hoja), o 8 nodos hijos (subdivisión del espacio), cada uno correspondiente a uno de los octantes.
+El nodo puede contener una o varias estrellas (nodo hoja), u ocho nodos hijos (subdivisión del espacio), cada uno correspondiente a uno de los octantes.
 
 La estructura \texttt{Octree} implementa el árbol jerárquico utilizado en la versión CPU.
-A diferencia de la estructura \texttt{Star}, que es plana y homogénea, el octree es una estructura jerárquica donde cada nodo contiene referencias a hasta 8 nodos hijos.
+A diferencia de la estructura \texttt{Star}, que es plana y homogénea, el octree es una estructura jerárquica donde cada nodo contiene referencias a hasta ocho nodos hijos.
 
 Cada nodo del octree almacena información geométrica, propiedades físicas acumuladas e información topológica:
 
 \begin{itemize}
     \item \textbf{Geometría del volumen (precisión simple, \texttt{float})}:
     \begin{itemize}
-        \item \texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}: Coordenadas del centro del cubo
+        \item \texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}: Coordenadas del centro del cubo.
 
-        \item \texttt{half\_size}: Semiextensión del cubo en cada dirección
+        \item \texttt{half\_size}: Semiextensión del cubo en cada dirección.
 
         La geometría del árbol se utiliza únicamente para aplicar el criterio de apertura de Barnes-Hut (comparación de distancias).
         La precisión simple es suficiente para estas comparaciones relativas sin afectar la validez del criterio de agrupación.
@@ -138,7 +134,7 @@ Cada nodo del octree almacena información geométrica, propiedades físicas acu
         La masa total se almacena en precisión simple ya que es el resultado de sumas acumulativas que se recomputabilizan en cada construcción del árbol.
 
         \item \texttt{com\_x}, \texttt{com\_y}, \texttt{com\_z}: Centro de masas.
-        El centro de masas, se mantiene en precisión doble porque:
+        Se mantiene en precisión doble porque:
         \begin{enumerate}
             \item Se utiliza directamente en el cálculo de la aceleración gravitatoria.
             \item Se actualiza mediante una operación de media ponderada que puede acumular errores significativos en precisión simple.
@@ -148,14 +144,13 @@ Cada nodo del octree almacena información geométrica, propiedades físicas acu
 
     \item \textbf{Información topológica}:
     \begin{itemize}
-        \item \texttt{children}: Array de 8 referencias a nodos hijos (array de 8 enteros sin signo).
+        \item \texttt{children}: Array de ocho referencias a nodos hijos (array de ocho enteros sin signo).
         Se utiliza \texttt{unsigned int} en lugar de \texttt{long} por dos razones críticas:
         \begin{enumerate}
-            \item \textbf{Ahorro de memoria}: Cada referencia ocupa 4 bytes en lugar de 8, reduciendo en un 50\% el espacio dedicado a punteros.
+            \item \textbf{Ahorro de memoria}: Cada referencia ocupa 4 bytes, reduciendo en un 50\% el espacio dedicado a punteros.
 
             \item \textbf{Límite máximo de nodos}: El rango de \texttt{unsigned int} es de 0 a $2^{32} - 1 = 4{.}294{.}967{.}295$, más que suficiente para los nodos esperados en una simulación de 1.100 millones de estrellas.
         \end{enumerate}
-
 
         Para representar la ausencia de hijo se utiliza la constante \texttt{INVALID\_INDEX} = \texttt{UINT32\_MAX} (4.294 mil millones), un valor fuera del rango de nodos válidos.
         Aunque \texttt{unsigned int} no permite directamente valores negativos como -1, el uso de \texttt{UINT32\_MAX} es una estrategia estándar que proporciona semántica equivalente: una comparación \texttt{if (child == INVALID\_INDEX)} determina de forma unívoca si el hijo existe.
@@ -165,13 +160,7 @@ Cada nodo del octree almacena información geométrica, propiedades físicas acu
     \end{itemize}
 \end{itemize}
 
-Memoria por nodo del octree:
-
-\[
-    \text{Memoria por nodo} = 4 \times 4 + 4 + 24 + 32 + 8 = 88 \text{ bytes}
-\]
-
-Esto es:
+Por tanto, la memoria por nodo del octree será:
 \begin{itemize}
     \item \texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}, \texttt{half\_size}: 4 bytes $\times$ 4 = 16 bytes
     \item \texttt{mass}: 4 bytes
@@ -191,7 +180,7 @@ Aunque mantiene la misma lógica algorítmica que la versión CPU, su organizaci
     \item Facilitar la paralelización masiva de búsquedas en el árbol
 \end{enumerate}
 
-En lugar de un único árbol monolítico como en CPU, la versión GPU divide el árbol raíz en 8 subárboles independientes, uno para cada octante del espacio:
+En lugar de un único árbol monolítico como en CPU, la versión GPU divide el árbol raíz en ocho subárboles independientes, uno para cada octante del espacio:
 
 \begin{lstlisting}[language=C,label={lst:octree_gpu_struct},caption={Estructura OctreeGPU con partición en octantes}]
 typedef struct {
@@ -203,20 +192,20 @@ typedef struct {
 Esta partición ofrece ventajas significativas:
 
 \begin{itemize}
-    \item \textbf{Paralelización natural}: Los 8 octantes se construyen en paralelo durante la etapa de inicialización.
-    Cada thread construye un octante sin contención con los otros.
+    \item \textbf{Paralelización natural}: Los ocho octantes se construyen en paralelo durante la etapa de inicialización.
+    Cada hilo construye un octante sin contención con los otros.
 
     \item \textbf{Eficiencia de memoria GPU}: Cada octante se transfiere a la GPU como un bloque de memoria contiguo, evitando la busqueda de hijos por rama como en CPU.
 
-    \item \textbf{Escalabilidad multi-GPU}: En sistemas con múltiples aceleradores, cada octante puede asignarse a una GPU diferente, distribuye la carga de trabajo de forma natural.
+    \item \textbf{Escalabilidad multi-GPU}: En sistemas con múltiples aceleradores, cada octante puede asignarse a una GPU diferente, lo que permite distribuir la carga de trabajo de forma natural.
 
 \end{itemize}
 
-A diferencia de la versión CPU donde cada nodo se almacena de forma distribuida en arrays separados (SoA), en GPU cada nodo individual se organiza como una estructura compacta \texttt{OctreeNode} (\textit{Array of Structures}, AoS) que contiene los mismos datos en una única unidad de memoria.
+A diferencia de la versión CPU, donde cada nodo se almacena de forma distribuida en arrays separados (SoA), en GPU cada nodo individual se organiza como una estructura compacta \texttt{OctreeNode} (\textit{Array of Structures}, AoS) que contiene los mismos datos en una única unidad de memoria.
 Esto se debe a que en GPU el costo de divergencia de control al acceder a múltiples arrays dispersos es mayor que el costo de leer una estructura compacta.
-Cada hilo de CUDA que desciende por el árbol accede a un único nodo a la vez; tener todos los datos del nodo juntos en memoria maximiza la localidad espacial, mejorando la tasa de accesos coalescentes a memoria.
+Como cada hilo de CUDA que desciende por el árbol accede a un único nodo a la vez, tener todos los datos del nodo juntos en memoria maximiza la localidad espacial, mejorando la tasa de accesos coalescentes a memoria.
 
-Debido a la baja eficiencia de funciones recursivas para recorrer el árbol en GPU, la arquitectura CUDA requiere un enfoque iterativo que evite el uso de stack implícito.
+Debido a la baja eficiencia en la implementación de funciones recursivas en GPU, la arquitectura CUDA requiere un enfoque iterativo para recorrer el árbol que evite el uso de stack implícito.
 El campo \texttt{next} añadido a la estructura \texttt{OctreeNode} implementa un enlace al siguiente nodo relevante, convirtiendo la búsqueda recursiva del árbol en una iteración directa sobre una lista encadenada de nodos no-hoja.
 \begin{lstlisting}[language=C,caption=Estructura OctreeNode,label={lst:lstlisting4}]
 typedef struct {
@@ -230,7 +219,7 @@ typedef struct {
 } OctreeNode;
 \end{lstlisting}
 
-Debido a la subdivisión por octantes, es necesario representar una porción del resto de subárboles, la frontera multipolo cumple este propósito fundamental.
+Debido a la subdivisión por octantes, es necesario representar una porción del resto de subárboles y la frontera multipolo cumple este propósito fundamental.
 La frontera multipolo \texttt{FrontierGPU} es la estructura de datos central que representa la aproximación del campo gravitatorio generado por el resto del árbol.
 En lugar de enumerar explícitamente todos los nodos que contribuyen a la aceleración de una partícula (lo cual generaría divergencia masiva entre hilos), se mantiene una lista compacta de nodos que conforman la frontera válida según el criterio de apertura de Barnes-Hut.
 
@@ -238,12 +227,21 @@ En lugar de enumerar explícitamente todos los nodos que contribuyen a la aceler
 
 En esta sección se describen los algoritmos principales empleados en la simulación, las estrategias de paralelización aplicadas en las versiones CPU (OpenMP) y GPU (CUDA) y las decisiones de diseño que permiten un uso eficiente de memoria y cómputo.
 
+El sistema paralelo se estructura en tres bloques principales: la gestión de la entrada y salida de datos, la construcción del árbol jerárquico de Barnes-Hut y la simulación dinámica de la dispersión estelar.
+
+La fase de entrada y salida se implementa de forma paralela mediante OpenMP y es común a ambas versiones del código, CPU y GPU, permitiendo un procesado eficiente de un gran volumen de datos.
+
+La construcción del árbol de Barnes-Hut presenta dos enfoques paralelos diferenciados según la arquitectura.
+En la versión CPU se emplea OpenMP para paralelizar los cálculos asociados a la inserción de partículas y al cómputo de propiedades agregadas de los nodos.
+En la versión GPU, en cambio, el árbol se organiza en octantes independientes para maximizar el paralelismo masivo, sustituyendo el recorrido recursivo utilizado en CPU por un enfoque iterativo sin pila (stackless), más adecuado para su ejecución en CUDA.
+
+Finalmente, la simulación de la dispersión estelar, también se implementa en paralelo usando OpenMP en la versión CPU y CUDA en la versión GPU, haciendo especial énfasis en la optimización del acceso a memoria y la reducción de latencias.
+
 \subsection{Entrada y salida}\label{subsec:lectura-de-archivos}
 
 Dado el volumen de datos manejado (millones de estrellas), las operaciones de entrada y salida (\textit{E/O}) constituyen una parte crítica del rendimiento global del sistema.
 Tanto la lectura inicial, como la escritura de resultados, se han diseñado para ser escalables y eficientes en entornos de cómputo paralelo.
-
-La lectura se realiza mediante un modelo distribuido por archivos y procesado por bloques, optimizado para entornos multi-hilo:
+La lectura se realiza mediante un modelo distribuido por archivos y procesado por bloques, optimizado para entornos de CPU multi-hilo:
 
 \begin{enumerate}
     \item \textbf{Distribución de ficheros entre hilos:}
@@ -263,9 +261,9 @@ La lectura se realiza mediante un modelo distribuido por archivos y procesado po
 
     \item \textbf{Gestión dinámica de memoria:}
     Cada hilo almacena temporalmente sus resultados en una estructura local \texttt{Star}.
-    Debido a que no se conoce el número de estrellas que se van a leer, esta estructura se le asigna una capacidad inicial \texttt{capacity}.
+    Debido a que no se conoce el número de estrellas que se van a leer, esta estructura se le asigna una capacidad inicial \texttt{capacity} de 10000 estrellas.
     Cuando el número de entradas supera la capacidad asignada, se amplía dinámicamente mediante \texttt{resize\_stars}.
-    Finalizado el procesado de cada archivo, los datos locales se incorporan a la estructura global mediante una región crítica mínima (incrementar la capacidad del array global), manteniendo el resto de operaciones (copia de datos) fuera de ella para reducir contención.
+    Finalizado el procesado de cada archivo, los datos locales se incorporan a la estructura global mediante una región crítica del menor tamaño posible (incrementar la capacidad del array global), manteniendo el resto de operaciones (copia de datos) fuera de ella para reducir contención.
 
     \item \textbf{Compactación final:}
     Una vez procesados todos los archivos, se ajusta la capacidad de la estructura global al número final de estrellas, liberando memoria no utilizada.
@@ -276,7 +274,7 @@ El proceso se divide en las siguientes etapas:
 
 \begin{enumerate}
     \item \textbf{Gestión de la estructura de directorios:}
-    Para cada paso de tiempo (\texttt{step}) guardado, se genera un subdirectorio independiente.
+    Para cada paso de tiempo (\texttt{step}) guardado se genera un subdirectorio independiente.
     Esto evita la saturación del sistema de archivos cuando se generan miles de ficheros a lo largo de la simulación.
 
     \item \textbf{Descomposición de dominio y balanceo de carga:}
@@ -303,11 +301,11 @@ Este paso es crucial puesto que el posicionamiento del nodo raíz condiciona dir
     \item Balanceo de las ramas: Si muchas estrellas caen en el mismo octante frente a una distribución equitativa, puede quedar desbalanceado el árbol.
     \item Precisión de los cálculos: Al limitar el tamaño mínimo de un nodo, puede que un nodo hoja contenga más estrellas de las que debería.
 \end{itemize}
-La función \texttt{compute\_root\_bounds} realiza el cálculo del nodo raíz así como el tamaño mínimo de nodo en 4 fases:
+La función \texttt{compute\_root\_bounds} realiza el cálculo del nodo raíz así como el tamaño mínimo de nodo en cuatro fases:
 \begin{enumerate}
     \item \textbf{Cálculo del centro de masa global:}
     El objetivo inicial es determinar un punto representativo alrededor del cual construir el nodo raíz.
-    Para ello se recorre el conjunto de estrellas acumulando su masa y su contribución ponderada a las coordenadas del centro de la siguiente forma.
+    Para ello se recorre el conjunto de estrellas acumulando su masa y su contribución ponderada a las coordenadas del centro de la siguiente forma:
     \begin{itemize}
         \item Se inicializan tres acumuladores (\texttt{center\_x}, \texttt{center\_y}, \texttt{center\_z}) y una suma total de masa (\texttt{total\_mass}).
         \item Para cada estrella:
@@ -315,10 +313,10 @@ La función \texttt{compute\_root\_bounds} realiza el cálculo del nodo raíz as
             \item Se añade su masa a \texttt{total\_mass}.
             \item Se acumula su posición multiplicada por la masa en cada coordenada.
         \end{enumerate}
-        \item Tras recorrer, cada coordenada acumulada se divide entre \texttt{total\_mass}, obteniendo el centro de masa.
+        \item Tras recorrer cada coordenada acumulada se divide entre \texttt{total\_mass}, obteniendo el centro de masa.
     \end{itemize}
 
-    Este proceso se paraleliza con \texttt{OpenMP} mediante una reducción, ya que cada actualización de los acumuladores es independiente entre sí.
+    Este proceso se paraleliza con \texttt{OpenMP} mediante una distribución estática de las iteraciones entre los hilos y reducción, ya que cada actualización de los acumuladores es independiente entre sí.
     \begin{lstlisting}[language=C, basicstyle=\ttfamily\small,label={lst:lstlisting5}]
 #pragma omp parallel for reduction(+:total_mass,center_x,center_y,center_z)
     \end{lstlisting}
@@ -332,9 +330,9 @@ La función \texttt{compute\_root\_bounds} realiza el cálculo del nodo raíz as
 
     La búsqueda de la distancia máxima también se paraleliza mediante \texttt{OpenMP} con reducción \texttt{max}, aprovechando que cada comparación es independiente de las demás.
     \item \textbf{Refinamiento mediante expansión tipo Ritter:}
-    Para evitar que la esfera inicial quede sobredimensionada por la presencia de estrellas aisladas, se aplica una actualización correctiva:
-    si se detecta una estrella fuera de la esfera, el centro y el radio se ajustan para mantener la contención minimizando el volumen.
+    Para evitar que la esfera inicial quede sobredimensionada por la presencia de estrellas aisladas, se aplica una actualización correctiva: si se detecta una estrella fuera de la esfera, el centro y el radio se ajustan para mantener la contención minimizando el volumen.
     Este proceso mejora la compacidad del nodo raíz y reduce el número de subdivisiones posteriores.
+    Dicha implementación se ejecuta de forma estrictamente secuencial debido a la dependencia de datos crítica entre una iteración y la anterior, adicionalmente, para evitar la saturación del ancho de banda de memoria al recorrer $N \approx 10^9$ cuerpos, se aplica un submuestreo heurístico procesando únicamente una de cada ocho estrellas (\texttt{stride = 8}), asumiendo estadísticamente que este subconjunto (12.5\%) es suficiente para aproximar la envolvente convexa global sin incurrir en la penalización temporal de un recorrido completo.
     \item \textbf{Conversión a cubo y fijación de la escala mínima de subdivisión:}
     Finalmente, el radio obtenido se transforma en el \emph{half-size} del cubo raíz:
     \[
@@ -432,14 +430,13 @@ OCTREE_INSERT(tree, stars, n, s, min_node_size)
 
 \subsection{Construcción del árbol Barnes-Hut en GPU}\label{subsec:construccion-del-arbol-barnes-hut-en-gpu}
 
-La versión acelerada presenta diferencias relevantes en la organización de datos y en el esquema de paralelización.
+La versión del árbol para GPU presenta diferencias relevantes en la organización de datos y en el esquema de paralelización.
 
-La principal divergencia radica en el proceso de construcción del árbol.
-Mientras que en CPU la inserción se realiza de forma secuencial, en GPU se paraleliza \textit{a nivel de octante}: cada uno de los ocho octantes principales del nodo raíz se construye de manera independiente.
+A pesar de que se sigue construyendo en CPU, la principal divergencia radica en el proceso de construcción del árbol.
+Mientras que en CPU la inserción se realiza de forma secuencial, en la versión para GPU se paraleliza \textit{a nivel de octante}: cada uno de los ocho octantes principales del nodo raíz se construye de manera independiente.
 Esto es posible porque, antes de la generación del árbol, las estrellas se reorganizan en memoria agrupándolas por octante.
 Dado que el tamaño de los catálogos analizados en este trabajo es grande, resulta esencial evitar duplicaciones de memoria.
 Por ello, la clasificación se realiza mediante un ordenamiento \textit{in-place}, lo que permite reestructurar el arreglo de estrellas sin necesidad de utilizar buffers adicionales.
-
 El procedimiento es el siguiente:
 \begin{enumerate}
     \item Se cuenta cuántas estrellas pertenecen a cada uno de los ocho octantes del nodo raíz.
@@ -451,7 +448,7 @@ Una vez completada esta reorganización, cada octante puede ser construido por u
 Como consecuencia, la construcción del árbol resulta \textbf{paralela y libre de bloqueos}, sin necesidad de sincronización entre octantes.
 El octree resultante es equivalente al obtenido en CPU, manteniendo el mismo número de nodos y la misma estructura geométrica.
 
-Además, tras la construcción del árbol, se generan los \textit{ropes}(punteros laterales entre nodos vecinos), cuyo propósito es permitir el recorrido del árbol sin recurrencia.
+Además, tras la construcción del árbol, se generan los \textit{ropes} (punteros laterales entre nodos vecinos), cuyo propósito es permitir el recorrido del árbol sin recurrencia.
 Cada nodo almacena un puntero al siguiente nodo que debe visitarse cuando se ha terminado de procesar su subárbol.
 De este modo, la navegación del árbol se convierte en un recorrido iterativo eficiente, particularmente adecuado para GPU, donde la recursión está limitada o directamente prohibida.
 
@@ -488,9 +485,8 @@ BUILD_ROPES(node, next)
         fin si
     FIN HACER
 \end{lstlisting}
-Además de la construcción paralela de los octantes, es necesario reintroducir la \textbf{influencia gravitacional entre octantes}.
+Además de la construcción paralela de los octantes, es necesario reintroducir la \textbf{influencia gravitacional entre los mismos}.
 Al haber separado la distribución original de estrellas en ocho regiones independientes, cada octree parcial contiene solo información local y, por tanto, no puede por sí solo estimar la contribución gravitatoria del resto del sistema. Para resolver esto, se construye una \textbf{frontera gravitacional} (\textit{frontier}), que actúa como un conjunto compacto de masas equivalentes que representan a los demás octantes externos.
-
 El procedimiento funciona de la siguiente manera:
 \begin{enumerate}
     \item Para un octante concreto, se recorre el árbol correspondiente a cada uno de los otros siete octantes.
@@ -508,11 +504,10 @@ El procedimiento funciona de la siguiente manera:
 
 Este proceso genera, para cada octante, una lista comprimida de fuentes gravitacionales externas, de tamaño reducido en comparación con el árbol completo.
 Durante la fase de cómputo de aceleraciones en GPU, cada bloque solo necesita acceder a su propio subárbol y frontera asociada.
-
 De esta forma se evita la necesidad de:
 \begin{itemize}
-    \item Compartir nodos globales entre bloques
-    \item Realizar sincronización entre octantes
+    \item Compartir nodos globales entre bloques.
+    \item Realizar sincronización entre octantes.
     \item Introducir bloqueos que degraden el rendimiento.
     \item Almacenar el árbol completo en cada GPU.
 \end{itemize}
@@ -520,7 +515,7 @@ De esta forma se evita la necesidad de:
 El resultado es una versión completamente paralelizable del método de Barnes--Hut que mantiene la misma aproximación física estándar, pero adaptada para arquitecturas masivamente paralelas.
 
 \subsection{Simulación en CPU}\label{subsec:simulacion-cpu}
-Una vez construido el árbol, podemos computar las aceleraciones utilizando el algoritmo de Barnes-Hut y actualizar las posiciones y las velocidades utilizando el esquema de integración temporal Kick-Drift-Kick (KDK) mencionado en la sección~\ref{subsec:esquema-de-integracion-temporal-(leapfrog-kick--drift--kick).}.
+Una vez construido el árbol, podemos computar las aceleraciones utilizando el algoritmo de Barnes-Hut y actualizar las posiciones y las velocidades utilizando el esquema de integración temporal KDK mencionado en la sección~\ref{subsec:esquema-de-integracion-temporal-(leapfrog-kick--drift--kick).}.
 
 \subsubsection{Cálculo de aceleraciones Barnes--Hut}
 El núcleo del cálculo de fuerzas es la función \texttt{compute\_acceleration\_bh}, que realiza un recorrido del árbol adaptativo para estimar la contribución gravitatoria sobre una estrella dada.
@@ -537,17 +532,12 @@ El criterio se evalúa comparando la relación entre el tamaño del nodo y la di
 donde $s$ es el lado del nodo y $d$ la distancia entre el centro de masa del nodo y la estrella objetivo.
 Si además el nodo contiene sólo una partícula, se toma siempre como masa puntual.
 
-La implementación incluye varias optimizaciones relevantes:
-\begin{itemize}
-    \item Las operaciones de acumulación se realizan usando \texttt{fma} para evitar pérdidas numéricas.
-    \item Se añade un término \texttt{EPSILON} para evitar divisiones por cero.
-    \item Se descarta explícitamente el caso donde la estrella es la misma que la contenida en el nodo hoja.
-\end{itemize}
+Entre las optimizaciones más relevantes se incluyen: las operaciones de acumulación se realizan usando \texttt{fma} para evitar pérdidas numéricas y Se descarta explícitamente el caso donde la estrella es la misma que la contenida en el nodo hoja.
 
 El cálculo de aceleraciones es independiente para cada estrella, por lo que se paraleliza en un bucle OpenMP.
-Cada hilo realiza recorridos independientes sobre el mismo árbol, que permanece en memoria de sólo lectura durante esta fase; por tanto, la paralelización es completamente \textbf{libre de bloqueos}.
+Cada hilo realiza recorridos independientes sobre el mismo árbol, que permanece en memoria de solo lectura durante esta fase.
+Por tanto, la paralelización es completamente \textbf{libre de bloqueos}.
 
-\subsubsection{Bucle principal de integración}
 El bucle de integración temporal realiza:
 \begin{enumerate}
     \item \textbf{Half-Kick:} Se actualizan las velocidades usando las aceleraciones actuales.
@@ -558,15 +548,13 @@ El bucle de integración temporal realiza:
     \item \textbf{Half-Kick final:} Se completan las velocidades del paso.
 \end{enumerate}
 
-La reconstrucción del árbol en cada paso es necesaria porque las estrellas se desplazan significativamente en cada iteración, y el rendimiento y precisión de Barnes--Hut depende de la calidad de la estructura jerárquica en relación con la distribución espacial actual.
-
 \subsubsection{Reutilización de memoria y eficiencia}
-Para evitar overhead innecesario:
-\begin{itemize}
-    \item Los arrays de aceleraciones \texttt{ax,ay,az} se asignan una sola vez y se reutilizan en cada paso.
-    \item La construcción del árbol se hace con un mecanismo de \textit{realocación progresiva} igual que al leer las estrellas para ajustarse dinámicamente al número de nodos necesarios.
-    \item Todas las fases que pueden paralelizarse (cálculo de aceleraciones y actualizaciones de estado) se ejecutan bajo directivas \texttt{omp parallel for}.
-\end{itemize}
+La reconstrucción del árbol en cada paso temporal resulta imperativa, dado que el desplazamiento significativo de las estrellas altera la distribución espacial de la que dependen tanto la precisión como el rendimiento del algoritmo Barnes-Hut.
+
+Con el objetivo de minimizar la sobrecarga computacional asociada a este proceso recurrente, se han adoptado estrategias de gestión eficiente de recursos.
+En primer lugar, se evita la latencia de asignación continua mediante la reserva única y persistente de los arrays de aceleraciones (\texttt{ax}, \texttt{ay}, \texttt{az}), los cuales son reutilizados en cada iteración.
+De forma complementaria, la gestión de memoria para la estructura del árbol emplea un mecanismo de \textit{realocación progresiva} —análogo al utilizado durante la carga inicial de datos— que permite ajustar dinámicamente la capacidad reservada al número fluctuante de nodos requeridos.
+Finalmente, para maximizar el rendimiento del sistema, todas las etapas susceptibles de ejecución concurrente, tales como el cálculo de interacciones gravitatorias y la actualización de los estados cinemáticos, se procesan en paralelo bajo directivas \texttt{omp parallel for}.
 
 \subsection{Simulación en GPU}\label{subsec:simulacion-gpu}
 
@@ -576,24 +564,19 @@ La simulación se ejecuta distribuyendo los octantes principales del árbol entr
 Antes de cada paso se ejecuta la función \texttt{reorder\_stars}, que reordena las estrellas de acuerdo al octante del espacio que ocupan con respecto a la raíz del árbol.
 Esto produce:
 \begin{itemize}
-    \item Particiones contiguas en memoria con estrellas espacialmente cercanas,
-    \item Coalescencia en accesos a memoria en GPU,
-    \item y la posibilidad de asignar cada octante a una GPU diferente sin necesidad de copias de subconjuntos dispersos.
+    \item Particiones contiguas en memoria con estrellas espacialmente cercanas.
+    \item Coalescencia en accesos a memoria en GPU.
+    \item La posibilidad de asignar cada octante a una GPU diferente sin necesidad de copias de subconjuntos dispersos.
 \end{itemize}
 
 El número de GPUs disponibles define cuántos octantes se procesan de manera simultánea.
-Para un total de $8$ octantes, el número de iteraciones de cálculo es:
+Para un total de ocho octantes, el número de iteraciones de cálculo es:
 \[
     \texttt{iterations} = \left\lceil \frac{8}{\texttt{device\_count}} \right\rceil.
 \]
 
-El árbol Barnes--Hut no se recorre recursivamente en GPU. La recursión implicaría un uso intensivo de memoria local y divergencia de hilos.
-En su lugar se usa:
-\begin{itemize}
-    \item un \textbf{árbol lineal} almacenado en memoria global,
-    \item nodos con punteros a hijos directos,
-    \item y un puntero \texttt{next} (\emph{rope}) por nodo que permite avanzar al siguiente nodo relevante sin volver a la raíz.
-\end{itemize}
+El árbol Barnes--Hut no se recorre recursivamente en GPU, ya que la recursión implicaría un uso intensivo de memoria local y divergencia de hilos.
+En su lugar se usa: un \textbf{árbol lineal} almacenado en memoria global, nodos con punteros a hijos directos y un puntero \texttt{next} (\emph{rope}) por nodo que permite avanzar al siguiente nodo relevante sin volver a la raíz.
 
 Este esquema de navegación permite un recorrido del árbol totalmente \emph{stackless} (sin pila), lo que resulta crítico en arquitecturas GPU para eliminar el desbordamiento de memoria local y minimizar la divergencia entre hilos de un mismo \texttt{warp}.
 El flujo lógico se resume en el algoritmo del Listing~\ref{lst:gpu_stackless}:
@@ -674,14 +657,13 @@ Para evitar tiempos muertos de comunicación, las GPUs se sincronizan únicament
 Además, se emplea una política de \textbf{copiar-construir-liberar} para los árboles y fronteras en cada medio paso, lo que garantiza la consistencia de la simulación independientemente de los reordenamientos internos de las estrellas. La coordinación de este pipeline híbrido CUDA+OpenMP se centraliza en la función \texttt{compute\_halfstep}, asegurando una ejecución paralela libre de interferencias.
 
 \section{Arquitectura del sistema y flujo de datos}\label{sec:arquitectura}
+El software desarrollado está públicamente disponible en el repositorio de GitHub: \url{https://github.com/Anse1000/TFG_PabloRey.git}
 El sistema engloba las versiones CPU y GPU del simulador de dinámica galáctica.
 Ambas versiones tienen una arquitectura modular y comparten la misma interfaz de entrada/salida, las mismas estructuras de datos fundamentales y el mismo pipeline de procesamiento, permitiendo una fácil validación cruzada de resultados y comparación de rendimiento.
 La selección entre la versión CPU o GPU se realiza en tiempo de compilación mediante opciones de CMake (\texttt{ENABLE\_CUDA}), facilitando la adaptación a distintas infraestructuras y volumen de datos.
-\subsection*{Organización}
-El código fuente del proyecto se ha estructurado modularmente para separar claramente la lógica de cálculo físico, la gestión de estructuras de datos y las operaciones de entrada/salida.
 A continuación se detalla la estructura de los archivos principales, divididos según su ubicación en el árbol de directorios:
 
-\subsubsection*{Núcleo del sistema (\texttt{src/})}
+\paragraph*{Núcleo del sistema (\texttt{src/})}
 Este directorio contiene los puntos de entrada y las utilidades compartidas por ambas implementaciones (CPU y GPU).
 
 \begin{itemize}
@@ -692,7 +674,7 @@ Este directorio contiene los puntos de entrada y las utilidades compartidas por 
     \item \texttt{aux\_fun.c/h}: Colección de utilidades para la medición de tiempos de ejecución, manejo de cadenas y gestión de errores.
 \end{itemize}
 
-\subsubsection*{Módulo CPU (\texttt{src/cpu/})}
+\paragraph*{Módulo CPU (\texttt{src/cpu/})}
 Contiene la implementación de la simulación basada en procesadores convencionales utilizando OpenMP.
 
 \begin{itemize}
@@ -700,7 +682,7 @@ Contiene la implementación de la simulación basada en procesadores convenciona
     \item \texttt{simulation.c/h}: Define el bucle principal de integración temporal para la versión CPU, coordinando los pasos de \textit{kick} y \textit{drift} y la reconstrucción del árbol en cada iteración.
 \end{itemize}
 
-\subsubsection*{Módulo GPU (\texttt{src/gpu/})}
+\paragraph*{Módulo GPU (\texttt{src/gpu/})}
 Contiene la lógica específica para la aceleración mediante GPU NVIDIA y CUDA.
 
 \begin{itemize}
@@ -708,7 +690,7 @@ Contiene la lógica específica para la aceleración mediante GPU NVIDIA y CUDA.
     \item \texttt{octree\_gpu.c/h}: Gestiona la adaptación del árbol octal para la GPU. Se encarga de la lógica del \textit{host} para preparar las estructuras lineales y las fronteras (\textit{frontiers}) que consumirán los kernels.
 \end{itemize}
 
-\subsubsection*{Scripts y herramientas (\texttt{scripts/})}
+\paragraph*{Scripts y herramientas (\texttt{scripts/})}
 El directorio \texttt{scripts} alberga herramientas auxiliares desarrolladas en Python y Bash para el preprocesamiento y postprocesamiento.
 
 \begin{itemize}
