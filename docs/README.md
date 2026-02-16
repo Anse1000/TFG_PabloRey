@@ -1,55 +1,60 @@
-# Modelo de memoria de Traballo Fin de Grao
+# TFG_PRA — Trabajo de Fin de Grado Pablo Rey Ansemil
 
-Este proxecto LaTeX constitúe un modelo de referencia para as memorias de Traballo Fin de Grao
-do **Grao en Enxeñaría Informática** e do **Grao en Ciencia e Enxeñaría de Datos**
-da Facultade de Informática da Universidade da Coruña.
+## Estructura del repositorio
 
-Antes de usar este modelo, por favor, revisa con atención as [`FAQ (Frequently Asked Questions)`](https://gitlab.com/lauramcastro/modelo-tfg-gei-fic/-/wikis/Frequently-asked-questions-(faq)).
+- `src/` — Código fuente principal (C/CUDA)
+     - `src/main.c` — Punto de entrada del programa
+     - `src/cpu/` — Implementación CPU (p. ej., estructuras tipo *octree* y simulación)
+     - `src/gpu/` — Implementación GPU (CUDA: `.cu`, `.cuh`)
+     - `src/*.c, src/*.h` — Utilidades comunes: lectura/escritura, cálculos, tipos, etc.
+- `scripts/` — Scripts auxiliares (Python y Bash) para preparar datos, comparar resultados y automatizar pruebas/render
+- `docs/` — Memoria y materiales en LaTeX (incluye `memoria_tfg.tex` y subcarpetas de contenido)
+- `pruebas/` / `test_results/` — Pruebas y salidas de validación/benchmark
+- `CMakeLists.txt` — Configuración de compilación del proyecto
+- `*.slurm` — Lanzadores para ejecución en clúster (Slurm)
 
-## Estrutura
+---
 
-  1) Ficheiros de autoría, contribucións, licenza e atribución
+## Requisitos
+- **CMake** (recomendado >= 3.20)
+- **Librería HDF5** (headers y librería enlazable)
+  - Si la instalas en una ruta no estándar, configura `HDF5_ROOT` o `CMAKE_PREFIX_PATH`.
+- **OpenMP** (soporte del compilador; en GCC suele venir integrado, en Intel también)
+### Para compilar (CPU)
+- **Compilador Intel (icc o icx)** recomendado
+> **Nota:** si `icc` no está disponible, el proyecto puede compilarse con **GCC (`gcc`)** (manteniendo OpenMP y HDF5 configurados).
+### Para compilar con GPU (CUDA)
+- **NVIDIA CUDA Toolkit** (con `nvcc`)
+- Drivers NVIDIA actualizados y GPU compatible
+### Utilidades opcionales
+- **Python 3** para ejecutar herramientas en `scripts/`
+---
 
-     > `AUTHOR`
-     >
-     > `CONTRIBUTING.md`
-     >
-     > `COPYING`
-     >
-     > `CREDITS`
+## Compilación
 
-  2) Ficheiro de estilo: `estilo_tfg.sty`
+El proyecto usa la opción de CMake `ENABLE_CUDA` para elegir entre implementaciones CPU y GPU:
 
-  3) Ficheiro principal: `memoria_tfg.tex`
+- **CPU**: compilar con `-DENABLE_CUDA=OFF`
+- **GPU (CUDA)**: compilar con `-DENABLE_CUDA=ON`
 
-  4) Directorios:
+Ejemplo:
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CUDA=OFF -S . -B ./build
+cmake --build ./build
+``` 
+## Ejecución
+Uso:
+```bash
+./build/TFG_PRA <archivo_estrellas> <archivo_salida> <STEPS>
+``` 
+Parámetros:
+- `<archivo_estrellas>`: **carpeta** con los datos de entrada de las estrellas.
+- `<archivo_salida>`: **carpeta** donde se guardarán los resultados.
+- `<STEPS>`: número de pasos de la simulación (entero > 0).
 
-     > `anexos/`		Contén os capítulos con materiais adicionais.
-     >
-     > `bibliografia/`	Contén a bibliografía e outros posibles índices (termos, glosario).
-     >
-     > `contido/`		Contén os capítulos da memoria.
-     >
-     > `imaxes/`		Contén as imaxes da memoria.
-     >
-     > `portada/`		Contén a portada, resumo e palabras chave.
+## Documentación (memoria)
 
-## Xeración da versión PDF
+La memoria del TFG se encuentra en `docs/` (LaTeX). Se compila desde el archivo principal:
+- `docs/memoria_tfg.tex`
 
-A versión PDF pódese xerar empregando a ferramenta `latexmk`, que asegura o correcto procesamento
-de índices, bibliografía e referencias:
-
-     latexmk -xelatex memoria_tfg.tex
-
-A ferramenta `latexmk` pódese empregar de xeito que monitorice o proxecto e recompile automaticamente
-a memoria en caso de producirse cambios nos diferentes ficheiros que a conforman:
-
-     latexmk -xelatex -pvc memoria_tfg.tex
-
-## Eliminación dos ficheiros auxiliares
-
-No momento no que a redacción da memoria do TFG se dea por finalizada, os ficheiros auxiliares xerados poden eliminarse doadamente con:
-
-     latexmk -xelatex -c
-
-Non se recomenda a eliminación dos ficheiros auxiliares durante o proceso de redacción, xa que a súa presenza contribúe a axilizar o proceso de compilación e xeración do PDF en construción.
+---
